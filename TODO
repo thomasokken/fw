@@ -1,7 +1,3 @@
-I had a core dump the other day trying to open crash.gif. At that point,
-curr_code was 16437 or something like that (a bit more than 2^14, anyway),
-while curr_code_size was 9 and maxcode was 267. What's the deal?!?
-
 In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
 can't set focus on a text field any more). Am I doing something wrong there, or
 is this an OpenMotif 2.2.2 bug? Take a look at...
