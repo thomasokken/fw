@@ -1,127 +1,36 @@
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>
 
-#include "Plugin.h"
+#include "MarianiSilver.h"
 #include "Polynomial.help"
 
-struct rect {
-    int top, left, bottom, right;
-    void set(int top, int left, int bottom, int right) {
-	this->top = top;
-	this->left = left;
-	this->bottom = bottom;
-	this->right = right;
-    }
-    void empty() {
-	top = left = bottom = right = -1;
-    }
-    bool isEmpty() const {
-	return top == -1 && left == -1 && bottom == -1 && right == -1;
-    }
-    void merge(const rect &r) {
-	if (isEmpty()) {
-	    top = r.top;
-	    left = r.left;
-	    bottom = r.bottom;
-	    right = r.right;
-	} else {
-	    if (!r.isEmpty()) {
-		if (r.top < top)
-		    top = r.top;
-		if (r.left < left)
-		    left = r.left;
-		if (r.bottom > bottom)
-		    bottom = r.bottom;
-		if (r.right > right)
-		    right = r.right;
-	    }
-	}
-    }
-};
-
 static const char *my_settings_layout[] = {
-    "WIDTH 'Width'",			// pm->width
-    "HEIGHT 'Height'",			// pm->height
-    "double 'Lower Real Bound'",	// xmin
-    "double 'Upper Real Bound'",	// xmax
-    "double 'Lower Imaginary Bound'",	// ymin
-    "double 'Upper Imaginary Bound'",	// ymax
     "int 'Maximum Iterations'",		// maxiter
     "double 'Escape Limit'",		// limit
-    "int 'Color Bands'",		// bands
-    "double 'a[5]'",			// a[0] (watch out!)
-    "double 'a[4]'",			// a[1]
-    "double 'a[3]'",			// a[2]
-    "double 'a[2]'",			// a[3]
-    "double 'a[1]'",			// a[4]
-    "double 'a[0]'",			// a[5]
-    "double 'b'",			// b
-    "double",		// limit2
+    "double 'a[5]'",                    // a[0] (watch out!)
+    "double 'a[4]'",                    // a[1]
+    "double 'a[3]'",                    // a[2]
+    "double 'a[2]'",                    // a[3]
+    "double 'a[1]'",                    // a[4]
+    "double 'a[0]'",                    // a[5]
+    "double 'b'",                       // b
     "int",		// degree
-    "int",		// ndirty
-    "double",		// step
-    "double",		// x1
-    "double",		// y1
-    "double",		// x2
-    "double",		// y2
-    "double",		// xm
-    "double",		// ym
-    "int",		// state
-    "int",		// value
-    "int",		// sp
-    "REPEAT 4",		// tos
-    "int",
-    "ENDREP",
-    "REPEAT 4",		// dirty
-    "int",
-    "ENDREP",
-    "int",		// hm
-    "int",		// vm
-    "int",		// hc
-    "int",		// vc
-    "REPEAT 50",	// stack (50 levels of 4 ints each)
-    "REPEAT 4",
-    "int",
-    "ENDREP",
-    "ENDREP",
-    "bool",		// finished
+    "double",		// limit2
     NULL
 };
 
-class Polynomial : public Plugin {
+class Polynomial : public MarianiSilver {
     private:
-	double xmin, xmax, ymin, ymax;
 	int maxiter;
 	double limit;
-	int bands;
-	double a[6], b;
-	double limit2;
+	double a[6];
+	double b;
 	int degree;
-	int ndirty;
-	double step;
-	double x1, y1;
-	double x2, y2;
-	double xm, ym;
-	int state;
-	int value;
-	int sp;
-	rect tos;
-	rect dirty;
-	int hm, vm;
-	int hc, vc;
-	rect stack[50];
-	bool finished;
+	double limit2;
+	// End of serialized data
 
     public:
-	/* move this to Plugin later */
-	void fillrect(int top, int left, int bottom, int right, int value) {
-	    for (int y = top; y <= bottom; y++)
-		for (int x = left; x <= right; x++)
-		    pm->pixels[y * pm->bytesperline + x] = value;
-	}
-
-	Polynomial(void *dl) : Plugin(dl) {
-	    register_for_serialization(my_settings_layout, &xmin);
+	Polynomial(void *dl) : MarianiSilver(dl) {
+	    register_for_serialization(my_settings_layout, &maxiter);
 	}
 
 	virtual ~Polynomial() {}
@@ -134,20 +43,19 @@ class Polynomial : public Plugin {
 	    return helptext;
 	}
 
-	virtual bool does_depth(int depth) {
-	    return depth == 8;
-	}
-
-	virtual void init_new() {
-	    pm->width = 700;
-	    pm->height = 500;
+	virtual void ms_init_new() {
+	    // MarianiSilver stuff
+	    // pm->width = 700;
+	    // pm->height = 500;
 	    xmin = -1.0 * pm->width / pm->height;
 	    xmax = 1.0 * pm->width / pm->height;
 	    ymin = -1;
 	    ymax = 1;
+	    bands = 1;
+
+	    // Our stuff
 	    maxiter = 25;
 	    limit = 10;
-	    bands = 1;
 	    a[0] = 0; // Remember, a[0] is the coefficient of x^5
 	    a[1] = 0; // x^4
 	    a[2] = 0; // x^3
@@ -155,203 +63,27 @@ class Polynomial : public Plugin {
 	    a[4] = 0; // x
 	    a[5] = 0; // 1
 	    b = 1;
-	    get_settings_dialog();
 	}
 
-	virtual void get_settings_ok() {
-	    pm->bytesperline = pm->width + 3 & ~3;
-	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
-	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
-	    pm->cmap = new FWColor[256];
-	    for (int k = 0; k < 256; k++) {
-		pm->cmap[k].r = k;
-		pm->cmap[k].g = k;
-		pm->cmap[k].b = k;
-	    }
-	    init_proceed();
+	virtual void ms_init_clone(MarianiSilver *src) {
+	    Polynomial *clonee = (Polynomial *) src;
+
+	    maxiter = clonee->maxiter;
+	    limit = clonee->limit;
+	    for (int i = 0; i < 6; i++)
+		a[i] = clonee->a[i];
+	    b = clonee->b;
 	}
 
-	virtual bool start() {
+	virtual void ms_start() {
 	    degree = 5;
 	    while (a[5 - degree] == 0 && degree > 0)
 		degree--;
 	    limit2 = limit * limit;
-	    step = (xmax - xmin) / pm->width;
-	    sp = 0;
-	    stack[sp].set(0, 0, pm->height - 1, pm->width - 1);
-	    state = 0;
-	    ndirty = 0;
-	    dirty.empty();
-	    finished = false;
-	    paint();
-	    start_working();
-	    return false;
+	    maxValue = maxiter;
 	}
 
-	virtual void stop() {
-	    stop_working();
-	    if (!dirty.isEmpty()) {
-		paint(dirty.top, dirty.left, dirty.bottom + 1, dirty.right + 1);
-		dirty.empty();
-		ndirty = 0;
-	    }
-	}
-
-	virtual bool restart() {
-	    if (!finished)
-		start_working();
-	    return finished;
-	}
-	
-	virtual bool work() {
-	    int count = 1000;
-	    do {
-		switch (state) {
-		    case 0:
-			tos = stack[sp];
-			x1 = xmin + (tos.left + 0.5) * step;
-			y1 = ymax - (tos.top + 0.5) * step;
-			if (tos.right - tos.left < 5 || tos.bottom - tos.top < 5) {
-			    hc = tos.left;
-			    vc = tos.top;
-			    xm = x1;
-			    ym = y1;
-			    state = 9;
-			} else {
-			    value = calcandset(tos.left, tos.top, x1, y1);
-			    state = 1;
-			}
-			break;
-
-		    case 1:
-			hm = (tos.left + tos.right) >> 1;
-			vm = (tos.top + tos.bottom) >> 1;
-			xm = xmin + (hm + 0.5) * step;
-			ym = ymax - (vm + 0.5) * step;
-			if (value != calcandset(hm, vm, xm, ym))
-			    recurse();
-			else
-			    state = 2;
-			break;
-
-		    case 2:
-			x2 = xmin + (tos.right + 0.5) * step;
-			if (value != calcandset(tos.right, tos.top, x2, y1))
-			    recurse();
-			else
-			    state = 3;
-			break;
-
-		    case 3:
-			y2 = ymax - (tos.bottom + 0.5) * step;
-			if (value != calcandset(tos.right, tos.bottom, x2, y2))
-			    recurse();
-			else
-			    state = 4;
-			break;
-
-		    case 4:
-			if (value != calcandset(tos.left, tos.bottom, x1, y2))
-			    recurse();
-			else {
-			    xm = x1;
-			    ym = y1;
-			    hc = tos.left;
-			    vc = tos.top;
-			    state = 5;
-			}
-			break;
-
-		    case 5:
-			hc = hc + 1;
-			xm = xm + step;
-			if (hc == tos.right)
-			    state = 6;
-			else if (value != calcandset(hc, vc, xm, ym))
-			    recurse();
-			break;
-
-		    case 6:
-			vc = vc + 1;
-			ym = ym - step;
-			if (vc == tos.bottom)
-			    state = 7;
-			else if (value != calcandset(hc, vc, xm, ym))
-			    recurse();
-			break;
-
-		    case 7:
-			hc = hc - 1;
-			xm = xm - step;
-			if (hc == tos.left)
-			    state = 8;
-			else if (value != calcandset(hc, vc, xm, ym))
-			    recurse();
-			break;
-
-		    case 8:
-			vc = vc - 1;
-			ym = ym + step;
-			if (vc == tos.top) {
-			    fillrect(tos.top + 1, tos.left + 1,
-				     tos.bottom - 1, tos.right - 1, value);
-			    pop();
-			} else if (value != calcandset(hc, vc, xm, ym))
-			    recurse();
-			break;
-
-		    case 9:
-			value = calcandset(hc, vc, xm, ym);
-			if (hc < tos.right) {
-			    hc = hc + 1;
-			    xm = xm + step;
-			} else if (vc < tos.bottom) {
-			    hc = tos.left;
-			    xm = x1;
-			    vc = vc + 1;
-			    ym = ym - step;
-			} else
-			    pop();
-			break;
-		}
-	    } while (sp >= 0 && --count >= 0);
-	    if (ndirty > 1000 || finished) {
-		paint(dirty.top, dirty.left, dirty.bottom + 1, dirty.right + 1);
-		dirty.empty();
-		ndirty = 0;
-	    }
-	    return finished;
-	}
-
-    private:
-	void recurse() {
-	    stack[sp + 1].top = vm;
-	    stack[sp + 1].left = stack[sp + 0].left;
-	    stack[sp + 1].bottom = stack[sp + 0].bottom;
-	    stack[sp + 1].right = hm;
-	    stack[sp + 2].top = stack[sp + 0].top;
-	    stack[sp + 2].left = hm;
-	    stack[sp + 2].bottom = vm;
-	    stack[sp + 2].right = stack[sp + 0].right;
-	    stack[sp + 3].top = stack[sp + 0].top;
-	    stack[sp + 3].left = stack[sp + 0].left;
-	    stack[sp + 3].bottom = vm;
-	    stack[sp + 3].right = hm;
-	    stack[sp + 0].top = vm;
-	    stack[sp + 0].left = hm;
-	    sp += 3;
-	    state = 0;
-	}
-
-	void pop() {
-	    dirty.merge(tos);
-	    ndirty += (tos.right - tos.left + 1) * (tos.bottom - tos.top + 1);
-	    sp--;
-	    state = 0;
-	    finished = sp < 0;
-	}
-
-	int calcandset(int h, int v, double re, double im) {
+	virtual int ms_calc_pixel(double re, double im) {
 	    int i, count;
 	    double x1, y1, x2, y2, temp, b_re, b_im;
 
@@ -372,10 +104,7 @@ class Polynomial : public Plugin {
 		y2 = y1 + b_im;
 		count = count + 1;
 	    }
-	    int value = count == maxiter ? 0
-			    : 1 + 254 * count / maxiter;
-	    pm->pixels[v * pm->bytesperline + h] = value;
-	    return value;
+	    return count == maxiter ? 0 : count + 1;
 	}
 };
 
