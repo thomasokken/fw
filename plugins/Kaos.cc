@@ -201,6 +201,56 @@ class Kaos : public Plugin {
 	    }
 	    return finished;
 	}
+
+	virtual void dump() {
+	    for (int i = 0; i < NMAX; i++) {
+		dumpdouble(Q[i].a11);
+		dumpdouble(Q[i].a12);
+		dumpdouble(Q[i].a21);
+		dumpdouble(Q[i].a22);
+		dumpdouble(Q[i].b1);
+		dumpdouble(Q[i].b2);
+	    }
+	    for (int i = 0; i < NMAX; i++) {
+		dumpint(RGGB[i].rg);
+		dumpint(RGGB[i].gb);
+	    }
+	    dumpint(n);
+	    dumpint(xmid);
+	    dumpint(ymid);
+	    dumpint(maxmid);
+	    dumpdouble(x);
+	    dumpdouble(y);
+	    dumpint(jop);
+	    dumpint(jopmax);
+	    dumpint(jOud1);
+	    dumpint(finished ? 1 : 0);
+	}
+
+	virtual void init_undump() {
+	    for (int i = 0; i < NMAX; i++) {
+		Q[i].a11 = undumpdouble();
+		Q[i].a12 = undumpdouble();
+		Q[i].a21 = undumpdouble();
+		Q[i].a22 = undumpdouble();
+		Q[i].b1 = undumpdouble();
+		Q[i].b2 = undumpdouble();
+	    }
+	    for (int i = 0; i < NMAX; i++) {
+		RGGB[i].rg = undumpint();
+		RGGB[i].gb = undumpint();
+	    }
+	    n = undumpint();
+	    xmid = undumpint();
+	    ymid = undumpint();
+	    maxmid = undumpint();
+	    x = undumpdouble();
+	    y = undumpdouble();
+	    jop = undumpint();
+	    jopmax = undumpint();
+	    jOud1 = undumpint();
+	    finished = undumpint() != 0;
+	}
 };
 
 extern "C" Plugin *factory(void *dl) {
