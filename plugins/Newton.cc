@@ -48,7 +48,7 @@ static const char *my_settings_layout[] = {
     "int 'Maximum Iterations'",		// maxiter
     "double 'Convergence Limit'",	// conv
     "double 'Root (real)'",		// root_re
-    "double 'Root (imaginary'",		// root_im
+    "double 'Root (imaginary)'",	// root_im
     "int 'Color Bands'",		// bands
     "double",		// conv2
     "int",		// ndirty

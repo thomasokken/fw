@@ -32,7 +32,7 @@ class ColormapEditor : public Frame {
 	ColorPicker *colorpicker;
 
     public:
-	ColormapEditor(Owner *owner, FWPixmap *pm);
+	ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap);
 	virtual ~ColormapEditor();
 	void colormapChanged(Colormap colormap);
 

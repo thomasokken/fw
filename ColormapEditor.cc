@@ -185,7 +185,7 @@ class MixAction : public ChangeRangeAction {
 };
 
 /* public */
-ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm)
+ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap)
 				    : Frame(false, true, false) {
     setTitle("Colormap Editor");
     setIconTitle("Colormap Editor");
@@ -261,7 +261,10 @@ ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm)
 			 imagesize, imagesize, 32, 0);
     image->data = (char *) malloc(image->bytes_per_line * image->height);
 
-    colormap = g_colormap;
+    this->colormap = colormap;
+    if (colormap != g_colormap)
+	setColormap(colormap);
+
     colorpicker = NULL;
 
     update_image();
@@ -284,8 +287,6 @@ ColormapEditor::~ColormapEditor() {
 
 /* public virtual */ void
 ColormapEditor::colormapChanged(Colormap colormap) {
-    if (colormap == None)
-	colormap = g_colormap;
     Colormap prevcolormap = this->colormap;
     this->colormap = colormap;
     if (colormap != prevcolormap)

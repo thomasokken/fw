@@ -26,6 +26,7 @@ class SettingsHelper {
 	const char *getFieldLabel(int index);
 	char *getFieldValue(int index);
 	void setFieldValue(int index, const char *value);
+	char *dumpSettings();
 	bool allowDepth(int depth);
 	int getDepth();
 	void setDepth(int depth);

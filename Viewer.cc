@@ -64,7 +64,7 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 	     int plugin_data_length, FWPixmap *fpm) {
     id = idcount++;
     image = NULL;
-    priv_cmap = None;
+    colormap = g_colormap;
     filename = NULL;
     filetype = NULL;
     savedialog = NULL;
@@ -394,8 +394,8 @@ Viewer::finish_init() {
 	    && g_depth == 8
 	    && g_visual->c_class == PseudoColor
 	    && (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))) {
-	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	setColormap(priv_cmap);
+	colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	setColormap(colormap);
 	colormapChanged();
     }
 
@@ -434,8 +434,8 @@ Viewer::~Viewer() {
 	Plugin::release(plugin);
 	plugin = NULL;
     }
-    if (priv_cmap != None) {
-	XFreeColormap(g_display, priv_cmap);
+    if (colormap != g_colormap) {
+	XFreeColormap(g_display, colormap);
 	setColormap(g_colormap);
     }
     if (filename != NULL)
@@ -526,12 +526,12 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  left, top, left, top,
 		  right - left, bottom - top);
     } else if (scale == 1) {
-	CopyBits::copy_unscaled(&pm, image, priv_cmap != None, false, dithering,
+	CopyBits::copy_unscaled(&pm, image, colormap != g_colormap, false, dithering,
 				 top, left, bottom, right);
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  left, top, left, top, right - left, bottom - top);
     } else if (scale > 1) {
-	CopyBits::copy_enlarged(scale, &pm, image, priv_cmap != None, false, dithering,
+	CopyBits::copy_enlarged(scale, &pm, image, colormap != g_colormap, false, dithering,
 				 top, left, bottom, right);
 	int TOP = top * scale;
 	int BOTTOM = bottom * scale;
@@ -541,7 +541,7 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  LEFT, TOP, LEFT, TOP,
 		  RIGHT - LEFT, BOTTOM - TOP);
     } else {
-	CopyBits::copy_reduced(-scale, &pm, image, priv_cmap != None, false, dithering,
+	CopyBits::copy_reduced(-scale, &pm, image, colormap != g_colormap, false, dithering,
 				top, left, bottom, right);
 	int s = -scale;
 	int TOP = top / s;
@@ -770,7 +770,7 @@ Viewer::pixmap2screen(int *x, int *y) {
 
 /* public */ void
 Viewer::colormapChanged() {
-    if (priv_cmap == None) {
+    if (colormap == g_colormap) {
 	paint(0, 0, pm.height, pm.width);
     } else {
 	XColor colors[256];
@@ -814,7 +814,7 @@ Viewer::colormapChanged() {
 		    i++;
 		}
 	}
-	XStoreColors(g_display, priv_cmap, colors, 256);
+	XStoreColors(g_display, colormap, colors, 256);
     }
 }
 
@@ -832,7 +832,7 @@ Viewer::canIDoDirectCopy() {
 		&& image->byte_order == LSBFirst
 		&& image->bitmap_bit_order == LSBFirst;
     if (pm.depth == 8)
-	return priv_cmap != None // implies 8-bit PseudoColor visual
+	return colormap != g_colormap // implies 8-bit PseudoColor visual
 		&& image->bytes_per_line == pm.bytesperline
 		&& image->byte_order == LSBFirst;
     // pm.depth == 24
@@ -1139,7 +1139,7 @@ Viewer::doLoadColors3(const char *filename) {
     fclose(file);
     colormapChanged();
     if (cme != NULL)
-	cme->colormapChanged(priv_cmap);
+	cme->colormapChanged(colormap);
     return;
 
     failure:
@@ -1222,7 +1222,17 @@ Viewer::doSaveAs() {
 
 /* private */ void
 Viewer::doGetInfo() {
-    doBeep();
+    char *info = plugin->dumpSettings();
+    if (info == NULL) {
+	char buf[1024];
+	snprintf(buf, 1024, "The plugin \"%s\" does not have public settings.", plugin->name());
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
+    } else {
+	TextViewer *tv = new TextViewer(info);
+	free(info);
+	tv->raise();
+    }
 }
 
 /* private */ void
@@ -1317,7 +1327,7 @@ Viewer::doEditColors() {
 	return;
     }
     if (cme == NULL)
-	cme = new ColormapEditor(new CMEProxy(this), &pm);
+	cme = new ColormapEditor(new CMEProxy(this), &pm, colormap);
     cme->raise();
 }
 
@@ -1375,8 +1385,8 @@ Viewer::doPrivateColormap(bool value) {
 	return;
 
     if (value) {
-	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	setColormap(priv_cmap);
+	colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	setColormap(colormap);
 	if (canIDoDirectCopy()) {
 	    free(image->data);
 	    image->data = (char *) pm.pixels;
@@ -1386,11 +1396,11 @@ Viewer::doPrivateColormap(bool value) {
 	}
 	colormapChanged();
 	if (cme != NULL)
-	    cme->colormapChanged(priv_cmap);
+	    cme->colormapChanged(colormap);
 	paint(0, 0, pm.height, pm.width);
     } else {
-	XFreeColormap(g_display, priv_cmap);
-	priv_cmap = None;
+	XFreeColormap(g_display, colormap);
+	colormap = g_colormap;
 	setColormap(g_colormap);
 	if (direct_copy) {
 	    image->data = (char *) malloc(image->bytes_per_line * image->height);
@@ -1400,7 +1410,7 @@ Viewer::doPrivateColormap(bool value) {
 	}
 	colormapChanged();
 	if (cme != NULL)
-	    cme->colormapChanged(priv_cmap);
+	    cme->colormapChanged(colormap);
     }
 }
 
@@ -1515,15 +1525,15 @@ Viewer::doScale(const char *value) {
     if (pm.depth == 1) {
 	bool want_priv_cmap = scale <= -1
 		&& optionsmenu->getToggleValue("Options.PrivateColormap");
-	bool have_priv_cmap = priv_cmap != None;
+	bool have_priv_cmap = colormap != g_colormap;
 	
 	if (want_priv_cmap && !have_priv_cmap) {
-	    priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	    setColormap(priv_cmap);
+	    colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	    setColormap(colormap);
 	    colormapChanged();
 	} else if (!want_priv_cmap && have_priv_cmap) {
-	    XFreeColormap(g_display, priv_cmap);
-	    priv_cmap = None;
+	    XFreeColormap(g_display, colormap);
+	    colormap = g_colormap;
 	    setColormap(g_colormap);
 	}
     }

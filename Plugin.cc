@@ -181,6 +181,15 @@ Plugin::deserialize(void *buf, int nbytes) {
     settings_helper->deserialize(buf, nbytes);
 }
 
+/* public */ char *
+Plugin::dumpSettings() {
+    if (settings_count == 0)
+	return NULL;
+    if (settings_helper == NULL)
+	settings_helper = new SettingsHelper(this);
+    return settings_helper->dumpSettings();
+}
+
 /* public virtual */ bool
 Plugin::does_depth(int depth) {
     return false;

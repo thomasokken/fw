@@ -45,6 +45,7 @@ class Plugin {
 	void setViewer(Viewer *viewer) { this->viewer = viewer; }
 	void serialize(void **buf, int *nbytes);
 	void deserialize(void *buf, int nbytes);
+	char *dumpSettings();
 
 	// Methods implemented by Plugins
 	// (Reasonable default implementations are provided for all of

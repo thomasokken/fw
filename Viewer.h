@@ -22,7 +22,7 @@ class Viewer : private Frame {
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
-	Colormap priv_cmap;
+	Colormap colormap;
 	int scale;
 	FWPixmap pm;
 	bool dithering;

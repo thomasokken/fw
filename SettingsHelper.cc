@@ -472,6 +472,30 @@ SettingsHelper::setFieldValue(int index, const char *value) {
     dlgfields[index]->setValue(value);
 }
 
+/* public */ char *
+SettingsHelper::dumpSettings() {
+    char *buf  = NULL;
+    int bufsize = 0;
+    int bufpos = 0;
+    for (int i = 0; i < ndlgfields; i++) {
+	const char *label = getFieldLabel(i);
+	char *value = getFieldValue(i);
+	char b[512];
+	snprintf(b, 512, "%s = %s\n", label, value);
+	free(value);
+	int bs = strlen(b);
+	if (bufpos + bs + 1 > bufsize) {
+	    bufsize += 1024;
+	    buf = (char *) realloc(buf, bufsize);
+	}
+	memcpy(buf + bufpos, b, bs);
+	bufpos += bs;
+    }
+    if (buf != NULL)
+	buf[bufpos] = 0;
+    return buf;
+}
+
 /* public */ bool
 SettingsHelper::allowDepth(int depth) {
     return plugin->does_depth(depth);
