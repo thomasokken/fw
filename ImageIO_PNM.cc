@@ -12,8 +12,9 @@
 static bool match_one_blank(FILE *file);
 static void optional_blank(FILE *file);
 static bool match_blank(FILE *file);
+static bool match_blank_or_comment(FILE *file, unsigned char **buf,
+				   int *bufsize, int *pufpos);
 static bool match_uint(FILE *file, int *i);
-static int get_one_char(FILE *file);
 static void write_encoded_pnm_comment(FILE *file, const void *data,
 				      int length, unsigned int crc);
 static bool is_grayscale(const FWColor *cmap);
@@ -64,10 +65,16 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	return false;
     }
 
-    if (!match_blank(pnm)) {
+    unsigned char *buf = NULL;
+    int bufsize = 0;
+    int bufpos = 0;
+
+    if (!match_blank_or_comment(pnm, &buf, &bufsize, &bufpos)) {
 	snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	*message = strclone(msgbuf);
 	fclose(pnm);
+	if (buf != NULL)
+	    free(buf);
 	return false;
     }
 
@@ -75,13 +82,17 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	*message = strclone(msgbuf);
 	fclose(pnm);
+	if (buf != NULL)
+	    free(buf);
 	return false;
     }
 
-    if (!match_blank(pnm)) {
+    if (!match_blank_or_comment(pnm, &buf, &bufsize, &bufpos)) {
 	snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	*message = strclone(msgbuf);
 	fclose(pnm);
+	if (buf != NULL)
+	    free(buf);
 	return false;
     }
 
@@ -89,21 +100,27 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	*message = strclone(msgbuf);
 	fclose(pnm);
+	if (buf != NULL)
+	    free(buf);
 	return false;
     }
 
     int maxval;
     if (ftype != '1' && ftype != '4') {
-	if (!match_blank(pnm)) {
+	if (!match_blank_or_comment(pnm, &buf, &bufsize, &bufpos)) {
 	    snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	    *message = strclone(msgbuf);
 	    fclose(pnm);
+	    if (buf != NULL)
+		free(buf);
 	    return false;
 	}
 	if (!match_uint(pnm, &maxval) || maxval < 1 || maxval > 65535) {
 	    snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	    *message = strclone(msgbuf);
 	    fclose(pnm);
+	    if (buf != NULL)
+		free(buf);
 	    return false;
 	}
     }
@@ -112,6 +129,8 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	snprintf(msgbuf, MSGLEN, "PNM file format error.");
 	*message = strclone(msgbuf);
 	fclose(pnm);
+	if (buf != NULL)
+	    free(buf);
 	return false;
     }
 
@@ -270,6 +289,39 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	    break;
     }
     eof:
+
+    if (buf != NULL) {
+	// Comments containing the magic incantation "FW:" have been found.
+	// Let's see if we got anything good.
+	// The first 4 bytes should be the length; the next 4 bytes should be
+	// the CRC for the following 'length' bytes.
+	int length = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+	unsigned int crc =
+		     (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+	unsigned int actualcrc;
+	if (length > bufpos - 8) {
+	    char msgbuf[1024];
+	    snprintf(msgbuf, 1024, "FW Plugin data block found, but it looks truncated\n(%d bytes read, %d bytes expected).", bufpos - 8, length);
+	    *message = strclone(msgbuf);
+	    free(buf);
+	} else if (crc != (actualcrc = crc32(buf + 8, length))) {
+	    char msgbuf[1024];
+	    snprintf(msgbuf, 1024, "FW Plugin data block found, but it looks corrupted\n(expected CRC: 0x%x, actual: 0x%x).", crc, actualcrc);
+	    *message = strclone(msgbuf);
+	    free(buf);
+	} else {
+	    // Looks good so far. Now, let's extract the plugin name. (No more
+	    // sanity checks; we trust the CRC to protect us from random
+	    // corruption. We don't expect plugins to check their data.)
+	    *plugin_name = strclone((char *) buf + 8);
+	    int pnl = strlen(*plugin_name);
+	    int data_offset = pnl + 9;
+	    length -= pnl + 1;
+	    memmove(buf, buf + data_offset, length);
+	    *plugin_data = buf;
+	    *plugin_data_length = length;
+	}
+    }
     
     fclose(pnm);
     return true;
@@ -287,18 +339,91 @@ static void optional_blank(FILE *file) {
 	ungetc(c, file);
 }
 
-static bool match_blank(FILE *file) {
-    int c = get_one_char(file);
-    if (c != ' ' && c != '\t' && c != '\r' && c != '\n')
+static bool match_blank_or_comment(FILE *file, unsigned char **buf,
+				   int *bufsize, int *bufpos) {
+    // This function reads the bit between the PNM signature and the width.
+    // It looks for comments containing the string "FW:" and tries to decode
+    // the stuff following that string, and store it in a data block in
+    // memory, which will later be used to allow the matching plugin to
+    // deserialize its state.
+
+    int c = fgetc(file);
+    if (c != ' ' && c != '\t' && c != '\r' && c != '\n' && c != '#')
 	return false;
-    while ((c = fgetc(file)) == ' ' || c == '\t' || c == '\r' || c == '\n');
-    if (c != EOF)
-	ungetc(c, file);
+    ungetc(c, file);
+
+    unsigned char inchar[4];
+    int k = 0;
+
+    while (true) {
+	while ((c = fgetc(file)) == ' ' || c == '\t' || c == '\r' || c == '\n');
+	if (c != '#') {
+	    ungetc(c, file);
+	    return true;
+	}
+	int bingo = 0;
+	while ((c = fgetc(file)) != '\n' && c != '\r' && c != EOF) {
+	    if (c == EOF)
+		return false;
+	    int n = -1;
+	    switch (bingo) {
+		case 0:
+		    if (c == 'F')
+			bingo = 1;
+		    break;
+		case 1:
+		    if (c == 'W')
+			bingo = 2;
+		    else
+			bingo = 4;
+		    break;
+		case 2:
+		    if (c == ':')
+			bingo = 3;
+		    else
+			bingo = 4;
+		    break;
+		case 3:
+		    if (c >= '0' && c <= '9')
+			n = c - '0';
+		    else if (c >= 'A' && c <= 'Z')
+			n = c - 'A' + 10;
+		    else if (c >= 'a' && c <= 'z')
+			n = c - 'a' + 36;
+		    else if (c == '.')
+			n = 62;
+		    else if (c == '/')
+			n = 63;
+		    else
+			bingo = 4;
+	    }
+	    if (n != -1) {
+		inchar[k++] = n;
+		k = k & 3;
+		if (k == 0) {
+		    // We have some bytes!
+		    if (*bufpos + 3 > *bufsize) {
+			*bufsize += 1024;
+			*buf = (unsigned char *) realloc(*buf, *bufsize);
+		    }
+		    (*buf)[(*bufpos)++] = (inchar[0] << 2) | (inchar[1] >> 4);
+		    (*buf)[(*bufpos)++] = (inchar[1] << 4) | (inchar[2] >> 2);
+		    (*buf)[(*bufpos)++] = (inchar[2] << 6) | inchar[3];
+		}
+	    }
+	}
+    }
+}
+
+static bool match_blank(FILE *file) {
+    if (!match_one_blank(file))
+	return false;
+    optional_blank(file);
     return true;
 }
 
 static bool match_uint(FILE *file, int *i) {
-    int c = get_one_char(file);
+    int c = fgetc(file);
     if (!isdigit(c))
 	return false;
     *i = c - '0';
@@ -307,13 +432,6 @@ static bool match_uint(FILE *file, int *i) {
     if (c != EOF)
 	ungetc(c, file);
     return true;
-}
-
-static int get_one_char(FILE *file) {
-    int c;
-    while ((c = fgetc(file)) == '#')
-	while ((c = fgetc(file)) != '\n' && c != '\r' && c != EOF);
-    return c;
 }
 
 /* public virtual */ bool
@@ -330,12 +448,17 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 	return false;
     }
 
+    bool grayscale = pm->depth == 8 && is_grayscale(pm->cmap);
+
     switch (pm->depth) {
 	case 1:
 	    fprintf(pnm, "P4\n");
 	    break;
 	case 8:
-	    fprintf(pnm, "P5\n");
+	    if (grayscale)
+		fprintf(pnm, "P5\n");
+	    else
+		fprintf(pnm, "P6\n");
 	    break;
 	case 24:
 	    fprintf(pnm, "P6\n");
@@ -367,7 +490,7 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 	    }
 	    fputc(d, pnm);
 	}
-    } else if (pm->depth == 8 && is_grayscale(pm->cmap)) {
+    } else if (pm->depth == 8 && grayscale) {
 	fwrite(pm->pixels, len, 1, pnm);
     } else if (pm->depth == 8) {
 	unsigned char *ptr = pm->pixels;
@@ -394,7 +517,7 @@ static char chartab[] =
 	"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz./";
 
 static void write_encoded_pnm_comment(FILE *file, const void *data, int length,
-				      unsigned int crc){
+				      unsigned int crc) {
 
     // This function writes first the four-byte data block length,
     // then the four-byte CRC, and finally the data block itself. The data
@@ -413,12 +536,15 @@ static void write_encoded_pnm_comment(FILE *file, const void *data, int length,
     unsigned char group[3];
     bool newline = true;
 
-    // Make sure length + 8 is an even multiple of 3
-    int imax = length;
+    // Make sure we write an even multiple of 3 bytes, including the 8
+    // bytes for length and crc. Note: the 'length' we write in the first 4
+    // bytes includes neither the 8 bytes for length and crc, nor the
+    // padding.
+    int imax;
     switch (length % 3) {
-	case 0: length++; break;
-	case 1: break;
-	case 2: length += 2; break;
+	case 0: imax = length + 1; break;
+	case 1: imax = length; break;
+	case 2: imax = length + 2; break;
     }
 
     for (int i = -8; i < imax; i++) {

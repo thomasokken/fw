@@ -13,6 +13,7 @@ class Viewer : private Frame {
     private:
 	char *filename;
 	char *filetype;
+	bool is_brand_new;
 	SaveImageDialog *savedialog;
 	Plugin *plugin;
 	Widget drawingarea;

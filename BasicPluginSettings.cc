@@ -87,15 +87,9 @@ BasicPluginSettings::getFieldInfo(int index, int *type, const char **label) {
 BasicPluginSettings::addField(int type, const char *label) {
     if ((type != INT && type != DOUBLE && type != STRING) || label == NULL)
 	crash();
-    if (nfields == 0) {
-	types = (int *) malloc(sizeof(int));
-	values = (Value *) malloc(sizeof(Value));
-	labels = (char **) malloc(sizeof(char *));
-    } else {
-	types = (int *) realloc(types, (nfields + 1) * sizeof(int));
-	values = (Value *) realloc(values, (nfields + 1) * sizeof(Value));
-	labels = (char **) realloc(labels, (nfields + 1) * sizeof(char *));
-    }
+    types = (int *) realloc(types, (nfields + 1) * sizeof(int));
+    values = (Value *) realloc(values, (nfields + 1) * sizeof(Value));
+    labels = (char **) realloc(labels, (nfields + 1) * sizeof(char *));
     types[nfields] = type;
     switch (type) {
 	case INT:

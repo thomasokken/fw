@@ -324,7 +324,7 @@ class MandelbrotMS : public Plugin {
 	    dumpint(finished ? 1 : 0);
 	}
 
-	virtual void undump() {
+	virtual void init_undump() {
 	    width = undumpint();
 	    height = undumpint();
 	    xmin = undumpdouble();
@@ -355,7 +355,7 @@ class MandelbrotMS : public Plugin {
 	    vc = undumpint();
 	    for (int i = 0; i < 50; i++)
 		undumprect(&stack[i]);
-	    finished = undumpint() != 1;
+	    finished = undumpint() != 0;
 	}
 
     private:
@@ -365,12 +365,14 @@ class MandelbrotMS : public Plugin {
 	    dumpint(r->bottom);
 	    dumpint(r->right);
 	}
+
 	void undumprect(rect *r) {
 	    r->top = undumpint();
 	    r->left = undumpint();
 	    r->bottom = undumpint();
 	    r->right = undumpint();
 	}
+
 	void recurse() {
 	    stack[sp + 1].top = vm;
 	    stack[sp + 1].left = stack[sp + 0].left;
