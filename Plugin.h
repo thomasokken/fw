@@ -85,7 +85,7 @@ class Plugin {
 	void dumpdouble(double d);
 	void dumpstring(const char *s);
 
-	// The next 5 methods should only be called from undump()
+	// The next 5 methods should only be called from init_undump()
 	int undumpchar();
 	void undumpbuf(void *buf, int nbytes);
 	int undumpint();

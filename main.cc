@@ -231,7 +231,7 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "Usage: fw [options] [files...]\n");
 	    fprintf(stderr, "    available options:\n");
 	    fprintf(stderr, "    X Toolkit options (see \"man X\")\n");
-	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more g_verbosity)\n");
+	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more verbosity)\n");
 	    fprintf(stderr, "    -xdump : dump core on X errors (implies -synchronous)\n");
 	    fprintf(stderr, "    -h , -help , --help : print usage information & exit\n");
 	    exit(0);
