@@ -105,16 +105,16 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
 		&& marker->data_length > (plbuf == NULL ? idlen + 8 : idlen)
 		&& strncmp((char *) marker->data, FW_ID_STR, idlen) == 0) {
 	    // Looks like one of ours
-	    if (buf == NULL) {
+	    if (plbuf == NULL) {
 		// first 8 bytes are length & crc
-		pllength = (marker->data[0] << 24)
-			| (marker->data[1] << 16)
-			| (marker->data[2] << 8)
-			| (marker->data[3]);
-		crc = (marker->data[4] << 24)
-			| (marker->data[5] << 16)
-			| (marker->data[6] << 8)
-			| (marker->data[7]);
+		pllength = (marker->data[idlen] << 24)
+			| (marker->data[idlen + 1] << 16)
+			| (marker->data[idlen + 2] << 8)
+			| (marker->data[idlen + 3]);
+		crc = (marker->data[idlen + 4] << 24)
+			| (marker->data[idlen + 5] << 16)
+			| (marker->data[idlen + 6] << 8)
+			| (marker->data[idlen + 7]);
 		int plbufpos = plbufsize;
 		plbufsize += marker->data_length - idlen - 8;
 		plbuf = (unsigned char *) malloc(plbufsize);
@@ -138,7 +138,7 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
 	    *message = strclone(msgbuf);
 	    free(plbuf);
 	    plbuf = NULL;
-	} else if (crc != (actualcrc = crc32(buf + 8, pllength))) {
+	} else if (crc != (actualcrc = crc32(plbuf, pllength))) {
 	    snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks corrupted\n(expected CRC: 0x%x, actual: 0x%x).", crc, actualcrc);
 	    *message = strclone(msgbuf);
 	    free(plbuf);
@@ -293,7 +293,7 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
 				    ? remaining_length : maxdata;
 	    memcpy(datastart, remaining, marker_size);
 	    jpeg_write_marker(&jcs, JPEG_APP0 + 13, (unsigned char *) marker,
-					marker_size);
+					marker_size + (datastart - marker));
 	    remaining += marker_size;
 	    remaining_length -= marker_size;
 
