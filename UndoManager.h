@@ -6,8 +6,8 @@ class UndoableAction {
 	virtual ~UndoableAction() {}
 	virtual void undo() = 0;
 	virtual void redo() = 0;
-	virtual const char *undoTitle() { return NULL; }
-	virtual const char *redoTitle() { return NULL; }
+	virtual const char *undoTitle() = 0;
+	virtual const char *redoTitle() = 0;
 };
 
 class UndoManager {

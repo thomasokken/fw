@@ -56,6 +56,7 @@ class PickAction : public UndoableAction {
 	    cme->pm->cmap[index].b = old_b;
 	    cme->update_cell(index);
 	    cme->redraw_cells(index, index);
+	    cme->owner->colormapChanged();
 	}
 	virtual void redo() {
 	    cme->pm->cmap[index].r = new_r;
@@ -63,12 +64,85 @@ class PickAction : public UndoableAction {
 	    cme->pm->cmap[index].b = new_b;
 	    cme->update_cell(index);
 	    cme->redraw_cells(index, index);
+	    cme->owner->colormapChanged();
 	}
 	virtual const char *undoTitle() {
 	    return "Undo Pick Color";
 	}
 	virtual const char *redoTitle() {
 	    return "Redo Pick Color";
+	}
+};
+
+class ChangeRangeAction : public UndoableAction {
+    private:
+	ColormapEditor *cme;
+	int startindex, endindex;
+	FWColor *oldcolors;
+    protected:
+	FWColor *newcolors;
+    public:
+	ChangeRangeAction(ColormapEditor *cme,
+			  int startindex,
+			  int endindex) {
+	    this->cme = cme;
+	    this->startindex = startindex;
+	    this->endindex = endindex;
+	    oldcolors = new FWColor[endindex - startindex + 1];
+	    newcolors = new FWColor[endindex - startindex + 1];
+	    for (int i = startindex; i <= endindex; i++)
+		oldcolors[i - startindex] = cme->pm->cmap[i];
+	}
+	virtual ~ChangeRangeAction() {
+	    delete[] oldcolors;
+	    delete[] newcolors;
+	}
+	virtual void undo() {
+	    for (int i = startindex; i <= endindex; i++) {
+		cme->pm->cmap[i] = oldcolors[i - startindex];
+		cme->update_cell(i);
+	    }
+	    cme->redraw_cells(startindex, endindex);
+	    cme->owner->colormapChanged();
+	}
+	virtual void redo() {
+	    for (int i = startindex; i <= endindex; i++) {
+		cme->pm->cmap[i] = newcolors[i - startindex];
+		cme->update_cell(i);
+	    }
+	    cme->redraw_cells(startindex, endindex);
+	    cme->owner->colormapChanged();
+	}
+};
+
+class BlendAction : public ChangeRangeAction {
+    public:
+	BlendAction(ColormapEditor *cme, int startindex, int endindex)
+		: ChangeRangeAction(cme, startindex, endindex) {
+	    int rstart, gstart, bstart, rend, gend, bend;
+	    rstart = cme->pm->cmap[startindex].r;
+	    gstart = cme->pm->cmap[startindex].g;
+	    bstart = cme->pm->cmap[startindex].b;
+	    rend = cme->pm->cmap[endindex].r;
+	    gend = cme->pm->cmap[endindex].g;
+	    bend = cme->pm->cmap[endindex].b;
+	    for (int i = startindex; i <= endindex; i++) {
+		newcolors[i - startindex].r =
+		    rstart + ((int) rend - (int) rstart) * (i - startindex)
+				/ (endindex - startindex);
+		newcolors[i - startindex].g =
+		    gstart + ((int) gend - (int) gstart) * (i - startindex)
+				/ (endindex - startindex);
+		newcolors[i - startindex].b =
+		    bstart + ((int) bend - (int) bstart) * (i - startindex)
+				/ (endindex - startindex);
+	    }
+	}
+	const char *undoTitle() {
+	    return "Undo Blend";
+	}
+	const char *redoTitle() {
+	    return "Redo Blend";
 	}
 };
 
@@ -221,7 +295,21 @@ ColormapEditor::doPick() {
 
 /* private */ void
 ColormapEditor::doBlend() {
-    //
+    if (sel_start == -1 || sel_start == sel_end)
+	XBell(g_display, 100);
+    else {
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	BlendAction *action = new BlendAction(this, start, end);
+	undomgr->addAction(action);
+	action->redo();
+    }
 }
 
 /* private */ void
@@ -256,12 +344,12 @@ ColormapEditor::doSave() {
 
 /* private */ void
 ColormapEditor::doUndo() {
-    //
+    undomgr->undo();
 }
 
 /* private */ void
 ColormapEditor::doRedo() {
-    //
+    undomgr->redo();
 }
 
 /* private */ void

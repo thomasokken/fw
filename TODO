@@ -1,3 +1,9 @@
+Take another careful look at the colormap editor. It needs a tidy API for
+the *Actions to control it by: changing the selection, changing color cell
+values; CME should repaint as necessary (which it may not be; if using a
+private colormap, repainting is only needed when the selection changes)
+and select_cell() etc. should not appear in the Actions.
+
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.
 
 In SaveImageDialog, using the 'type' menu tends to mess up input focus (you

@@ -63,4 +63,6 @@ class ColormapEditor : public Frame {
 
 	friend class CPListener;
 	friend class PickAction;
+	friend class ChangeRangeAction;
+	friend class BlendAction;
 };

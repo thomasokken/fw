@@ -1,6 +1,8 @@
+#include <X11/Xlib.h>
 #include <stdlib.h>
 
 #include "UndoManager.h"
+#include "main.h"
 #include "util.h"
 
 /* public */
@@ -46,33 +48,29 @@ UndoManager::undo() {
     if (sp >= 0)
 	((UndoableAction *) stack->get(sp--))->undo();
     else
-	crash();
+	XBell(g_display, 100);
 }
 
 /* public */ void
 UndoManager::redo() {
-    if (sp < stack->size())
+    if (sp < stack->size() - 1)
 	((UndoableAction *) stack->get(++sp))->redo();
     else
-	crash();
+	XBell(g_display, 100);
 }
 
 /* public */ const char *
 UndoManager::undoTitle() {
     if (sp > -1)
 	return ((UndoableAction *) stack->get(sp))->undoTitle();
-    else {
-	crash();
+    else
 	return NULL;
-    }
 }
 
 /* public */ const char *
 UndoManager::redoTitle() {
     if (sp < stack->size() - 1)
 	return ((UndoableAction *) stack->get(sp + 1))->redoTitle();
-    else {
-	crash();
+    else
 	return NULL;
-    }
 }
