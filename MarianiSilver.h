@@ -1,3 +1,6 @@
+#ifndef MARIANISILVER_H
+#define MARIANISILVER_H 1
+
 #include "Plugin.h"
 
 class MarianiSilver : public Plugin {
@@ -90,3 +93,5 @@ class MarianiSilver : public Plugin {
 	void pop();
 	int calcandset(int h, int v, double x, double y);
 };
+
+#endif

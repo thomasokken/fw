@@ -1,3 +1,6 @@
+#ifndef UNDOMANAGER_H
+#define UNDOMANAGER_H 1
+
 class List;
 
 class UndoableAction {
@@ -44,3 +47,5 @@ class UndoManager {
     private:
 	void notifyListeners();
 };
+
+#endif

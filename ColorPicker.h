@@ -1,3 +1,6 @@
+#ifndef COLORPICKER_H
+#define COLORPICKER_H 1
+
 #include "Frame.h"
 
 class ColorPicker : public Frame {
@@ -60,3 +63,5 @@ class ColorPicker : public Frame {
 	static void modifyVerify(Widget w, XtPointer ud, XtPointer cd);
 	static void valueChanged(Widget w, XtPointer ud, XtPointer cd);
 };
+
+#endif

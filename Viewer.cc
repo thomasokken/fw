@@ -13,6 +13,7 @@
 #include "CopyBits.h"
 #include "FileDialog.h"
 #include "ImageIO.h"
+#include "InverseCMap.h"
 #include "Menu.h"
 #include "Plugin.h"
 #include "SaveImageDialog.h"
@@ -137,6 +138,7 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     undomanager->addListener(new UndoManagerListener(this));
     saved_undo_id = undomanager->getCurrentId();
     cmelistener = NULL;
+    invcmap = NULL;
 
     // The 'dirty' flag is used to track changes made by the plugin. Viewer
     // sets this flag whenever it calls plugin->start() or plugin->restart()
@@ -592,6 +594,8 @@ Viewer::~Viewer() {
 	free(pm.pixels);
     if (pm.cmap != NULL)
 	delete[] pm.cmap;
+    if (invcmap != NULL)
+	delete invcmap;
 
     removeViewer(this);
     if (instances->size() == 0)
@@ -726,13 +730,13 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  left, top, left, top,
 		  right - left, bottom - top);
     } else if (scale == 1) {
-	CopyBits::copy_unscaled(&pm, image, colormap != g_colormap, false, dithering,
-				 top, left, bottom, right);
+	CopyBits::copy_unscaled(&pm, image, colormap != g_colormap, false,
+				dithering, top, left, bottom, right);
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  left, top, left, top, right - left, bottom - top);
     } else if (scale > 1) {
-	CopyBits::copy_enlarged(scale, &pm, image, colormap != g_colormap, false, dithering,
-				 top, left, bottom, right);
+	CopyBits::copy_enlarged(scale, &pm, image, colormap != g_colormap,
+				false, dithering, top, left, bottom, right);
 	int TOP = top * scale;
 	int BOTTOM = bottom * scale;
 	int LEFT = left * scale;
@@ -741,8 +745,11 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  LEFT, TOP, LEFT, TOP,
 		  RIGHT - LEFT, BOTTOM - TOP);
     } else {
-	CopyBits::copy_reduced(-scale, &pm, image, colormap != g_colormap, false, dithering,
-				top, left, bottom, right);
+	if (colormap != g_colormap && pm.depth == 8 && invcmap == NULL)
+	    invcmap = new InverseCMap(pm.cmap);
+	CopyBits::copy_reduced(-scale, &pm, image, colormap != g_colormap,
+			       false, dithering, top, left, bottom, right,
+			       invcmap);
 	int s = -scale;
 	int TOP = top / s;
 	int BOTTOM = (bottom + s - 1) / s;
@@ -980,6 +987,10 @@ Viewer::pixmap2screen(int *x, int *y) {
 
 /* public */ void
 Viewer::colormapChanged() {
+    if (invcmap != NULL) {
+	delete invcmap;
+	invcmap = NULL;
+    }
     if (colormap == g_colormap) {
 	paint(0, 0, pm.height, pm.width);
     } else {
@@ -1025,6 +1036,8 @@ Viewer::colormapChanged() {
 		}
 	}
 	XStoreColors(g_display, colormap, colors, 256);
+	if (pm.depth == 8 && scale <= -1)
+	    paint(0, 0, pm.height, pm.width);
     }
 }
 
@@ -1962,7 +1975,30 @@ Viewer::doPrivateColormap(bool value) {
 	colormapChanged();
 	if (cme != NULL)
 	    cme->colormapChanged(colormap);
-	paint(0, 0, pm.height, pm.width);
+
+	// When we switch to private colormap mode, the XImage needs to be
+	// repainted *once* so that the pixels correspond to indices into
+	// the private colormap; from then on, as long as we stay in private
+	// colormap mode, changes to the colormap do not require a repaint.
+	// WITH ONE EXCEPTION: if we have an 8-bit image and we're
+	// displaying it reduced, the pixels go through an averaging step
+	// first, followed by an error diffusion step (which is necessary
+	// because the averaging step will probably produce colors that do
+	// not exist in our private colormap). So, even though this is
+	// likely a very minor thing visually, in most cases, nonetheless
+	// the contents of the XImage *do* depend on the contents of the
+	// colormap in this case.
+	// For this reason, colormapChanged() will repaint the XImage if
+	// depth == 8 and scale <= -1, and because of that, *we* do not do
+	// it here, or we would be repainting the exact same thing twice.
+	// (And since reduced painting to an arbitrary colormap is a very
+	// expensive operation, we really do want to avoid needless
+	// repaints. Take a look at the InverseCMap class to
+	// get an idea of the problem.)
+
+	if (pm.depth != 8 || scale >= 1)
+	    paint(0, 0, pm.height, pm.width);
+
     } else {
 	XFreeColormap(g_display, colormap);
 	colormap = g_colormap;

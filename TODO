@@ -1,9 +1,3 @@
-In paint_reduced(), the code for displaying 8-bit colormapped images when a
-private colormap is in effect, is painfully slow. Finding the closest match for
-a color within an arbitrary set of colors is the problem. The current
-implementation is totally naive... Even if a brute-force search really can't be
-avoided, that code still wants some optimizing.
-
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
 Maybe it's a gif2tiff bug... Then again I'd feel a lot better if I had some

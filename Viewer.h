@@ -8,6 +8,7 @@
 
 class ColormapEditorListener;
 class ColormapEditor;
+class InverseCMap;
 class List;
 class Plugin;
 class UndoManager;
@@ -31,6 +32,7 @@ class Viewer : private Frame {
 	Colormap colormap;
 	int scale;
 	FWPixmap pm;
+	InverseCMap *invcmap;
 	bool dithering;
 	bool direct_copy;
 	bool selection_visible;

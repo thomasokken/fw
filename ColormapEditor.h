@@ -1,3 +1,6 @@
+#ifndef COLORMAPEDITOR_H
+#define COLORMAPEDITOR_H 1
+
 #include <X11/Xlib.h>
 
 #include "Frame.h"
@@ -76,3 +79,5 @@ class ColormapEditor : public Frame {
 
 	friend class CPListener;
 };
+
+#endif

@@ -1,7 +1,11 @@
+#ifndef COPYBITS_H
+#define COPYBITS_H 1
+
 #include <X11/Xlib.h>
 
 class FWColor;
 class FWPixmap;
+class InverseCMap;
 
 class CopyBits {
     public:
@@ -15,7 +19,8 @@ class CopyBits {
 	static void copy_reduced(int factor,
 				 FWPixmap *pm, XImage *image,
 				 bool priv_cmap, bool no_grays, bool dither,
-				 int top, int left, int bottom, int right);
+				 int top, int left, int bottom, int right,
+				 InverseCMap *invcmap = NULL);
 
 	static int halftone(unsigned char value, int x, int y);
 
@@ -46,4 +51,7 @@ class CopyBits {
 	static void rgb2hsv(unsigned char r, unsigned char g,
 			    unsigned char b,
 			    float *h, float *s, float *v);
+
 };
+
+#endif

@@ -1,6 +1,12 @@
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <sys/time.h>
+
 #include "CopyBits.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
+#include "InverseCMap.h"
 #include "main.h"
 
 
@@ -652,7 +658,8 @@ CopyBits::copy_enlarged(int factor,
 CopyBits::copy_reduced(int factor,
 		       FWPixmap *pm, XImage *image,
 		       bool priv_cmap, bool no_grays, bool dither,
-		       int top, int left, int bottom, int right) {
+		       int top, int left, int bottom, int right,
+		       InverseCMap *invcmap = NULL) {
     calc_rgb_masks();
 
     int TOP = top / factor;
@@ -680,7 +687,6 @@ CopyBits::copy_reduced(int factor,
     int W[RIGHT - LEFT];
     for (int i = 0; i < RIGHT - LEFT; i++)
 	R[i] = G[i] = B[i] = W[i] = 0;
-
 
     if (!dither || (pm->depth == 1 && priv_cmap)) {
 	// Color or Gray, no dithering
@@ -761,19 +767,21 @@ CopyBits::copy_reduced(int factor,
 			    }
 			    XPutPixel(image, X + LEFT, Y, pixel);
 			} else {
-			    // TODO -- this is pathetic, of course
 			    unsigned long best_pixel;
-			    int best_error = 1000000;
-			    for (int i = 0; i < 256; i++) {
-				int dr = r - pm->cmap[i].r;
-				int dg = g - pm->cmap[i].g;
-				int db = b - pm->cmap[i].b;
-				int err = dr * dr + dg * dg + db * db;
-				if (err < best_error) {
-				    best_pixel = i;
-				    best_error = err;
+			    if (invcmap == NULL) {
+				int best_error = 1000000;
+				for (int i = 0; i < 256; i++) {
+				    int dr = r - pm->cmap[i].r;
+				    int dg = g - pm->cmap[i].g;
+				    int db = b - pm->cmap[i].b;
+				    int err = dr * dr + dg * dg + db * db;
+				    if (err < best_error) {
+					best_pixel = i;
+					best_error = err;
+				    }
 				}
-			    }
+			    } else
+				best_pixel = invcmap->rgb2index(r, g, b);
 			    XPutPixel(image, X + LEFT, Y, best_pixel);
 			}
 		    } else if (g_grayramp == NULL) {
@@ -932,20 +940,21 @@ CopyBits::copy_reduced(int factor,
 			}
 			XPutPixel(image, X + LEFT, Y, pixel);
 		    } else if (priv_cmap) {
-			// Find the closest match to (R, G, B) in the colormap...
-			// TODO -- this is pathetic, of course! Ssslllooowww...
 			int best_pixel;
-			int best_error = 1000000;
-			for (int i = 0; i < 256; i++) {
-			    int rerr = r - pm->cmap[i].r;
-			    int gerr = g - pm->cmap[i].g;
-			    int berr = b - pm->cmap[i].b;
-			    int err = rerr * rerr + gerr * gerr + berr * berr;
-			    if (err < best_error) {
-				best_pixel = i;
-				best_error = err;
+			if (invcmap == NULL) {
+			    int best_error = 1000000;
+			    for (int i = 0; i < 256; i++) {
+				int rerr = r - pm->cmap[i].r;
+				int gerr = g - pm->cmap[i].g;
+				int berr = b - pm->cmap[i].b;
+				int err = rerr * rerr + gerr * gerr + berr * berr;
+				if (err < best_error) {
+				    best_pixel = i;
+				    best_error = err;
+				}
 			    }
-			}
+			} else
+			    best_pixel = invcmap->rgb2index(r, g, b);
 			XPutPixel(image, X + LEFT, Y, best_pixel);
 			dR = r - pm->cmap[best_pixel].r;
 			dG = g - pm->cmap[best_pixel].g;
@@ -1074,7 +1083,7 @@ CopyBits::copy_reduced(int factor,
 			int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
 			int g = (G[X] + w / 2) / w; if (g > 255) g = 255;
 			int b = (B[X] + w / 2) / w; if (b > 255) b = 255;
-			int k = (r * 306 + g * 601 + b * 117) / 1024;
+			k = (r * 306 + g * 601 + b * 117) / 1024;
 			if (k > 255)
 			    k = 255;
 			R[X] = G[X] = B[X] = W[X] = 0;
