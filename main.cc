@@ -22,6 +22,7 @@ Pixmap icon, iconmask;
 XColor *colorcube = NULL, *grayramp = NULL;
 int cubesize, rampsize;
 
+
 int main(int argc, char **argv) {
     // TODO: handle all command line options thru XtAppInitialize
     bool gray = false;

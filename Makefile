@@ -1,5 +1,5 @@
 CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include
-LDFLAGS = -L/usr/X11R6/lib -rdynamic
+LDFLAGS = -L/usr/X11R6/lib -Llibjpeg -rdynamic
 LOADLIBES = -lXm -lXt -lX11 -lXmu -lXpm -ldl
 
 SRCS := $(wildcard *.cc)
