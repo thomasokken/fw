@@ -627,6 +627,12 @@ Viewer::doOpen() {
 Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
     XmSelectionBoxCallbackStruct *cbs = (XmSelectionBoxCallbackStruct *) cd;
     if (cbs->reason == XmCR_OK) {
+	if (curr_path_name != NULL)
+	    XmStringFree(curr_path_name);
+	Arg arg;
+	XtSetArg(arg, XmNdirectory, &curr_path_name);
+	XtGetValues(w, &arg, 1);
+
 	char *filename;
 	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
 	    fprintf(stderr, "Opening \"%s\"...\n", filename);
@@ -650,14 +656,6 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 		    // What if opening the file fails?!?
 		    new Viewer(pluginname, filename);
 		    free(pluginname);
-
-		    // if (successful) {
-			if (curr_path_name != NULL)
-			    XmStringFree(curr_path_name);
-			Arg arg;
-			XtSetArg(arg, XmNdirectory, &curr_path_name);
-			XtGetValues(w, &arg, 1);
-		    // }
 		} else
 		    // No matching plugin found
 		    XBell(display, 100);
