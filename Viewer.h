@@ -65,7 +65,6 @@ class Viewer : private Frame {
 	void radiocallback2(const char *id, const char *value);
 
 	static Boolean deleteLater2(XtPointer ud);
-	static void doOpen2(Widget w, XtPointer cd, XtPointer ud);
 
 	void doBeep();
 	void doNew(const char *plugin);

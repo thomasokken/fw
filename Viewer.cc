@@ -1,6 +1,5 @@
 #include <Xm/Xm.h>
 #include <Xm/DrawingA.h>
-#include <Xm/FileSB.h>
 #include <Xm/Form.h>
 #include <Xm/ScrolledW.h>
 #include <stdio.h>
@@ -8,11 +7,11 @@
 
 #include "Viewer.h"
 #include "Menu.h"
+#include "OpenFileDialog.h"
 #include "Plugin.h"
 #include "main.h"
 #include "util.h"
 
-static XmString curr_path_name = NULL;
 
 /* private static */ int
 Viewer::instances = 0;
@@ -1767,6 +1766,7 @@ Viewer::input(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 Viewer::input2(XEvent *event) {
+    /*
     switch (event->type) {
 	case 2:
 	    printf("KeyPress: state=%d keycode=%d\n", event->xkey.state,
@@ -1799,6 +1799,7 @@ Viewer::input2(XEvent *event) {
 	    fflush(stdout);
 	    core();
     }
+    */
 }
 
 /* private static */ void
@@ -1906,35 +1907,7 @@ Viewer::doNew(const char *plugin) {
 
 /* private */ void
 Viewer::doOpen() {
-    Arg arg;
-    XtSetArg(arg, XmNdirectory, curr_path_name);
-    // Using g_appshell as the parent, instead of our own toplevel shell,
-    // because I don't want the file selection dialog to inherit our colormap.
-    // The drawback is that the dialog does not get positioned very nicely.
-    // TODO...
-    Widget fsb = XmCreateFileSelectionDialog(g_appshell, "Open", &arg, 1);
-    XtAddCallback(fsb, XmNokCallback, doOpen2, (XtPointer) this);
-    XtAddCallback(fsb, XmNcancelCallback, doOpen2, (XtPointer) this);
-    XtManageChild(fsb);
-}
-
-/* private static */ void
-Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
-    XmSelectionBoxCallbackStruct *cbs = (XmSelectionBoxCallbackStruct *) cd;
-    if (cbs->reason == XmCR_OK) {
-	if (curr_path_name != NULL)
-	    XmStringFree(curr_path_name);
-	Arg arg;
-	XtSetArg(arg, XmNdirectory, &curr_path_name);
-	XtGetValues(w, &arg, 1);
-	char *filename;
-	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
-	    if (!Viewer::openFile(filename))
-		XBell(g_display, 100);
-	    XtFree(filename);
-	}
-    }
-    XtUnmanageChild(w);
+    new OpenFileDialog();
 }
 
 /* public static */ bool
