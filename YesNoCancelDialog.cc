@@ -70,6 +70,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 	    xmPushButtonWidgetClass,
 	    bb,
 	    XmNlabelString, s,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
 	    NULL);
     XmStringFree(s);
     XtAddCallback(yesB, XmNactivateCallback, yesCB, (XtPointer) this);
@@ -80,6 +81,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 	    xmPushButtonWidgetClass,
 	    bb,
 	    XmNlabelString, s,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
 	    NULL);
     XmStringFree(s);
     XtAddCallback(noB, XmNactivateCallback, noCB, (XtPointer) this);
@@ -92,6 +94,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 		xmPushButtonWidgetClass,
 		bb,
 		XmNlabelString, s,
+		XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
 		NULL);
 	XmStringFree(s);
 	XtAddCallback(cancelB, XmNactivateCallback, cancelCB, (XtPointer) this);

@@ -6,6 +6,7 @@
 
 #include "ColormapEditor.h"
 #include "ColorPicker.h"
+#include "CopyBits.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "UndoManager.h"
@@ -257,74 +258,6 @@ class CancelAction : public ChangeRangeAction {
 };
 
 
-static bool halftone_inited = false;
-static unsigned char halftone_pattern[256][16][2];
-
-static void halftone_initialize() {
-    if (halftone_inited)
-	return;
-
-    for (int i = 0; i < 256; i++) {
-	// Each halftone patten differs by its predecessor by exactly one bit.
-	// First, copy the predecessor into the current slot:
-
-	if (i == 0) {
-	    for (int j = 0; j < 16; j++)
-		for (int k = 0; k < 2; k++)
-		    halftone_pattern[0][j][k] = 0;
-	} else {
-	    for (int j = 0; j < 16; j++)
-		for (int k = 0; k < 2; k++)
-		    halftone_pattern[i][j][k] = halftone_pattern[i - 1][j][k];
-	}
-
-	// Next, find the bit to set. This is a bit tricky. One possibility is
-	// to paint a gradually growing clump, which leads to clustered-dot
-	// dithering. Clustered-dot is appropriate mostly for printers, since
-	// it offers a measure of immunity to pixel smear; on computer screens,
-	// pattern dithering usually looks better, because the artefacts tend
-	// to be smaller. I use a very simplistic approach to generating these
-	// patterns, which seems to work very well (and generalizes nicely to
-	// other pattern sizes, not that that's important right here).
-
-	int v = i;
-	int x = 0;
-	int y = 0;
-
-	for (int k = 0; k < 4; k++) {
-	    y = (y << 1) | (v & 1); v >>= 1;
-	    x = (x << 1) | (v & 1); v >>= 1;
-	}
-	x ^= y;
-
-	halftone_pattern[i][y][x >> 3] |= 1 << (x & 7);
-    }
-
-    halftone_inited = true;
-}
-
-static int halftone(unsigned char value, int x, int y) {
-    // A little hack: since halftone_pattern[0] has one pixel off (in a 16x16
-    // pattern, you have 257 possible levels of brightness, and our table only
-    // has 256 entries), we couldn't represent 'black' exactly. We fudge that
-    // by handling black directly...
-
-    if (value == 0)
-	return 0;
-    else if (value < 128)
-	// This means halftone_pattern[127] (50% gray) is never used. Hopefully
-	// no one will notice. It should be less apparent than an inaccuracy at
-	// pure white or pure black!
-	value--;
-
-    halftone_initialize();
-    x &= 15;
-    y &= 15;
-    unsigned char c = halftone_pattern[value][y][x >> 3];
-    return (c >> (x & 7)) & 1;
-}
-
-
 /* private static */ FWColor *
 ColormapEditor::color_clipboard = new FWColor[256];
 
@@ -378,7 +311,8 @@ ColormapEditor::ColormapEditor(Listener *listener, FWPixmap *pm,
 	    "ButtonGrid",
 	    xmRowColumnWidgetClass,
 	    form,
-	    XmNnumColumns, 2,
+	    XmNnumColumns, 6,
+	    XmNorientation, XmHORIZONTAL,
 	    XmNpacking, XmPACK_COLUMN,
 	    XmNentryAlignment, XmALIGNMENT_CENTER,
 	    XmNtopAttachment, XmATTACH_FORM,
@@ -387,17 +321,16 @@ ColormapEditor::ColormapEditor(Listener *listener, FWPixmap *pm,
 	    NULL);
 
     addButton(rowcolumn, "Pick", BTN_PICK);
-    addButton(rowcolumn, "Swap", BTN_SWAP);
-    addButton(rowcolumn, "Copy", BTN_COPY);
-    addButton(rowcolumn, "Load", BTN_LOAD);
-    addButton(rowcolumn, "Undo", BTN_UNDO);
-    addButton(rowcolumn, "OK", BTN_OK);
-
     addButton(rowcolumn, "Blend", BTN_BLEND);
+    addButton(rowcolumn, "Swap", BTN_SWAP);
     addButton(rowcolumn, "Mix", BTN_MIX);
+    addButton(rowcolumn, "Copy", BTN_COPY);
     addButton(rowcolumn, "Paste", BTN_PASTE);
+    addButton(rowcolumn, "Load", BTN_LOAD);
     addButton(rowcolumn, "Save", BTN_SAVE);
+    addButton(rowcolumn, "Undo", BTN_UNDO);
     addButton(rowcolumn, "Redo", BTN_REDO);
+    addButton(rowcolumn, "OK", BTN_OK);
     addButton(rowcolumn, "Cancel", BTN_CANCEL);
 
     sel_in_progress = false;
@@ -720,10 +653,10 @@ ColormapEditor::update_cell(int c) {
 	unsigned char g = pm->cmap[c].g;
 	unsigned char b = pm->cmap[c].b;
 	unsigned long pixels[2];
-	rgb2nearestgrays(&r, &g, &b, pixels);
+	CopyBits::rgb2nearestgrays(&r, &g, &b, pixels);
 	for (int xx = x; xx < x + CELL_SIZE; xx++)
 	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
-		int index = halftone(r, xx - x, yy - y);
+		int index = CopyBits::halftone(r, xx - x, yy - y);
 		XPutPixel(image, xx, yy, pixels[index]);
 	    }
     } else {
@@ -732,12 +665,12 @@ ColormapEditor::update_cell(int c) {
 	unsigned char g = pm->cmap[c].g;
 	unsigned char b = pm->cmap[c].b;
 	unsigned long pixels[8];
-	rgb2nearestcolors(&r, &g, &b, pixels);
+	CopyBits::rgb2nearestcolors(&r, &g, &b, pixels);
 	for (int xx = x; xx < x + CELL_SIZE; xx++)
 	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
-		int index = (halftone(r, xx - x, yy - y) << 2)
-			    | (halftone(g, xx - x, yy - y) << 1)
-			    | halftone(b, xx - x, yy - y);
+		int index = (CopyBits::halftone(r, xx - x, yy - y) << 2)
+			    | (CopyBits::halftone(g, xx - x, yy - y) << 1)
+			    | CopyBits::halftone(b, xx - x, yy - y);
 		XPutPixel(image, xx, yy, pixels[index]);
 	    }
     }
@@ -779,6 +712,47 @@ ColormapEditor::input(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 ColormapEditor::input2(XEvent *event) {
+    if (event->type == KeyPress) {
+	if (sel_start == -1) {
+	    // No selection; let's get one started first
+	    selectColor(0);
+	    return;
+	}
+	// TODO: Yuck, hard-coded keycodes and mask bits.
+	// Where the #@$%^&*! is this stuff defined?!?
+	unsigned int keycode = event->xkey.keycode;
+	bool shift = (event->xkey.state & 1) != 0;
+	int c;
+	switch (keycode) {
+	    case 98: // Up
+		if (sel_end < 16)
+		    return;
+		c = sel_end - 16;
+		break;
+	    case 100: // Left
+		if (sel_end % 16 == 0)
+		    return;
+		c = sel_end - 1;
+		break;
+	    case 102: // Right
+		if (sel_end % 16 == 15)
+		    return;
+		c = sel_end + 1;
+		break;
+	    case 104: // Down
+		if (sel_end >= 240)
+		    return;
+		c = sel_end + 16;
+		break;
+	    default:
+		return;
+	}
+	if (shift)
+	    extendSelection(c);
+	else
+	    selectColor(c);
+    }
+	
     if (event->type != ButtonPress
 	    && event->type != ButtonRelease
 	    && event->type != MotionNotify)

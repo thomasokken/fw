@@ -12,21 +12,6 @@ bool isFile(const char *name);
 char *basename(const char *fullname);
 char *canonical_pathname(const char *fullname);
 
-bool is_grayscale(const FWColor *cmap);
-unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b);
-void rgb2nearestgrays(unsigned char *r, unsigned char *g, unsigned char *b,
-		      unsigned long *pixels);
-void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
-		       unsigned long *pixels);
-void hsl2rgb(float h, float s, float l,
-	     unsigned char *r, unsigned char *g, unsigned char *b);
-void rgb2hsl(unsigned char r, unsigned char g, unsigned char b,
-	     float *h, float *s, float *l);
-void hsv2rgb(float h, float s, float v,
-	     unsigned char *r, unsigned char *g, unsigned char *b);
-void rgb2hsv(unsigned char r, unsigned char g, unsigned char b,
-	     float *h, float *s, float *v);
-
 int bool_alignment();
 int char_alignment();
 int short_alignment();

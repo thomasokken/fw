@@ -8,6 +8,7 @@
 #include <jpeglib.h>
 
 #include "ImageIO_JPEG.h"
+#include "CopyBits.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "util.h"
@@ -251,7 +252,8 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
 
     jcs.image_width = pm->width;
     jcs.image_height = pm->height;
-    bool gray = pm->depth == 1 || (pm->depth == 8 && is_grayscale(pm->cmap));
+    bool gray = pm->depth == 1 ||
+		(pm->depth == 8 && CopyBits::is_grayscale(pm->cmap));
     jcs.input_components = gray ? 1 : 3;
     jcs.in_color_space = gray ? JCS_GRAYSCALE : JCS_RGB;
 

@@ -6,6 +6,7 @@
 #include <png.h>
 
 #include "ImageIO_PNG.h"
+#include "CopyBits.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "main.h"
@@ -338,7 +339,7 @@ ImageIO_PNG::write(const char *filename, const char *plugin_name,
     // png_set_unknown_chunks())?!? GRRRR!
     png_set_keep_unknown_chunks(png_ptr, 2, (png_byte *) FW_CHUNK, 1);
 
-    bool gray = pm->depth == 8 && is_grayscale(pm->cmap);
+    bool gray = pm->depth == 8 && CopyBits::is_grayscale(pm->cmap);
     png_set_IHDR(png_ptr, info_ptr, pm->width, pm->height,
 		 pm->depth == 1 ? 1 : 8,
 		 pm->depth == 1 || gray ? PNG_COLOR_TYPE_GRAY

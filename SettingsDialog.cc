@@ -97,6 +97,71 @@ SettingsDialog::SettingsDialog(Plugin *plugin, SettingsHelper *settings)
 	XmStringFree(xms);
     }
 
+    Widget radios = XtVaCreateManagedWidget(
+	    "Radios", xmRowColumnWidgetClass,
+	    form,
+	    XmNradioBehavior, True,
+	    XmNorientation, XmVERTICAL,
+	    XmNentryAlignment, XmALIGNMENT_CENTER,
+	    XmNrowColumnType, XmWORK_AREA,
+	    XmNleftAttachment, XmATTACH_WIDGET,
+	    XmNleftWidget, right,
+	    XmNleftOffset, 0,
+	    XmNrightAttachment, XmATTACH_FORM,
+	    XmNrightOffset, 0,
+	    // The bottom attachment must wait until we've created
+	    // the rowColumn widget for the ok/cancel/help buttons.
+	    NULL);
+
+    bool depth_set = false;
+
+    xms = XmStringCreateLocalized(" 1 Bit ");
+    Widget radio1 = XtVaCreateManagedWidget(
+	    "Radio", xmToggleButtonWidgetClass,
+	    radios,
+	    XmNlabelString, xms,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+	    NULL);
+    XtAddCallback(radio1, XmNvalueChangedCallback, depth1, (XtPointer) settings);
+    XmStringFree(xms);
+    if (settings->allowDepth(1)) {
+	XmToggleButtonSetState(radio1, True, True);
+	depth_set = true;
+    } else
+	XtSetSensitive(radio1, False);
+
+    xms = XmStringCreateLocalized(" 8 Bits");
+    Widget radio8 = XtVaCreateManagedWidget(
+	    "Radio", xmToggleButtonWidgetClass,
+	    radios,
+	    XmNlabelString, xms,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+	    NULL);
+    XtAddCallback(radio8, XmNvalueChangedCallback, depth8, (XtPointer) settings);
+    XmStringFree(xms);
+    if (settings->allowDepth(8)) {
+	if (!depth_set) {
+	    XmToggleButtonSetState(radio8, True, True);
+	    depth_set = true;
+	}
+    } else
+	XtSetSensitive(radio8, False);
+
+    xms = XmStringCreateLocalized("24 Bits");
+    Widget radio24 = XtVaCreateManagedWidget(
+	    "Radio", xmToggleButtonWidgetClass,
+	    radios,
+	    XmNlabelString, xms,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+	    NULL);
+    XtAddCallback(radio24, XmNvalueChangedCallback, depth24, (XtPointer) settings);
+    XmStringFree(xms);
+    if (settings->allowDepth(24)) {
+	if (!depth_set)
+	    XmToggleButtonSetState(radio24, True, True);
+    } else
+	XtSetSensitive(radio24, False);
+
     Widget buttons = XtVaCreateManagedWidget(
 	    "Buttons", xmRowColumnWidgetClass,
 	    form,
@@ -109,6 +174,12 @@ SettingsDialog::SettingsDialog(Plugin *plugin, SettingsHelper *settings)
 	    XmNrightAttachment, XmATTACH_FORM,
 	    XmNrightOffset, 0,
 	    XmNbottomAttachment, XmATTACH_FORM,
+	    XmNbottomOffset, 0,
+	    NULL);
+
+    XtVaSetValues(radios,
+	    XmNbottomAttachment, XmATTACH_WIDGET,
+	    XmNbottomWidget, buttons,
 	    XmNbottomOffset, 0,
 	    NULL);
 
@@ -141,69 +212,6 @@ SettingsDialog::SettingsDialog(Plugin *plugin, SettingsHelper *settings)
 	    NULL);
     XtAddCallback(helpB, XmNactivateCallback, help, (XtPointer) this);
     XmStringFree(xms);
-
-    Widget radios = XtVaCreateManagedWidget(
-	    "Radios", xmRowColumnWidgetClass,
-	    form,
-	    XmNradioBehavior, True,
-	    XmNorientation, XmVERTICAL,
-	    XmNentryAlignment, XmALIGNMENT_CENTER,
-	    XmNrowColumnType, XmWORK_AREA,
-	    XmNleftAttachment, XmATTACH_WIDGET,
-	    XmNleftWidget, right,
-	    XmNleftOffset, 0,
-	    XmNrightAttachment, XmATTACH_FORM,
-	    XmNrightOffset, 0,
-	    XmNbottomAttachment, XmATTACH_WIDGET,
-	    XmNbottomWidget, buttons,
-	    XmNbottomOffset, 0,
-	    NULL);
-
-    bool depth_set = false;
-
-    xms = XmStringCreateLocalized(" 1 Bit ");
-    Widget radio1 = XtVaCreateManagedWidget(
-	    "Radio", xmToggleButtonWidgetClass,
-	    radios,
-	    XmNlabelString, xms,
-	    NULL);
-    XtAddCallback(radio1, XmNvalueChangedCallback, depth1, (XtPointer) settings);
-    XmStringFree(xms);
-    if (settings->allowDepth(1)) {
-	XmToggleButtonSetState(radio1, True, True);
-	depth_set = true;
-    } else
-	XtSetSensitive(radio1, False);
-
-    xms = XmStringCreateLocalized(" 8 Bits");
-    Widget radio8 = XtVaCreateManagedWidget(
-	    "Radio", xmToggleButtonWidgetClass,
-	    radios,
-	    XmNlabelString, xms,
-	    NULL);
-    XtAddCallback(radio8, XmNvalueChangedCallback, depth8, (XtPointer) settings);
-    XmStringFree(xms);
-    if (settings->allowDepth(8)) {
-	if (!depth_set) {
-	    XmToggleButtonSetState(radio8, True, True);
-	    depth_set = true;
-	}
-    } else
-	XtSetSensitive(radio8, False);
-
-    xms = XmStringCreateLocalized("24 Bits");
-    Widget radio24 = XtVaCreateManagedWidget(
-	    "Radio", xmToggleButtonWidgetClass,
-	    radios,
-	    XmNlabelString, xms,
-	    NULL);
-    XtAddCallback(radio24, XmNvalueChangedCallback, depth24, (XtPointer) settings);
-    XmStringFree(xms);
-    if (settings->allowDepth(24)) {
-	if (!depth_set)
-	    XmToggleButtonSetState(radio24, True, True);
-    } else
-	XtSetSensitive(radio24, False);
 
     int nfields = settings->getFieldCount();
     if (nfields > 20)

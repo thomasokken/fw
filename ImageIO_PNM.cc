@@ -5,6 +5,7 @@
 #include <string.h>
 
 #include "ImageIO_PNM.h"
+#include "CopyBits.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "util.h"
@@ -453,7 +454,7 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 	return false;
     }
 
-    bool grayscale = pm->depth == 8 && is_grayscale(pm->cmap);
+    bool grayscale = pm->depth == 8 && CopyBits::is_grayscale(pm->cmap);
 
     switch (pm->depth) {
 	case 1:

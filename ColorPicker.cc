@@ -73,7 +73,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
     R = oldR = r;
     G = oldG = g;
     B = oldB = b;
-    rgb2hsl(R, G, B, &H, &S, &L);
+    CopyBits::rgb2hsl(R, G, B, &H, &S, &L);
 
     cross_x = -1;
     cross_y = -1;
@@ -257,6 +257,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	    xmDrawingAreaWidgetClass,
 	    bb,
 	    XmNtranslations, translations,
+	    XmNtraversalOn, False,
 	    NULL);
 
     slider = XtVaCreateManagedWidget(
@@ -531,7 +532,7 @@ ColorPicker::updateRGBTextFields(unsigned char r, unsigned char g, unsigned char
 /* private */ void
 ColorPicker::rgbChanged() {
     if (!disable_rgbChanged) {
-	rgb2hsl(R, G, B, &H, &S, &L);
+	CopyBits::rgb2hsl(R, G, B, &H, &S, &L);
 	repaintOldNewImage();
 	repaintWheelImage();
 	repaintSliderImage();
@@ -576,31 +577,102 @@ ColorPicker::repaintOldNewImage() {
 
 	oldnew_image_initialized = true;
     } else {
-	FWPixmap pm;
-	pm.width = OLDNEW_W;
-	pm.height = OLDNEW_H;
-	pm.depth = 24;
-	pm.bytesperline = pm.width * 4;
-	pm.pixels = (unsigned char *) malloc(pm.height * pm.bytesperline);
-	for (int x = 1; x < OLDNEW_W - 1; x++) {
-	    pm.put_pixel(x, 0, 0);
-	    pm.put_pixel(x, OLDNEW_H - 1, 0);
+	if (g_grayramp != NULL) {
+	    // Greyscale halftoning
+	    unsigned char r, g, b;
+	    unsigned long pixels[2];
+	    if (!oldnew_image_initialized) {
+		r = oldR;
+		g = oldG;
+		b = oldB;
+		CopyBits::rgb2nearestgrays(&r, &g, &b, pixels);
+		for (int y = 1; y < OLDNEW_H / 2; y++)
+		    for (int x = 1; x < OLDNEW_W - 1; x++) {
+			int index = CopyBits::halftone(r, x - 1, y - 1);
+			XPutPixel(oldnew_image, x, y, pixels[index]);
+		    }
+	    }
+	    r = R;
+	    g = G;
+	    b = B;
+	    CopyBits::rgb2nearestgrays(&r, &g, &b, pixels);
+	    for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
+		for (int x = 1; x < OLDNEW_W - 1; x++) {
+		    int index = CopyBits::halftone(r, x - 1, y - 1);
+		    XPutPixel(oldnew_image, x, y, pixels[index]);
+		}
+	} else {
+	    // Color halftoning
+	    unsigned char r, g, b;
+	    unsigned long pixels[8];
+	    if (!oldnew_image_initialized) {
+		r = oldR;
+		g = oldG;
+		b = oldB;
+		CopyBits::rgb2nearestcolors(&r, &g, &b, pixels);
+		for (int y = 1; y < OLDNEW_H / 2; y++)
+		    for (int x = 1; x < OLDNEW_W - 1; x++) {
+			int index = (CopyBits::halftone(r, x - 1, y - 1) << 2)
+			    | (CopyBits::halftone(g, x - 1, y - 1) << 1)
+			    | CopyBits::halftone(b, x - 1, y - 1);
+			XPutPixel(oldnew_image, x, y, pixels[index]);
+		    }
+	    }
+	    r = R;
+	    g = G;
+	    b = B;
+	    CopyBits::rgb2nearestcolors(&r, &g, &b, pixels);
+	    for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
+		for (int x = 1; x < OLDNEW_W - 1; x++) {
+		    int index = (CopyBits::halftone(r, x - 1, y - 1) << 2)
+			| (CopyBits::halftone(g, x - 1, y - 1) << 1)
+			| CopyBits::halftone(b, x - 1, y - 1);
+		    XPutPixel(oldnew_image, x, y, pixels[index]);
+		}
 	}
-	for (int y = 0; y < OLDNEW_H; y++) {
-	    pm.put_pixel(0, y, 0);
-	    pm.put_pixel(OLDNEW_W - 1, y, 0);
+	if (!oldnew_image_initialized) {
+	    for (int x = 1; x < OLDNEW_W - 1; x++) {
+		XPutPixel(oldnew_image, x, 0, 0);
+		XPutPixel(oldnew_image, x, OLDNEW_H - 1, 0);
+	    }
+	    for (int y = 0; y < OLDNEW_H; y++) {
+		XPutPixel(oldnew_image, 0, y, 0);
+		XPutPixel(oldnew_image, OLDNEW_W - 1, y, 0);
+	    }
+	    oldnew_image_initialized = true;
 	}
-	unsigned long oldp = (oldR << 16) | (oldG << 8) | oldB;
-	for (int y = 1; y < OLDNEW_H / 2; y++)
-	    for (int x = 1; x < OLDNEW_W - 1; x++)
-		pm.put_pixel(x, y, oldp);
-	unsigned long newp = (R << 16) | (G << 8) | B;
-	for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
-	    for (int x = 1; x < OLDNEW_W - 1; x++)
-		pm.put_pixel(x, y, newp);
-	CopyBits::copy_unscaled(&pm, oldnew_image, false, true, true,
-				0, 0, OLDNEW_H, OLDNEW_W);
-	free(pm.pixels);
+	
+//	I think pattern dithering looks better than error diffusion
+//	in color preview areas -- that is, in the ColormapEditor and
+//	in the old/new preview area in the ColorPicker.
+//	I kept the old code that used error diffusion for the old/new
+//	area around in case I ever change my mind. :-)
+//
+//	FWPixmap pm;
+//	pm.width = OLDNEW_W;
+//	pm.height = OLDNEW_H;
+//	pm.depth = 24;
+//	pm.bytesperline = pm.width * 4;
+//	pm.pixels = (unsigned char *) malloc(pm.height * pm.bytesperline);
+//	for (int x = 1; x < OLDNEW_W - 1; x++) {
+//	    pm.put_pixel(x, 0, 0);
+//	    pm.put_pixel(x, OLDNEW_H - 1, 0);
+//	}
+//	for (int y = 0; y < OLDNEW_H; y++) {
+//	    pm.put_pixel(0, y, 0);
+//	    pm.put_pixel(OLDNEW_W - 1, y, 0);
+//	}
+//	unsigned long oldp = (oldR << 16) | (oldG << 8) | oldB;
+//	for (int y = 1; y < OLDNEW_H / 2; y++)
+//	    for (int x = 1; x < OLDNEW_W - 1; x++)
+//		pm.put_pixel(x, y, oldp);
+//	unsigned long newp = (R << 16) | (G << 8) | B;
+//	for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
+//	    for (int x = 1; x < OLDNEW_W - 1; x++)
+//		pm.put_pixel(x, y, newp);
+//	CopyBits::copy_unscaled(&pm, oldnew_image, false, true, true,
+//				0, 0, OLDNEW_H, OLDNEW_W);
+//	free(pm.pixels);
     }
 
     // Paint it!
@@ -638,7 +710,7 @@ ColorPicker::repaintWheelImage() {
 	    float h = atan2((double) -y, (double) -x) / (2 * 3.141592654) + 0.5;
 	    float s = sqrt(x * x + y * y) / r;
 	    unsigned char rr, gg, bb;
-	    hsl2rgb(h, s, L, &rr, &gg, &bb);
+	    CopyBits::hsl2rgb(h, s, L, &rr, &gg, &bb);
 	    pm.put_pixel(x + r + CROSS_SIZE / 2,
 			 y + r + CROSS_SIZE / 2,
 			 (rr << 16) | (bb << 8) | gg);
@@ -706,7 +778,7 @@ ColorPicker::repaintSliderImage() {
     for (int x = 1; x <= WHEEL_DIAMETER - 1; x++) {
 	float l = (x - 1.0) / (WHEEL_DIAMETER - 1);
 	unsigned char rr, gg, bb;
-	hsl2rgb(H, S, l, &rr, &gg, &bb);
+	CopyBits::hsl2rgb(H, S, l, &rr, &gg, &bb);
 	unsigned long pixel = (rr << 16) | (gg << 8) | bb;
 	for (int y = (SLIDER_H - SLIDER_HEIGHT) / 2 + 1;
 		 y < (SLIDER_H + SLIDER_HEIGHT) / 2 - 1; y++) {
@@ -844,7 +916,7 @@ ColorPicker::mouseInWheel(XEvent *event) {
     cross_x = newcx;
     cross_y = newcy;
     S = s;
-    hsl2rgb(H, S, L, &R, &G, &B);
+    CopyBits::hsl2rgb(H, S, L, &R, &G, &B);
     updateRGBTextFields(R, G, B);
     drawCross();
 
@@ -881,7 +953,7 @@ ColorPicker::mouseInSlider(XEvent *event) {
     removeThumb();
     slider_x = newsx;
     L = l;
-    hsl2rgb(H, S, L, &R, &G, &B);
+    CopyBits::hsl2rgb(H, S, L, &R, &G, &B);
     updateRGBTextFields(R, G, B);
     drawThumb();
 
@@ -944,7 +1016,61 @@ ColorPicker::input(Widget w, XtPointer ud, XtPointer cd) {
     ColorPicker *This = (ColorPicker *) ud;
     XmDrawingAreaCallbackStruct *cbs = (XmDrawingAreaCallbackStruct *) cd;
     XEvent *event = cbs->event;
-    if (event->type == KeyPress && event->type == KeyRelease)
+    if (event->type == KeyPress) {
+	// Look away, sensitive spirits! This is the kind of ugly code I
+	// write when I really want that feature but am too lazy to do it
+	// cleanly.
+	// I'm handling keystrokes by creating fake mouse events and sending
+	// them to mouseInWheel() and mouseInSlider(). All I populate in those
+	// events is stuff that I happen to know those methods care about.
+	// This is evil to the max and should be fixed sometime. (TODO)
+
+	// Cursor keys move the cross 16 pixels at a time; shift-cursor
+	// moves the cross one pixel at a time; pageup/pagedown moves the
+	// slider 16 pixels at a time; shift-pageup/pagedown moves the slider
+	// one pixel at a time.
+
+	bool shift = event->xkey.state & 1;
+	int motion_amount = shift ? 1 : 16;
+	unsigned int keycode = event->xkey.keycode;
+
+	XEvent my_event;
+	my_event.type = MotionNotify;
+	// TODO: uh-oh, hard-coded stuff again! Also hard-coded keycodes below.
+	my_event.xbutton.state = 0x100;
+
+	switch (keycode) {
+	    case 98: // Up
+		my_event.xbutton.x = This->cross_x;
+		my_event.xbutton.y = This->cross_y - motion_amount;
+		This->mouseInWheel(&my_event);
+		break;
+	    case 100: // Left
+		my_event.xbutton.x = This->cross_x - motion_amount;
+		my_event.xbutton.y = This->cross_y;
+		This->mouseInWheel(&my_event);
+		break;
+	    case 102: // Right
+		my_event.xbutton.x = This->cross_x + motion_amount;
+		my_event.xbutton.y = This->cross_y;
+		This->mouseInWheel(&my_event);
+		break;
+	    case 104: // Down
+		my_event.xbutton.x = This->cross_x;
+		my_event.xbutton.y = This->cross_y + motion_amount;
+		This->mouseInWheel(&my_event);
+		break;
+	    case 99: // PageUp
+		my_event.xbutton.x = This->slider_x + motion_amount;
+		This->mouseInSlider(&my_event);
+		break;
+	    case 105: // PageDown
+		my_event.xbutton.x = This->slider_x - motion_amount;
+		This->mouseInSlider(&my_event);
+		break;
+	}
+	return;
+    } else if (event->type == KeyRelease)
 	return;
     if (w == This->oldnew)
 	This->mouseInOldNew(event);

@@ -1,28 +1,19 @@
-The aspect ratio mainenance support is still missing. Need a notification
-mechanism, plus code in MarianiSilver to use it. If you feel up to it, arrow
-buttons for zooming in/out, plus a "maxpect" button, would be nice. Or, heck,
-not make WIDTH and HEIGHT come up "maxpect" automagically? I could do *that*
-for free, right now, by implementing it in MarianiSilver.
+In paint_reduced(), the code for displaying 8-bit colormapped images when a
+private colormap is in effect, is painfully slow. Finding the closest match for
+a color within an arbitrary set of colors is the problem. The current
+implementation is totally naive... Even if a brute-force search really can't be
+avoided, that code still wants some optimizing.
 
-The "save changes before quitting" flow should have a "no to all" button.
-Maybe also "yes to all", but that would probably be less useful (because
-you would typically still have to deal with SaveImageDialogs since typically
-most 'dirty' images will be Untitled).
-
-YesNoCancelDialog and SaveImageDialog should not be application-modal.
-How to reduce modality to one window only, and still make sure that the user
-can't throw the application into an inconsistent state by mucking about in
-the other windows? Maybe what's needed is some global entity that's in charge
-of the closing/saving/quitting event flows (instead of the current chains of
-dialogs and listeners that basically float freely) and that allows such flows
-to be interrupted when they no longer make sense. (This applies mostly to the
-"quit" flow, but there is also the issue of a window being modaled out with a
-YesNoCancelDialog or a SaveFileDialog and and meanwhile a "quit" chain being
-initiated on some other window.)
-Besides, while modal dialogs are a nice feature, a robust app should protect
-itself agains WMs that don't enforce modality. And application-modality is
-kinda evil if it does not prevent the modal dialog from being hidden behind
-other windows. I mean, really.
+Implement multithreading support. This should probably be a compile-time option
+(because it may be hard to make it portable, and because there may be a speed
+penalty which makes it unattractive on single-CPU systems -- depends how highly
+you value overall speed vs. UI responsiveness).
+Implementing multithreading seems like it should be a simple matter of changing
+Plugin::start_working() and Plugin::stop_working(), and make Plugin::paint() go
+through an XtWorkProc to invoke Viewer::paint() -- or rather, do everything on
+the worker thread *except* the final XPutImage() (because the dithering/scaling
+step can take a long time, and it would be good to have that not happen on the
+UI thread, because it makes the app really painful to work with).
 
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
@@ -33,57 +24,3 @@ flying blind at times. I guess I should be thankful that it works as well as it
 does now, but still, stuff like the gif2tiff problem just makes me wonder what
 other surprises are still lurking in that code.
 I know, I know, don't use GIF, use PNG. :-)
-
-In the Color Picker and Colormap Editor, the focus disappears at one point in
-the tabbing sequence. Where does it go? And more importantly, how do we get it
-to not do that? Also, in the colormap editor, the tabbing sequence is wrong.
-(Which, BTW, would be fixed if only I could convince the rowcolumn widget to
-lay out its children left-to-right first. I really should read the book again
-sometime.)
-
-The code that draws the color wheel in ColorPicker uses unhealthy amouts of
-transcendental functions (rectangular -> polar coordinate transformation), and
-it is pathetically slow. Can't we fudge this with some fast, limited-precision
-approximations for sqrt() and atan2()?
-Or just cache an (x, y) -> (H, S) translation table... about 200K...
-Or is the slowness not due to the FP math, but to the re-generating and re-
-displaying of the color wheel? Hmmm...
-
-The SettingsDialog code should receive focus notifications, and invoke
-PluginSettings::fieldChanged() immediately (if the field has, in fact,
-changed!), rather than putting it all off until the ok() callback.
-Also, PluginSettings::fieldChanged() should return a bool saying whether a
-change is vetoed or not. If vetoed, the focus could return to the offending
-field, or the offending field could be highlighted (e.g. red background), or
-something along those lines. Also, the OK action should be prevented when a
-field has an error. (Cancel should always be allowed.)
-
-In paint_reduced(), the code for displaying 8-bit colormapped images when a
-private colormap is in effect, is painfully slow. Finding the closest match for
-a color within an arbitrary set of colors is the problem. The current
-implementation is totally naive... Even if a brute-force search really can't be
-avoided, that code still wants some optimizing.
-
-Fix the tabbing order in SettingsDialog (should traverse the bit depth radio
-buttons *before* the group of pushbuttons in the lower right corner). Is the
-order currently governed by the order in which the widgets were added to the
-container? May not be possible to change the order in which the widgets are
-added to the container, because of the XmForm constraints... But the tabbing
-order can be overridden using some resource. Check xmlgui if unsure; I seem to
-remember doing just that right there.
-
-Isn't it possible to get rid of the Viewer::deleteLater() ugliness by using a
-factory method instead of constructors, and returning error status etc.?
-
-Implement multithreading support. This should probably be a compile-time option
-(because it may be hard to make it portable, and because there may be a speed
-penalty which makes it unattractive on single-CPU systems -- depends how highly
-you value overall speed vs. UI responsiveness).
-Implementing multithreading seems like it should be a simple matter of changing
-Plugin::start_working() and Plugin::stop_working(), and make Plugin::paint() go
-through an XtWorkProc to invoke Viewer::paint() (a la
-SwingUtilities.invokeLater() in Java -- keep all Xt processing on the main
-event loop's thread). Of course if XtAppAddWorkProc() isn't thread-safe, we
-have a problem, but that would just be sick, now wouldn't it? And there should
-be ways around that too (there's always the truly desperate hack using
-XtAppAddInput() -- yuck, but it will do the job and *without* any polling).
