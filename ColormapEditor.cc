@@ -266,9 +266,9 @@ ColormapEditor::color_clipboard_size = 0;
 
 
 /* public */
-ColormapEditor::ColormapEditor(Listener *listener, FWPixmap *pm,
+ColormapEditor::ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
 			       UndoManager *undomanager, Colormap colormap)
-				    : Frame(false, true, false) {
+				    : Frame(parent, false) {
     setTitle("Colormap Editor");
     setIconTitle("Colormap Editor");
 
@@ -442,6 +442,7 @@ ColormapEditor::doPick() {
 	if (colorpicker != NULL)
 	    colorpicker->close();
 	colorpicker = new ColorPicker(
+		    this,
 		    new CPListener(this, sel_start),
 		    pm->cmap[sel_start].r,
 		    pm->cmap[sel_start].g,

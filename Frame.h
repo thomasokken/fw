@@ -13,6 +13,7 @@ class Frame {
 	Menu *menu;
 	bool centered;
 	bool is_dialog;
+	bool is_modal;
 	static bool decor_known;
 	static int decor_width, decor_height;
 	static bool taskbar_known;

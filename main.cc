@@ -207,6 +207,12 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
     return 0;
 }
 
+static int x_io_error_handler(Display *display) {
+    fprintf(stderr, "X I/O Error!\n");
+    fprintf(stderr, "Sending myself a QUIT signal...\n");
+    crash();
+    return 0;
+}
 
 int main(int argc, char **argv) {
     XtSetLanguageProc(NULL, NULL, NULL);
@@ -287,8 +293,10 @@ int main(int argc, char **argv) {
     // This is necessary if you want the core dump to actually lead you,
     // via the stack trace, to the context in which the offending call
     // was made.
-    if (x_errors_coredump)
+    if (x_errors_coredump) {
 	XSynchronize(g_display, True);
+	XSetIOErrorHandler(x_io_error_handler);
+    }
     XSetErrorHandler(x_error_handler);
 
     g_visual = DefaultVisual(g_display, g_screennumber);

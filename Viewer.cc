@@ -1695,6 +1695,10 @@ Viewer::doQuit2() {
 	    continue;
 	}
 
+	// It may be the topmost viewer, but that doesn't mean it's also the
+	// topmost window...
+	viewer->raise();
+
 	char buf[1024];
 	if (viewer->filename == NULL) {
 	    snprintf(buf, 1024, "Save changes to \"Untitled #%d\" before quitting?", viewer->untitled);
@@ -1886,7 +1890,7 @@ Viewer::doEditColors() {
     if (cmelistener == NULL)
 	cmelistener = new ColormapEditorListener(this);
     if (cme == NULL)
-	cme = new ColormapEditor(cmelistener, &pm, undomanager, colormap);
+	cme = new ColormapEditor(this, cmelistener, &pm, undomanager, colormap);
     cme->raise();
 }
 

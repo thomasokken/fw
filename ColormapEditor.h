@@ -41,7 +41,7 @@ class ColormapEditor : public Frame {
 	static int color_clipboard_size;
 
     public:
-	ColormapEditor(Listener *listener, FWPixmap *pm,
+	ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
 		       UndoManager *undomanager, Colormap colormap);
 	virtual ~ColormapEditor();
 	void colormapChanged(Colormap colormap);

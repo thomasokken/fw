@@ -57,9 +57,9 @@ ColorPicker::instances = 0;
 
 
 /* public */
-ColorPicker::ColorPicker(Listener *listener, unsigned char r,
+ColorPicker::ColorPicker(Frame *parent, Listener *listener, unsigned char r,
 	unsigned char g, unsigned char b, bool allow_private_cmap)
-				: Frame(false, true, false) {
+				: Frame(parent, false) {
     this->listener = listener;
 
     setTitle("Color Picker");

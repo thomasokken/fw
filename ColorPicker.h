@@ -39,8 +39,8 @@ class ColorPicker : public Frame {
 	static int instances;
 
     public:
-	ColorPicker(Listener *listener, unsigned char r, unsigned char g,
-		    unsigned char b, bool allow_private_cmap);
+	ColorPicker(Frame *parent, Listener *listener, unsigned char r,
+		    unsigned char g, unsigned char b, bool allow_private_cmap);
 	virtual ~ColorPicker();
 
     private:

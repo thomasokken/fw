@@ -132,6 +132,7 @@ Frame::init(Frame *parent, bool modal) {
     this->centered = false;
     this->menu = NULL;
     is_dialog = true;
+    is_modal = modal;
 
     Arg args[11];
     int nargs = 0;
@@ -270,7 +271,7 @@ Frame::getTitle() {
 
 /* public virtual */ void
 Frame::close() {
-    if (is_dialog)
+    if (is_dialog && is_modal)
 	hide();
     else
 	delete this;
