@@ -2,6 +2,7 @@
 #define UTIL_H 1
 
 char *strclone(const char *src);
+void core();
 
 class Map {
     private:

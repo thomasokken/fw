@@ -17,6 +17,10 @@ char *strclone(const char *src) {
     return dst;
 }
 
+void core() {
+    kill(0, SIGQUIT);
+}
+
 /* public */
 Map::Map() {
     entries = NULL;

@@ -222,9 +222,20 @@ Viewer::finish_init() {
 					  XmNheight, (Dimension) image_height,
 					  NULL);
 
+    Arg args[7];
+
+    XtTranslations translations = XtParseTranslationTable(
+		"<KeyDown>: DrawingAreaInput()\n"
+		"<KeyUp>: DrawingAreaInput()\n"
+		"<BtnDown>: DrawingAreaInput()\n"
+		"<BtnUp>: DrawingAreaInput()\n"
+		"<Motion>: DrawingAreaInput()\n");
+    XtSetArg(args[0], XmNtranslations, translations);
+    XtSetValues(drawingarea, args, 1);
+
+
     Widget hsb, vsb;
     Dimension marginwidth, marginheight, spacing, borderWidth, shadowThickness;
-    Arg args[7];
     XtSetArg(args[0], XmNhorizontalScrollBar, &hsb);
     XtSetArg(args[1], XmNverticalScrollBar, &vsb);
     XtSetArg(args[2], XmNscrolledWindowMarginWidth, &marginwidth);
@@ -304,6 +315,7 @@ Viewer::finish_init() {
     
     XtAddCallback(drawingarea, XmNresizeCallback, resize, (XtPointer) this);
     XtAddCallback(drawingarea, XmNexposeCallback, expose, (XtPointer) this);
+    XtAddCallback(drawingarea, XmNinputCallback, input, (XtPointer) this);
     raise();
 
 
@@ -1690,6 +1702,11 @@ Viewer::colormapChanged() {
     }
 }
 
+/* private virtual */ void
+Viewer::close() {
+    delete this;
+}
+
 /* private */ bool
 Viewer::canIDoDirectCopy() {
     if (scale != 1)
@@ -1742,9 +1759,46 @@ Viewer::expose2(int x, int y, int w, int h) {
     XPutImage(g_display, XtWindow(drawingarea), g_gc, image, x, y, x, y, w, h);
 }
 
-/* private virtual */ void
-Viewer::close() {
-    delete this;
+/* private static */ void
+Viewer::input(Widget w, XtPointer ud, XtPointer cd) {
+    XmDrawingAreaCallbackStruct *cbs = (XmDrawingAreaCallbackStruct *) cd;
+    ((Viewer *) ud)->input2(cbs->event);
+}
+
+/* private */ void
+Viewer::input2(XEvent *event) {
+    switch (event->type) {
+	case 2:
+	    printf("KeyPress: state=%d keycode=%d\n", event->xkey.state,
+						      event->xkey.keycode);
+	    break;
+	case 3:
+	    printf("KeyRelease: state=%d keycode=%d\n", event->xkey.state,
+							event->xkey.keycode);
+	    break;
+	case 4:
+	    printf("ButtonPress: pos=(%d, %d) state=%d button=%d\n",
+						    event->xbutton.x,
+						    event->xbutton.y,
+						    event->xbutton.state,
+						    event->xbutton.button);
+	    break;
+	case 5:
+	    printf("ButtonPress: pos=(%d, %d) state=%d button=%d\n",
+						    event->xbutton.x,
+						    event->xbutton.y,
+						    event->xbutton.state,
+						    event->xbutton.button);
+	    break;
+	case 6:
+	    printf("MotionNotify: pos=(%d, %d)\n", event->xmotion.x,
+						   event->xmotion.y);
+	    break;
+	case 7:
+	    printf("Unexpected event!\n");
+	    fflush(stdout);
+	    core();
+    }
 }
 
 /* private static */ void

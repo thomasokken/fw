@@ -44,16 +44,19 @@ class Viewer : private Frame {
     private:
 	void init(const char *pluginname, const Viewer *src,
 		  const char *filename);
+	virtual void close();
 	bool canIDoDirectCopy();
 	void paint_direct(int top, int left, int bottom, int right);
 	void paint_unscaled(int top, int left, int bottom, int right);
 	void paint_enlarged(int top, int left, int bottom, int right);
 	void paint_reduced(int top, int left, int bottom, int right);
+
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();
 	static void expose(Widget w, XtPointer cd, XtPointer ud);
 	void expose2(int x, int y, int w, int h);
-	virtual void close();
+	static void input(Widget w, XtPointer cd, XtPointer ud);
+	void input2(XEvent *event);
 	static void menucallback(void *closure, const char *id);
 	void menucallback2(const char *id);
 	static void togglecallback(void *closure, const char *id, bool value);
