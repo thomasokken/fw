@@ -138,14 +138,51 @@ class BlendAction : public ChangeRangeAction {
 				/ (endindex - startindex);
 	    }
 	}
-	const char *undoTitle() {
+	virtual const char *undoTitle() {
 	    return "Undo Blend";
 	}
-	const char *redoTitle() {
+	virtual const char *redoTitle() {
 	    return "Redo Blend";
 	}
 };
 
+class SwapAction : public ChangeRangeAction {
+    public:
+	SwapAction(ColormapEditor *cme, int startindex, int endindex)
+		: ChangeRangeAction(cme, startindex, endindex) {
+	    for (int i = startindex; i <= endindex; i++)
+		newcolors[i - startindex] =
+			cme->pm->cmap[startindex + endindex - i];
+	}
+	virtual const char *undoTitle() {
+	    return "Undo Swap";
+	}
+	virtual const char *redoTitle() {
+	    return "Redo Swap";
+	}
+};
+
+class MixAction : public ChangeRangeAction {
+    public:
+	MixAction(ColormapEditor *cme, int startindex, int endindex)
+		: ChangeRangeAction(cme, startindex, endindex) {
+	    int k = (endindex - startindex + 1) / 2;
+	    for (int i = 0; i < k; i++) {
+		newcolors[2 * i] =
+			cme->pm->cmap[startindex + k + i];
+		newcolors[2 * i + 1] =
+			cme->pm->cmap[startindex + i];
+	    }
+	    if ((endindex - startindex) % 2 == 0)
+		newcolors[endindex - startindex] = cme->pm->cmap[endindex];
+	}
+	virtual const char *undoTitle() {
+	    return "Undo Mix";
+	}
+	virtual const char *redoTitle() {
+	    return "Redo Mix";
+	}
+};
 
 /* public */
 ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm)
@@ -314,12 +351,40 @@ ColormapEditor::doBlend() {
 
 /* private */ void
 ColormapEditor::doSwap() {
-    //
+    if (sel_start == -1 || sel_start == sel_end)
+	XBell(g_display, 100);
+    else {
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	SwapAction *action = new SwapAction(this, start, end);
+	undomgr->addAction(action);
+	action->redo();
+    }
 }
 
 /* private */ void
 ColormapEditor::doMix() {
-    //
+    if (sel_start == -1 || sel_start == sel_end)
+	XBell(g_display, 100);
+    else {
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	MixAction *action = new MixAction(this, start, end);
+	undomgr->addAction(action);
+	action->redo();
+    }
 }
 
 /* private */ void
