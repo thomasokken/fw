@@ -176,9 +176,9 @@ static float hue2rgb(float v1, float v2, float vH) {
 void hsl2rgb(float H, float S, float L,
 	     unsigned char *R, unsigned char *G, unsigned char *B) {
     if (S == 0) {
-	*R = (unsigned char) L * 255;
-	*G = (unsigned char) L * 255;
-	*B = (unsigned char) L * 255;
+	*R = (unsigned char) (L * 255);
+	*G = (unsigned char) (L * 255);
+	*B = (unsigned char) (L * 255);
     } else {
 	float var_2;
 	if (L < 0.5)
@@ -192,6 +192,78 @@ void hsl2rgb(float H, float S, float L,
 	*G = (unsigned char) (255 * hue2rgb(var_1, var_2, H));
 	*B = (unsigned char) (255 * hue2rgb(var_1, var_2, H - 1.0 / 3));
     }
+}
+
+void rgb2hsv(unsigned char R, unsigned char G, unsigned char B,
+	     float *H, float *S, float *V) {
+    float var_R = R / 255.0;
+    float var_G = G / 255.0;
+    float var_B = B / 255.0;
+
+    float var_Min = var_R < var_G ? var_R : var_G;
+    if (var_B < var_Min)
+	var_Min = var_B;
+    float var_Max = var_R > var_G ? var_R : var_G;
+    if (var_B > var_Max)
+	var_Max = var_B;
+    float del_Max = var_Max - var_Min;
+
+    *V = var_Max;
+
+    if (del_Max == 0) {
+	*H = 0;
+	*S = 0;
+    } else {
+	*S = del_Max / var_Max;
+
+	float del_R = ((var_Max - var_R) / 6 + del_Max / 2) / del_Max;
+	float del_G = ((var_Max - var_G) / 6 + del_Max / 2) / del_Max;
+	float del_B = ((var_Max - var_B) / 6 + del_Max / 2) / del_Max;
+
+	if (var_R == var_Max)
+	    *H = del_B - del_G;
+	else if (var_G == var_Max)
+	    *H = (1.0 / 3) + del_R - del_B;
+	else if (var_B == var_Max)
+	    *H = ( 2 / 3 ) + del_G - del_R;
+
+	if (*H < 0) *H += 1;
+	if (*H > 1) *H -= 1;
+    }
+}
+
+void hsv2rgb(float H, float S, float V,
+	     unsigned char *R, unsigned char *G, unsigned char *B) {
+    if (S == 0) {
+	*R = (unsigned char) (V * 255);
+	*G = (unsigned char) (V * 255);
+	*B = (unsigned char) (V * 255);
+    } else {
+	float var_h = H * 6;
+	int var_i = (int) var_h;
+	float var_1 = V * (1 - S);
+	float var_2 = V * (1 - S * (var_h - var_i));
+	float var_3 = V * (1 - S * (1 - (var_h - var_i)));
+
+	float var_r, var_g, var_b;
+	if ( var_i == 0 ) {
+	    var_r = V     ; var_g = var_3 ; var_b = var_1;
+	} else if (var_i == 1) {
+	    var_r = var_2 ; var_g = V     ; var_b = var_1;
+	} else if (var_i == 2) {
+	    var_r = var_1 ; var_g = V     ; var_b = var_3;
+	} else if (var_i == 3) {
+	    var_r = var_1 ; var_g = var_2 ; var_b = V;
+	} else if (var_i == 4) {
+	    var_r = var_3 ; var_g = var_1 ; var_b = V;
+	} else {
+	    var_r = V     ; var_g = var_1 ; var_b = var_2;
+	}
+
+	*R = (unsigned char) (var_r * 255);
+	*G = (unsigned char) (var_g * 255);
+	*B = (unsigned char) (var_b * 255);
+   }
 }
 
 int bool_alignment() {

@@ -18,9 +18,9 @@
 
 #define WHEEL_DIAMETER 150
 #define CROSS_SIZE 16
-#define SLIDER_HEIGHT 16
-#define THUMB_OUTER_HEIGHT 24
-#define THUMB_INNER_HEIGHT 20
+#define SLIDER_HEIGHT 12
+#define THUMB_OUTER_HEIGHT 20
+#define THUMB_INNER_HEIGHT 16
 #define THUMB_OUTER_WIDTH 10
 #define THUMB_INNER_WIDTH 6
 
@@ -84,7 +84,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 
     Widget form = getContainer();
 
-    Widget bb = XtVaCreateManagedWidget(
+    bb = XtVaCreateManagedWidget(
 	    "BulletinBoard",
 	    xmBulletinBoardWidgetClass,
 	    form,
@@ -472,11 +472,16 @@ ColorPicker::~ColorPicker() {
 
 /* private */ void
 ColorPicker::rgbChanged() {
-    if (disable_rgbChanged)
-	return;
+    if (!disable_rgbChanged) {
+	rgb2hsl(R, G, B, &H, &S, &L);
+	repaintOldNewImage();
+	repaintWheelImage();
+	repaintSliderImage();
+    }
+}
 
-    // Repaint the XImages
-
+/* private */ void
+ColorPicker::repaintOldNewImage() {
     // The "old/new" area requires special treatment in the case we are using
     // a private colormap or private colorcells. I'll just write the image data
     // manually in that case...
@@ -527,9 +532,14 @@ ColorPicker::rgbChanged() {
 	free(pm.pixels);
     }
 
+    // Paint it!
+    if (XtIsRealized(oldnew))
+	XPutImage(g_display, XtWindow(oldnew), g_gc, oldnew_image,
+		  0, 0, 0, 0, OLDNEW_W, OLDNEW_H);
+}
 
-    // The color wheel
-
+/* private */ void
+ColorPicker::repaintWheelImage() {
     FWPixmap pm;
     pm.width = WHEEL_W;
     pm.height = WHEEL_H;
@@ -541,7 +551,7 @@ ColorPicker::rgbChanged() {
     XColor xc;
     Arg arg;
     XtSetArg(arg, XmNbackground, &xc.pixel);
-    XtGetValues(wheel, &arg, 1);
+    XtGetValues(bb, &arg, 1);
     XQueryColor(g_display, private_colormap ? private_6x6x6_cube :
 		g_colormap, &xc);
     unsigned long background = ((xc.red / 257) << 16)
@@ -554,10 +564,15 @@ ColorPicker::rgbChanged() {
     int r = WHEEL_DIAMETER / 2;
     for (int y = -r; y <= r; y++) {
 	int w = (int) (sqrt((double) (r * r - y * y)) + 0.5);
-	for (int x = -w; x <= w; x++)
+	for (int x = -w; x <= w; x++) {
+	    float h = atan2((double) -y, (double) -x) / (2 * 3.141592654) + 0.5;
+	    float s = sqrt(x * x + y * y) / r;
+	    unsigned char rr, gg, bb;
+	    hsl2rgb(h, s, L, &rr, &gg, &bb);
 	    pm.put_pixel(x + r + CROSS_SIZE / 2,
 			 y + r + CROSS_SIZE / 2,
-			 0xFF0000);
+			 (rr << 16) | (bb << 8) | gg);
+	}
     }
 
     // The black circle around the wheel
@@ -590,12 +605,62 @@ ColorPicker::rgbChanged() {
 			    0, 0, WHEEL_H, WHEEL_W);
     free(pm.pixels);
 
-    if (XtIsRealized(oldnew))
-	XPutImage(g_display, XtWindow(oldnew), g_gc, oldnew_image,
-		  0, 0, 0, 0, OLDNEW_W, OLDNEW_H);
+    // Paint it!
     if (XtIsRealized(wheel))
 	XPutImage(g_display, XtWindow(wheel), g_gc, wheel_image,
 		  0, 0, 0, 0, WHEEL_W, WHEEL_H);
+}
+
+/* private */ void
+ColorPicker::repaintSliderImage() {
+    FWPixmap pm;
+    pm.width = SLIDER_W;
+    pm.height = SLIDER_H;
+    pm.depth = 24;
+    pm.bytesperline = pm.width * 4;
+    pm.pixels = (unsigned char *) malloc(pm.height * pm.bytesperline);
+
+    // Background
+    XColor xc;
+    Arg arg;
+    XtSetArg(arg, XmNbackground, &xc.pixel);
+    XtGetValues(bb, &arg, 1);
+    XQueryColor(g_display, private_colormap ? private_6x6x6_cube :
+		g_colormap, &xc);
+    unsigned long background = ((xc.red / 257) << 16)
+				| ((xc.green / 257) << 8) | (xc.blue / 257);
+    for (int y = 0; y < SLIDER_H; y++)
+	for (int x = 0; x < SLIDER_W; x++)
+	    pm.put_pixel(x, y, background);
+
+    // The slider itself
+    for (int x = 1; x <= WHEEL_DIAMETER - 1; x++) {
+	float l = (x - 1.0) / (WHEEL_DIAMETER - 1);
+	unsigned char rr, gg, bb;
+	hsl2rgb(H, S, l, &rr, &gg, &bb);
+	unsigned long pixel = (rr << 16) | (gg << 8) | bb;
+	for (int y = (SLIDER_H - SLIDER_HEIGHT) / 2 + 1;
+		 y < (SLIDER_H + SLIDER_HEIGHT) / 2; y++) {
+	    pm.put_pixel(x + CROSS_SIZE / 2, y, pixel);
+	}
+    }
+
+    // The slider's black outline
+    for (int x = 1; x <= WHEEL_DIAMETER - 1; x++) {
+	pm.put_pixel(x + CROSS_SIZE / 2, (SLIDER_H - SLIDER_HEIGHT) / 2, 0);
+	pm.put_pixel(x + CROSS_SIZE / 2, (SLIDER_H + SLIDER_HEIGHT) / 2, 0);
+    }
+    for (int y = (SLIDER_H - SLIDER_HEIGHT) / 2 + 1;
+	     y < (SLIDER_H + SLIDER_HEIGHT) / 2; y++) {
+	pm.put_pixel(CROSS_SIZE / 2, y, 0);
+	pm.put_pixel(CROSS_SIZE / 2 + WHEEL_DIAMETER, y, 0);
+    }
+
+    CopyBits::copy_unscaled(&pm, slider_image, false, true,
+			    0, 0, SLIDER_H, SLIDER_W);
+    free(pm.pixels);
+
+    // Paint it!
     if (XtIsRealized(slider))
 	XPutImage(g_display, XtWindow(slider), g_gc, slider_image,
 		  0, 0, 0, 0, SLIDER_W, SLIDER_H);

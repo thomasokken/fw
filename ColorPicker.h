@@ -13,6 +13,7 @@ class ColorPicker : public Frame {
 
     private:
 	Listener *listener;
+	Widget bb;
 	Widget red, green, blue;
 	XImage *wheel_image;
 	XImage *slider_image;
@@ -37,6 +38,9 @@ class ColorPicker : public Frame {
 
     private:
 	void rgbChanged();
+	void repaintOldNewImage();
+	void repaintWheelImage();
+	void repaintSliderImage();
 	static void ok(Widget w, XtPointer ud, XtPointer cd);
 	static void cancel(Widget w, XtPointer ud, XtPointer cd);
 	static void expose(Widget w, XtPointer ud, XtPointer cd);
