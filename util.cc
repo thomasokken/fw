@@ -542,7 +542,15 @@ int long_double_alignment() {
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
-int string_alignment() {
+int char_pointer_alignment() {
+    struct {
+	char a;
+	char *b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int char_array_alignment() {
     struct {
 	char a;
 	char b[13];

@@ -79,6 +79,7 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     filetype = NULL;
     savedialog = NULL;
     cme = NULL;
+    finished = false;
 
     if (clonee != NULL)
 	pluginname = clonee->name();
@@ -482,7 +483,8 @@ Viewer::finish_init() {
 	plugin->start();
     else {
 	paint(0, 0, pm.height, pm.width);
-	plugin->restart();
+	if (!finished)
+	    plugin->restart();
     }
 
     addViewer(this);
@@ -584,6 +586,11 @@ Viewer::setFile(const char *name, const char *type) {
     if (filetype != NULL)
 	free(filetype);
     filetype = type == NULL ? NULL : strclone(type);
+}
+
+/* public */ void
+Viewer::pluginFinished() {
+    finished = true;
 }
 
 /* public */ void
@@ -1414,7 +1421,7 @@ Viewer::doStopOthers() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
 	Viewer *viewer = (Viewer *) iter->next();
-	if (viewer != this)
+	if (viewer != this && !viewer->finished)
 	    viewer->plugin->stop();
     }
     delete iter;
@@ -1422,7 +1429,10 @@ Viewer::doStopOthers() {
 
 /* private */ void
 Viewer::doStop() {
-    plugin->stop();
+    if (finished)
+	doBeep();
+    else
+	plugin->stop();
 }
 
 /* private */ void
@@ -1430,14 +1440,18 @@ Viewer::doStopAll() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
 	Viewer *viewer = (Viewer *) iter->next();
-	viewer->plugin->stop();
+	if (!viewer->finished)
+	    viewer->plugin->stop();
     }
     delete iter;
 }
 
 /* private */ void
 Viewer::doContinue() {
-    plugin->restart();
+    if (finished)
+	doBeep();
+    else
+	plugin->restart();
 }
 
 /* private */ void
@@ -1445,7 +1459,8 @@ Viewer::doContinueAll() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
 	Viewer *viewer = (Viewer *) iter->next();
-	viewer->plugin->restart();
+	if (!viewer->finished)
+	    viewer->plugin->restart();
     }
     delete iter;
 }

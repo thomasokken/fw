@@ -63,7 +63,8 @@ class SettingsHelper {
 	friend class FloatField;
 	friend class DoubleField;
 	friend class LongDoubleField;
-	friend class StringField;
+	friend class CharPointerField;
+	friend class CharArrayField;
 };
 
 #endif

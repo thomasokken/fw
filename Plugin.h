@@ -28,7 +28,19 @@ class Plugin {
 	const char ***settings_layout;
 	void **settings_base;
 	SettingsHelper *settings_helper;
+
+	// These two members are serialized (unless the actual plugin does not
+	// register anything for serialization). Do not add anything to the
+	// list of members to be serialized, or you'll lose file compatibility.
+	// To maintain compatibility, store any additional FW data (that is,
+	// data that isn't owned by the plugin itself) in a null-terminated
+	// string pointed to by 'extra'. There is no length limit to 'extra'.
+
+	bool finished;
+	char *extra;
+
 	friend class SettingsHelper;
+	friend class SlaveDriver;
 
     protected:
 	FWPixmap *pm;

@@ -15,15 +15,100 @@
 #include "About.xbm"
 
 
-static int list_compar(const void *a, const void *b);
+static int list_compar(const void *a, const void *b) {
+    return strcmp(*(const char **) a, *(const char **) b);
+}
 
-struct WorkNode {
-    Plugin *worker;
-    WorkNode *next;
+class SlaveDriver {
+    private:
+	struct Slave {
+	    Plugin *worker;
+	    Slave *next;
+	};
+	static Slave *worklist;
+	static XtWorkProcId workproc_id;
+    
+    public:
+	static void start_working(Plugin *worker) {
+	    Slave *node = worklist;
+	    bool found = false;
+	    while (node != NULL) {
+		if (node->worker == worker) {
+		    found = true;
+		    break;
+		}
+		node = node->next;
+	    }
+	    if (!found) {
+		if (worklist == NULL)
+		    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
+		node = new Slave;
+		node->worker = worker;
+		node->next = worklist;
+		worklist = node;
+	    }
+	}
+    
+	static void stop_working(Plugin *worker) {
+	    Slave *node = worklist;
+	    Slave **prev = &worklist;
+	    bool found = false;
+	    while (node != NULL) {
+		if (node->worker == worker) {
+		    found = true;
+		    break;
+		}
+		prev = &node->next;
+		node = node->next;
+	    }
+	    if (found) {
+		*prev = node->next;
+		delete node;
+		if (worklist == NULL)
+		    XtRemoveWorkProc(workproc_id);
+	    }
+	}
+
+    private:
+
+	static Boolean workproc(XtPointer ud) {
+	    static int n = 0;
+
+	    // Just to be safe
+	    if (worklist == NULL)
+		return True;
+
+	    Slave *node = worklist;
+	    Slave **prev = &worklist;
+	    for (int i = 0; i < n; i++) {
+		prev = &node->next;
+		node = node->next;
+		if (node == NULL) {
+		    n = 0;
+		    prev = &worklist;
+		    node = worklist;
+		    break;
+		}
+	    }
+
+	    if (node->worker->work()) {
+		node->worker->finished = true;
+		node->worker->viewer->pluginFinished();
+		*prev = node->next;
+		delete node;
+		if (worklist == NULL)
+		    return True;
+	    }
+	    n++;
+	    return False;
+	}
 };
-static WorkNode *worklist = NULL;
-static XtWorkProcId workproc_id;
-static Boolean workproc(XtPointer ud);
+
+/* public static */ SlaveDriver::Slave *
+SlaveDriver::worklist = NULL;
+
+/* public static */ XtWorkProcId
+SlaveDriver::workproc_id;
 
 
 class Null : public Plugin {
@@ -74,13 +159,32 @@ class About : public Plugin {
 };
 
 
+// These two members are serialized (unless the actual plugin does not
+// register anything for serialization). Do not add anything to the
+// list of members to be serialized, or you'll lose file compatibility.
+// To maintain compatibility, store any additional FW data (that is,
+// data that isn't owned by the plugin itself) in a null-terminated
+// string pointed to by 'extra'. There is no length limit to 'extra'.
+
+static const char *layout[] = {
+    "bool",	// finished
+    "char*",	// extra (for future use)
+    NULL
+};
+
+
 /* protected */
 Plugin::Plugin(void *dl) {
     this->dl = dl;
+
     settings_count = 0;
     settings_layout = NULL;
     settings_base = NULL;
     settings_helper = NULL;
+
+    finished = false;
+    extra = NULL;
+    register_for_serialization(layout, &finished);
 }
 
 /* protected virtual */
@@ -88,6 +192,12 @@ Plugin::~Plugin() {
     stop_working();
     if (settings_helper != NULL)
 	delete settings_helper;
+    if (settings_layout != NULL)
+	free(settings_layout);
+    if (settings_base!= NULL)
+	free(settings_base);
+    if (extra != NULL)
+	free(extra);
 }
 
 /* public static */ Plugin *
@@ -162,7 +272,7 @@ Plugin::register_for_serialization(const char **layout, void *base) {
 
 /* public */ void
 Plugin::serialize(void **buf, int *nbytes) {
-    if (settings_count == 0) {
+    if (settings_count == 1) {
 	*buf = NULL;
 	*nbytes = 0;
 	return;
@@ -174,16 +284,18 @@ Plugin::serialize(void **buf, int *nbytes) {
 
 /* public */ void
 Plugin::deserialize(void *buf, int nbytes) {
-    if (settings_count == 0)
+    if (settings_count == 1)
 	return;
     if (settings_helper == NULL)
 	settings_helper = new SettingsHelper(this);
     settings_helper->deserialize(buf, nbytes);
+    if (finished)
+	viewer->pluginFinished();
 }
 
 /* public */ char *
 Plugin::dumpSettings() {
-    if (settings_count == 0)
+    if (settings_count == 1)
 	return NULL;
     if (settings_helper == NULL)
 	settings_helper = new SettingsHelper(this);
@@ -271,44 +383,12 @@ Plugin::init_abort() {
 
 /* protected */ void
 Plugin::start_working() {
-    WorkNode *node = worklist;
-    bool found = false;
-    while (node != NULL) {
-	if (node->worker == this) {
-	    found = true;
-	    break;
-	}
-	node = node->next;
-    }
-    if (!found) {
-	if (worklist == NULL)
-	    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
-	node = new WorkNode;
-	node->worker = this;
-	node->next = worklist;
-	worklist = node;
-    }
+    SlaveDriver::start_working(this); 
 }
 
 /* protected */ void
 Plugin::stop_working() {
-    WorkNode *node = worklist;
-    WorkNode **prev = &worklist;
-    bool found = false;
-    while (node != NULL) {
-	if (node->worker == this) {
-	    found = true;
-	    break;
-	}
-	prev = &node->next;
-	node = node->next;
-    }
-    if (found) {
-	*prev = node->next;
-	delete node;
-	if (worklist == NULL)
-	    XtRemoveWorkProc(workproc_id);
-    }
+    SlaveDriver::stop_working(this);
 }
 
 /* protected */ void
@@ -344,38 +424,4 @@ Plugin::paint(int top, int left, int bottom, int right) {
 /* protected */ void
 Plugin::colormapChanged() {
     viewer->colormapChanged();
-}
-
-static int list_compar(const void *a, const void *b) {
-    return strcmp(*(const char **) a, *(const char **) b);
-}
-
-static Boolean workproc(XtPointer ud) {
-    static int n = 0;
-
-    // Just to be safe
-    if (worklist == NULL)
-	return True;
-
-    WorkNode *node = worklist;
-    WorkNode **prev = &worklist;
-    for (int i = 0; i < n; i++) {
-	prev = &node->next;
-	node = node->next;
-	if (node == NULL) {
-	    n = 0;
-	    prev = &worklist;
-	    node = worklist;
-	    break;
-	}
-    }
-
-    if (node->worker->work()) {
-	*prev = node->next;
-	delete node;
-	if (worklist == NULL)
-	    return True;
-    }
-    n++;
-    return False;
 }

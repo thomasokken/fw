@@ -279,14 +279,45 @@ class LongDoubleField : public Field {
 	}
 };
 
-class StringField : public Field {
+class CharPointerField : public Field {
+    private:
+	char **addr;
+    public:
+	CharPointerField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, char_pointer_alignment());
+	    this->addr = (char **) *addr;
+	    *addr += sizeof(char *);
+	}
+	virtual void setValue(const char *s) {
+	    if (*addr != NULL)
+		free(*addr);
+	    *addr = strclone(s);
+	}
+	virtual char *getValue() {
+	    return strclone(*addr);
+	}
+	virtual void serialize() {
+	    if (*addr == NULL)
+		helper->appendstring("");
+	    else
+		helper->appendstring(*addr);
+	}
+	virtual void deserialize() {
+	    if (*addr != NULL)
+		free(*addr);
+	    *addr = helper->readstring();
+	}
+};
+
+class CharArrayField : public Field {
     private:
 	char *addr;
 	int size;
     public:
-	StringField(const char *label, SettingsHelper *helper, char **addr, int size)
+	CharArrayField(const char *label, SettingsHelper *helper, char **addr, int size)
 		: Field(label, helper) {
-	    *addr = align(*addr, string_alignment());
+	    *addr = align(*addr, char_array_alignment());
 	    this->addr = *addr;
 	    *addr += size;
 	    this->size = size;
@@ -334,8 +365,8 @@ SettingsHelper::SettingsHelper(Plugin *plugin) {
 	    int length = strlen(line);
 	    
 	    // The first part of a line should be a type (bool, char, short,
-	    // int, long, longlong, float, double, longdouble, char[n]), or
-	    // one of the special words WIDTH and HEIGHT (which are hooked
+	    // int, long, longlong, float, double, longdouble, char*, char[n]),
+	    // or one of the special words WIDTH and HEIGHT (which are hooked
 	    // to plugin->pm.width and plugin->pm.height, respectively, and
 	    // which are skipped during serialization/deserialization, since
 	    // the plugin->pm structure is populated by the pixmap reading
@@ -413,11 +444,13 @@ SettingsHelper::SettingsHelper(Plugin *plugin) {
 		    field = new DoubleField(label, this, &addr);
 		else if (strcmp(line, "longdouble") == 0)
 		    field = new LongDoubleField(label, this, &addr);
+		else if (strcmp(line, "char*") == 0)
+		    field = new CharPointerField(label, this, &addr);
 		else if (strcmp(line, "char[") == 0) {
 		    int size;
 		    if (sscanf(line + 5, "%d", &size) != 1 || size <= 0)
 			crash();
-		    field = new StringField(label, this, &addr, size);
+		    field = new CharArrayField(label, this, &addr, size);
 		} else
 		    crash();
 
@@ -713,8 +746,8 @@ SettingsHelper::readstring() {
 	if (c == -1)
 	    c = 0;
 	if (length == size) {
-	    length += 256;
-	    buf = (char *) realloc(buf, length);
+	    size += 256;
+	    buf = (char *) realloc(buf, size);
 	}
 	buf[length++] = c;
     } while (c != 0);

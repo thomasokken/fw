@@ -31,7 +31,8 @@ int long_long_alignment();
 int float_alignment();
 int double_alignment();
 int long_double_alignment();
-int string_alignment();
+int char_pointer_alignment();
+int char_array_alignment();
 
 void crash();
 
