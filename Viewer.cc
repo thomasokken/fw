@@ -651,7 +651,8 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 
 /* public static */ bool
 Viewer::openFile(const char *filename) {
-    fprintf(stderr, "Opening \"%s\"...\n", filename);
+    if (verbosity >= 1)
+	fprintf(stderr, "Opening \"%s\"...\n", filename);
     char **names = Plugin::list();
     if (names != NULL) {
 	int suitability = 0;

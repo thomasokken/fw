@@ -21,6 +21,7 @@ GC gc;
 Pixmap icon, iconmask;
 XColor *colorcube = NULL, *grayramp = NULL;
 int cubesize, rampsize;
+int verbosity = 0;
 
 
 int main(int argc, char **argv) {
@@ -34,13 +35,29 @@ int main(int argc, char **argv) {
 
     // TODO: handle all command line options thru XtAppInitialize
     bool gray = false;
-    if (argc > 1 && strcmp(argv[1], "-gray") == 0) {
-	fprintf(stderr, "Forcing grayscale operation.\n");
-	gray = true;
-	argc--;
-	for (int i = 1; i < argc; i++)
-	    argv[i] = argv[i + 1];
-	argv[argc] = NULL;
+    for (int i = 1; i < argc; i++) {
+	int remove = 0;
+	if (strcmp(argv[i], "-gray") == 0
+		|| strcmp(argv[i], "-grey") == 0) {
+	    if (verbosity >= 1)
+		fprintf(stderr, "Forcing grayscale operation.\n");
+	    gray = true;
+	    remove = 1;
+	} else if (strncmp(argv[i], "-v", 2) == 0) {
+	    char *p = argv[i] + 1;
+	    while (*p++ == 'v')
+		verbosity++;
+	    fprintf(stderr, "Verbosity level set to %d.\n", verbosity);
+	    remove = 1;
+	}
+
+	if (remove > 0) {
+	    for (int j = i; j <= argc - remove; j++)
+		argv[j] = argv[j + remove];
+	    argc -= remove;
+	    argv[argc] = NULL;
+	    i--;
+	}
     }
     
     display = XtDisplay(appshell);
@@ -145,7 +162,7 @@ int main(int argc, char **argv) {
 		    if (n > 0) {
 			unsigned long *pixels = new unsigned long[n];
 			for (int i = 0; i < n; i++)
-			    pixels[i] = colorcube[i].pixel;
+			    pixels[i] = grayramp[i].pixel;
 			XFreeColors(display, colormap, pixels, n, 0);
 			delete[] pixels;
 			delete[] grayramp;
@@ -159,11 +176,13 @@ int main(int argc, char **argv) {
 	}
     }
 
-    if (colorcube != NULL)
-	fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", cubesize,
-		cubesize, cubesize);
-    if (grayramp != NULL)
-	fprintf(stderr, "Allocated a %d-entry gray ramp.\n", rampsize);
+    if (verbosity >= 1) {
+	if (colorcube != NULL)
+	    fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", cubesize,
+		    cubesize, cubesize);
+	if (grayramp != NULL)
+	    fprintf(stderr, "Allocated a %d-entry gray ramp.\n", rampsize);
+    }
 
     XGCValues values;
     values.foreground = WhitePixel(display, screennumber);

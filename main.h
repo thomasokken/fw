@@ -14,5 +14,6 @@ extern GC gc;
 extern Pixmap icon, iconmask;
 extern XColor *colorcube, *grayramp;
 extern int cubesize, rampsize;
+extern int verbosity;
 
 #endif

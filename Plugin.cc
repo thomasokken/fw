@@ -40,7 +40,8 @@ Plugin::get(const char *name) {
     snprintf(dlname, _POSIX_PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
     if (dl == NULL) {
-	fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
+	if (verbosity >= 1)
+	    fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
 	return NULL;
     }
     Plugin *(*factory)(void *) = (Plugin *(*)(void *)) dlsym(dl, "factory");

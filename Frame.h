@@ -12,6 +12,8 @@ class Frame {
 	Widget container;
 	Menu *menu;
 	bool centered;
+	static bool decor_known;
+	static int decor_width, decor_height;
 
     public:
 	Frame(bool resizable, bool centered, bool hasMenuBar);
@@ -28,6 +30,10 @@ class Frame {
 
     private:
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);
+	void findDecorSize();
+	void fitToScreen();
+	static void config(Widget w, XtPointer closure,
+				XEvent *event, Boolean *cont);
 };
 
 #endif
