@@ -54,6 +54,8 @@ class Viewer : private Frame {
 	void paint_reduced(int top, int left, int bottom, int right);
 	void draw_selection();
 	void erase_selection();
+	void screen2pixmap(int *x, int *y);
+	void pixmap2screen(int *x, int *y);
 
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();

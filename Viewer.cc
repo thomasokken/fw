@@ -1787,6 +1787,44 @@ Viewer::erase_selection() {
     }
 }
 
+/* private */ void
+Viewer::screen2pixmap(int *x, int *y) {
+    int X = *x;
+    int Y = *y;
+    if (scale <= -1) {
+	X *= -scale;
+	Y *= -scale;
+    } else if (scale > 1) {
+	X /= scale;
+	Y /= scale;
+    }
+    if (X < 0)
+	X = 0;
+    else if (X >= width)
+	X = width - 1;
+    if (Y < 0)
+	Y = 0;
+    else if (Y >= height)
+	Y = height - 1;
+    *x = X;
+    *y = Y;
+}
+
+/* private */ void
+Viewer::pixmap2screen(int *x, int *y) {
+    int X = *x;
+    int Y = *y;
+    if (scale <= -1) {
+	X /= -scale;
+	Y /= -scale;
+    } else if (scale > 1) {
+	X *= scale;
+	Y *= scale;
+    }
+    *x = X;
+    *y = Y;
+}
+
 /* public */ void
 Viewer::colormapChanged() {
     if (priv_cmap == None) {
@@ -1918,17 +1956,9 @@ Viewer::input2(XEvent *event) {
 	    // event->xbutton.state, event->xbutton.button
 	    if (selection_visible)
 		erase_selection();
-	    int x, y;
-	    if (scale == 1) {
-		x = event->xbutton.x;
-		y = event->xbutton.y;
-	    } else if (scale <= -1) {
-		x = event->xbutton.x * (-scale);
-		y = event->xbutton.y * (-scale);
-	    } else {
-		x = event->xbutton.x / scale;
-		y = event->xbutton.y / scale;
-	    }
+	    int x = event->xbutton.x;
+	    int y = event->xbutton.y;
+	    screen2pixmap(&x, &y);
 	    sel_x1 = sel_x2 = x;
 	    sel_y1 = sel_y2 = y;
 	    draw_selection();
@@ -1941,17 +1971,9 @@ Viewer::input2(XEvent *event) {
 	    // event->xbutton.state, event->xbutton.button
 	    if (!selection_in_progress)
 		return;
-	    int x, y;
-	    if (scale == 1) {
-		x = event->xbutton.x;
-		y = event->xbutton.y;
-	    } else if (scale <= -1) {
-		x = event->xbutton.x * (-scale);
-		y = event->xbutton.y * (-scale);
-	    } else {
-		x = event->xbutton.x / scale;
-		y = event->xbutton.y / scale;
-	    }
+	    int x = event->xbutton.x;
+	    int y = event->xbutton.y;
+	    screen2pixmap(&x, &y);
 	    if (x == sel_x1 || y == sel_y1) {
 		erase_selection();
 		selection_visible = false;
@@ -1968,17 +1990,9 @@ Viewer::input2(XEvent *event) {
 	    // event->xmotion.x, event->xmotion.y
 	    if (!selection_in_progress)
 		return;
-	    int x, y;
-	    if (scale == 1) {
-		x = event->xbutton.x;
-		y = event->xbutton.y;
-	    } else if (scale <= -1) {
-		x = event->xbutton.x * (-scale);
-		y = event->xbutton.y * (-scale);
-	    } else {
-		x = event->xbutton.x / scale;
-		y = event->xbutton.y / scale;
-	    }
+	    int x = event->xbutton.x;
+	    int y = event->xbutton.y;
+	    screen2pixmap(&x, &y);
 	    if (sel_x2 != x || sel_y2 != y) {
 		erase_selection();
 		sel_x2 = x;
