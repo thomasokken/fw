@@ -10,6 +10,7 @@
 #include "Viewer.h"
 #include "Menu.h"
 #include "FileDialog.h"
+#include "ImageIO.h"
 #include "Plugin.h"
 #include "main.h"
 #include "util.h"
@@ -30,23 +31,25 @@ Viewer::colormap_directory = NULL;
 /* public */
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
-    init(pluginname, NULL, NULL);
+    init(pluginname, NULL, NULL, 0, NULL);
 }
 
 /* public */
 Viewer::Viewer(const char *pluginname, const Viewer *src)
     : Frame(true, false, true) {
-    init(pluginname, src, NULL);
+    init(pluginname, src, NULL, 0, NULL);
 }
 
 /* public */
-Viewer::Viewer(const char *pluginname, const char *filename)
+Viewer::Viewer(const char *pluginname, void *plugin_data,
+	               int plugin_data_length, FWPixmap *fpm)
     : Frame(true, false, true) {
-    init(pluginname, NULL, filename);
+    init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
 
 /* private */ void
-Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
+Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
+	     int plugin_data_length, FWPixmap *fpm) {
     instances++;
     image = NULL;
     priv_cmap = None;
@@ -55,8 +58,17 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
-	delete this;
-	return;
+	if (fpm != NULL) {
+	    // We're here because a file has been opened, and we're going to
+	    // display it, whether we have a matching plugin or not.
+	    // TODO: error reporting!
+	    // Since the plugin was not found, we're falling back on the Null
+	    // plugin.
+	    plugin = Plugin::get("Null");
+	} else {
+	    delete this;
+	    return;
+	}
     }
     plugin->setViewer(this);
     plugin->setPixmap(&pm);
@@ -66,16 +78,15 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
 		finish_init();
 	    else
 		delete this;
-	} else if (filename != NULL) {
-	    if (plugin->init_load(filename))
-		finish_init();
-	    else
-		delete this;
+	} else if (fpm != NULL) {
+	    pm = *fpm;
+	    plugin->deserialize(plugin_data, plugin_data_length);
+	    finish_init();
 	} else {
 	    plugin->init_new();
-	    // the plugin must call finish_init or delete the Viewer.
-	    // If it deletes the viewer, it should do so using
-	    // Viewer::deleteLater(), NOT using Viewer::~Viewer().
+	    // The plugin must call Plugin::init_proceed() (which calls
+	    // Viewer::finish_init()) or Plugin::init_abort() (which calls
+	    // Viewer::deleteLater()).
 	}
     }
 }
@@ -95,11 +106,9 @@ Viewer::finish_init() {
 	pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
     else {
 	for (char **p = plugins; *p != NULL; p++) {
-	    if (strcmp(*p, "About") != 0) {
-		char id[100];
-		snprintf(id, 100, "File.New.%s", *p);
-		pluginmenu->addCommand(*p, NULL, NULL, id);
-	    }
+	    char id[100];
+	    snprintf(id, 100, "File.New.%s", *p);
+	    pluginmenu->addCommand(*p, NULL, NULL, id);
 	}
     }
 	
@@ -180,11 +189,9 @@ Viewer::finish_init() {
     if (plugins != NULL) {
 	helpmenu->addSeparator();
 	for (char **p = plugins; *p != NULL; p++) {
-	    if (strcmp(*p, "About") != 0) {
-		char id[100];
-		snprintf(id, 100, "Help.X.%s", *p);
-		helpmenu->addCommand(*p, NULL, NULL, id);
-	    }
+	    char id[100];
+	    snprintf(id, 100, "Help.X.%s", *p);
+	    helpmenu->addCommand(*p, NULL, NULL, id);
 	    free(*p);
 	}
 	free(plugins);
@@ -2108,8 +2115,26 @@ Viewer::radiocallback2(const char *id, const char *value) {
 
 /* private static */ void
 Viewer::doOpen2(const char *filename, void *closure) {
-    if (!openFile(filename))
+    char *plugin_name = NULL;
+    void *plugin_data = NULL;
+    int plugin_data_length;
+    FWPixmap pm;
+    char *message = NULL;
+    if (ImageIO::sread(filename, &plugin_name, &plugin_data,
+		      &plugin_data_length, &pm, &message)) {
+	// Read successful; open viewer
+	new Viewer(plugin_name, plugin_data, plugin_data_length, &pm);
+    } else {
+	// TODO: nicer error reporting
+	fprintf(stderr, "Can't open \"%s\" (%s).\n", filename, message);
 	doBeep();
+    }
+    if (plugin_name != NULL)
+	free(plugin_name);
+    if (plugin_data != NULL)
+	free(plugin_data);
+    if (message != NULL)
+	free(message);
 }
 
 /* private static */ void
@@ -2187,57 +2212,6 @@ Viewer::doOpen() {
     opendialog->setDirectory(&file_directory);
     opendialog->setFileSelectedCB(doOpen2, this);
     opendialog->raise();
-}
-
-/* public static */ bool
-Viewer::openFile(const char *filename) {
-    if (g_verbosity >= 1)
-	fprintf(stderr, "Opening \"%s\"...\n", filename);
-    char **names = Plugin::list();
-    if (names != NULL) {
-	int suitability = 0;
-	char *pluginname;
-	Plugin *plugin;
-	for (char **n = names; *n != NULL; n++) {
-	    Plugin *p= Plugin::get(*n);
-	    if (p == NULL) {
-		free(*n);
-		continue;
-	    }
-	    int s = p->can_open(filename);
-	    if (s > suitability) {
-		if (suitability > 0) {
-		    free(pluginname);
-		    Plugin::release(plugin);
-		}
-		pluginname = *n;
-		plugin = p;
-		suitability = s;
-	    } else {
-		free(*n);
-		Plugin::release(p);
-	    }
-	}
-	free(names);
-	if (suitability > 0) {
-	    // TODO: shouldn't use a constructor here!
-	    // What if opening the file fails?!?
-	    new Viewer(pluginname, filename);
-	    free(pluginname);
-	    Plugin::release(plugin);
-	    // NOTE: we only release the plugin *after* instantiating
-	    // a Viewer, because we want to avoid loading the .so more
-	    // often than necessary. If the instance openend for the
-	    // can_open() call was the only one, and we'd close it
-	    // between the can_open() call and the Viewer::Viewer()
-	    // call, we'd be loading the shared library twice.
-	    return true;
-	} else
-	    // No matching plugin found
-	    return false;
-    } else
-	// No plugins found at all
-	return false;
 }
 
 /* private */ void

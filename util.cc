@@ -6,7 +6,9 @@
 
 #include "util.h"
 
+
 extern int g_verbosity;
+
 
 char *strclone(const char *src) {
     if (src == NULL)
@@ -17,9 +19,82 @@ char *strclone(const char *src) {
     return dst;
 }
 
+int crc32(void *buf, int size) {
+    // TODO -- actual CRCs!
+    // Just XORing for now.
+    int res = 0;
+    int w = 0;
+    for (int i = 0; i < size + 3; i++) {
+	if (i >= size)
+	    w <<= 8;
+	else
+	    w = (w << 8) + *(((unsigned char *) buf) + i);
+	if ((i & 3) == 3) {
+	    res ^= w;
+	    w = 0;
+	}
+    }
+    return res;
+}
+
 void crash() {
     kill(0, SIGQUIT);
 }
+
+
+/* public */
+Iterator::Iterator() {
+    //
+}
+
+/* public virtual */
+Iterator::~Iterator() {
+    //
+}
+
+
+class Entry {
+    public:
+	char *key;
+	const void *value;
+};
+
+static int entry_compare(const void *a, const void *b) {
+    Entry *A = (Entry *) a;
+    Entry *B = (Entry *) b;
+    return strcmp(A->key, B->key);
+}
+
+class MapIterator : public Iterator {
+    private:
+	bool doKeys;
+	Entry *entries;
+	int nentries;
+	int pos;
+
+    public:
+	MapIterator(Entry *entries, int nentries, bool doKeys) {
+	    this->doKeys = doKeys;
+	    this->entries = entries;
+	    this->nentries = nentries;
+	    pos = 0;
+	}
+	virtual ~MapIterator() {
+	    //
+	}
+	virtual bool hasNext() {
+	    return pos < nentries;
+	}
+	virtual void *next() {
+	    if (pos < nentries) {
+		if (doKeys)
+		    return &entries[pos++].key;
+		else
+		    return &entries[pos++].value;
+	    } else
+		return NULL;
+	}
+};
 
 /* public */
 Map::Map() {
@@ -43,7 +118,7 @@ Map::put(const char *key, const void *value) {
     }
 
     if (entries == NULL) {
-	entries = (entry *) malloc(sizeof(entry));
+	entries = (Entry *) malloc(sizeof(Entry));
 	entries[0].key = strclone(key);
 	entries[0].value = value;
 	nentries = 1;
@@ -57,7 +132,7 @@ Map::put(const char *key, const void *value) {
     int high = nentries - 1;
     while (low <= high) {
 	int mid = (low + high) / 2;
-	entry *midVal = entries + mid;
+	Entry *midVal = entries + mid;
 	int res = strcmp(midVal->key, key);
 	if (res < 0)
 	    low = mid + 1;
@@ -75,10 +150,10 @@ Map::put(const char *key, const void *value) {
     if (nentries == size) {
 	// entries array full; grow it
 	size++;
-	entries = (entry *) realloc(entries, size * sizeof(entry));
+	entries = (Entry *) realloc(entries, size * sizeof(Entry));
     }
     memmove(entries + (low + 1), entries + low,
-	    (nentries - low) * sizeof(entry));
+	    (nentries - low) * sizeof(Entry));
     entries[low].key = strclone(key);
     entries[low].value = value;
     nentries++;
@@ -96,9 +171,9 @@ Map::get(const char *key) {
     if (entries == NULL)
 	return NULL;
 
-    entry e;
+    Entry e;
     e.key = (char *) key;
-    entry *res = (entry *) bsearch(&e, entries, nentries, sizeof(entry),
+    Entry *res = (Entry *) bsearch(&e, entries, nentries, sizeof(Entry),
 				    entry_compare);
     return res == NULL ? NULL : res->value;
 }
@@ -113,26 +188,29 @@ Map::remove(const char *key) {
     if (entries == NULL)
 	return;
 
-    entry e;
+    Entry e;
     e.key = (char *) key;
-    entry *res = (entry *) bsearch(&e, entries, nentries, sizeof(entry),
+    Entry *res = (Entry *) bsearch(&e, entries, nentries, sizeof(Entry),
 				    entry_compare);
     if (res == NULL)
 	// Not found
 	return;
     free(res->key);
     int res_pos = res - entries;
-    memmove(res, res + 1, (nentries - res_pos - 1) * sizeof(entry));
+    memmove(res, res + 1, (nentries - res_pos - 1) * sizeof(Entry));
     nentries--;
     if (g_verbosity >= 3)
 	dump();
 }
 
-/* private static */ int
-Map::entry_compare(const void *a, const void *b) {
-    entry *A = (entry *) a;
-    entry *B = (entry *) b;
-    return strcmp(A->key, B->key);
+/* public */ Iterator *
+Map::keys() {
+    return new MapIterator(entries, nentries, true);
+}
+
+/* public */ Iterator *
+Map::values() {
+    return new MapIterator(entries, nentries, false);
 }
 
 /* private */ void

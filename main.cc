@@ -12,6 +12,11 @@
 #include "Viewer.h"
 #include "util.h"
 
+#include "ImageIO_GIF.h"
+#include "ImageIO_JPEG.h"
+#include "ImageIO_PNG.h"
+#include "ImageIO_PNM.h"
+
 #include "fw.xpm"
 
 // Exported globals
@@ -410,12 +415,33 @@ int main(int argc, char **argv) {
 			    &g_iconmask,
 			    NULL);
 
+    ImageIO::regist(new ImageIO_GIF());
+    ImageIO::regist(new ImageIO_JPEG());
+    ImageIO::regist(new ImageIO_PNG());
+    ImageIO::regist(new ImageIO_PNM());
+
     bool nothingOpened = true;
     for (int i = 1; i < argc; i++) {
-	if (Viewer::openFile(argv[i]))
+	char *plugin_name = NULL;
+	void *plugin_data = NULL;
+	int plugin_data_length;
+	FWPixmap pm;
+	char *message = NULL;
+	if (ImageIO::sread(argv[i], &plugin_name, &plugin_data,
+			  &plugin_data_length, &pm, &message)) {
+	    // Read successful; open viewer
+	    new Viewer(plugin_name, plugin_data, plugin_data_length, &pm);
 	    nothingOpened = false;
-	else if (g_verbosity >= 1)
-	    fprintf(stderr, "Can't open \"%s\".\n", argv[i]);
+	} else {
+	    // TODO: nicer error reporting
+	    fprintf(stderr, "Can't open \"%s\" (%s).\n", argv[i], message);
+	}
+	if (plugin_name != NULL)
+	    free(plugin_name);
+	if (plugin_data != NULL)
+	    free(plugin_data);
+	if (message != NULL)
+	    free(message);
     }
     if (nothingOpened)
 	new Viewer("About");

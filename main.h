@@ -1,6 +1,9 @@
 #ifndef MAIN_H
 #define MAIN_H 1
 
+#include <X11/Xlib.h>
+#include <X11/Intrinsic.h>
+
 extern XtAppContext g_appcontext;
 extern Widget g_appshell;
 extern Display *g_display;

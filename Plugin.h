@@ -25,47 +25,72 @@ class Plugin {
     private:
 	void *dl;
 	Viewer *viewer;
+	void *dump_info;
 
     protected:
 	FWPixmap *pm;
 	PluginSettings *settings;
 
+	Plugin(void *dl);
+	virtual ~Plugin();
+
     public:
+	// Methods called by FW to manage plugins
 	static Plugin *get(const char *name);
 	static void release(Plugin *plugin);
 	static char **list();
 	void setPixmap(FWPixmap *pm) { this->pm = pm; }
 	void setViewer(Viewer *viewer) { this->viewer = viewer; }
-	virtual int can_open(const char *filename);
+	void serialize(void **buf, int *nbytes);
+	void deserialize(void *buf, int nbytes);
+
+	// Methods implemented by Plugins
+	// (Reasonable default implementations are provided for all of
+	// these, except for name().)
 	virtual bool does_depth(int depth);
 	virtual void set_depth(int depth);
 	virtual void init_new();
 	virtual bool init_clone(const Plugin *src);
-	virtual bool init_load(const char *filename);
-	virtual void save(const char *filename);
+	virtual void init_undump();
 	virtual void get_settings_ok();
 	virtual void get_settings_cancel();
 	virtual void run();
 	virtual void restart();
 	virtual void stop();
 	virtual bool work();
+	virtual void dump();
 	virtual const char *name() const = 0;
 	virtual const char *help();
 
     protected:
-	Plugin(void *dl);
-	virtual ~Plugin();
+	// Utility methods provided for use by plugins
 	static PluginSettings *getSettingsInstance();
 	static void beep();
+	static int debug_level();
 	void get_settings_dialog();
 	void init_proceed();
 	void init_abort();
+	void start_working();
+	void stop_working();
+
+	// Methods used by plugins to tell FW that the image has changed
 	void paint();
 	void paint(int top, int left, int bottom, int right);
 	void colormapChanged();
-	void start_working();
-	void stop_working();
-	static int debug_level();
+
+	// The next 5 methods should only be called from dump()
+	void dumpchar(int c);
+	void dumpbuf(void *buf, int nbytes);
+	void dumpint(int n);
+	void dumpdouble(double d);
+	void dumpstring(const char *s);
+
+	// The next 5 methods should only be called from undump()
+	int undumpchar();
+	void undumpbuf(void *buf, int nbytes);
+	int undumpint();
+	double undumpdouble();
+	char *undumpstring();
 };
 
 #endif

@@ -2,15 +2,22 @@
 #define UTIL_H 1
 
 char *strclone(const char *src);
+int crc32(void *buf, int size);
 void crash();
+
+class Iterator {
+    public:
+	Iterator();
+	virtual ~Iterator();
+	virtual bool hasNext() = 0;
+	virtual void *next() = 0;
+};
+
+class Entry;
 
 class Map {
     private:
-	struct entry {
-	    char *key;
-	    const void *value;
-	};
-	entry *entries;
+	Entry *entries;
 	int nentries;
 	int size;
 
@@ -20,9 +27,10 @@ class Map {
 	void put(const char *key, const void *value);
 	const void *get(const char *key);
 	void remove(const char *key);
+	Iterator *keys();
+	Iterator *values();
 
     private:
-	static int entry_compare(const void *a, const void *b);
 	void dump();
 };
 
