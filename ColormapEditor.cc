@@ -197,16 +197,59 @@ static void halftone_initialize() {
 	    halftone_pattern[0][i][j] = 0;
 
     for (int i = 1; i < 256; i++) {
-	int x = 0;
-	int y = 0;
-	int v = i;
-	for (int j = 0; j < 4; j++) {
-	    x = (x << 1) | (v & 1); v >>= 1;
-	    y = (y << 1) | (v & 1); v >>= 1;
-	}
+	// Each halftone patten differs by its predecessor by exactly one bit.
+	// First, copy the predecessor into the current slot:
+
 	for (int j = 0; j < 16; j++)
 	    for (int k = 0; k < 2; k++)
 		halftone_pattern[i][j][k] = halftone_pattern[i - 1][j][k];
+
+	// Next, find the bit to set. This is a bit tricky. One possibility is
+	// to paint a gradually growing clump, which leads to clustered-dot
+	// dithering. Clustered-dot is appropriate mostly for printers, since
+	// it offers a measure of immunity to pixel smear; on computer screens,
+	// pattern dithering usually looks better, because the artefacts tend
+	// to be smaller. I use a very simplistic approach to generating these
+	// patterns...
+
+	int v = i;
+	int x = 0;
+	int y = 0;
+
+	// Decompose 8-bit pattern number into two 4-bit coordinates.
+	// This code looks at the pattern number as follows
+	//
+	//   +----+----+----+----+----+----+----+----+
+	//   | n7 | n6 | n5 | n4 | n3 | n2 | n1 | n0 |
+	//   +----+----+----+----+----+----+----+----+
+	//   | x0 | y0 | y1 | x1 | x2 | y2 | y3 | x3 |
+	//   +----+----+----+----+----+----+----+----+
+	//
+	// This leads to alternating horizontal and vertical artefacts as you
+	// progress through the brightness levels. It would be better to use a
+	// scheme that kept such artefacts at a mimumum by picking the next
+	// pixel to color slightly more cleverly. I feel the basic bit-order-
+	// reversal idea is valid, but the right 2D variant still eludes me.
+	//
+	// Since I'm currently only using halftoning to paint the cells in the
+	// colormap editor, where artefacts are not very noticeable and
+	// certainly not as distracting as they would be in an actual image;
+	// and also, since I have been hacking for more than three weeks
+	// already and I would like to put FW 2.0 to bed within the next couple
+	// of days, I'm just going to leave it like this for now.
+	//
+	// Note to self: TODO, along with a truly general CopyBits (arbitrary
+	// scaling, halftoning support, yada yada yada). When hell freezes over
+	// seems like a nice target. :-)
+
+	x = (x << 1) | (v & 1); v >>= 1;
+	y = (y << 1) | (v & 1); v >>= 1;
+	y = (y << 1) | (v & 1); v >>= 1;
+	x = (x << 1) | (v & 1); v >>= 1;
+	x = (x << 1) | (v & 1); v >>= 1;
+	y = (y << 1) | (v & 1); v >>= 1;
+	y = (y << 1) | (v & 1); v >>= 1;
+	x = (x << 1) | (v & 1); v >>= 1;
 	halftone_pattern[i][y][x >> 3] |= 1 << (x & 7);
     }
 
