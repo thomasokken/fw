@@ -273,7 +273,7 @@ void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
 	}
 
 	gp = (*g * gmax + 127) / 255;
-	gk = rp * gmax / 255;
+	gk = gp * 255 / gmax;
 	if (gk == *g) {
 	    gp2 = gp;
 	    gk2 = gk;
@@ -293,7 +293,7 @@ void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
 	}
 
 	bp = (*b * bmax + 127) / 255;
-	bk = bp * bmax / 255;
+	bk = bp * 255 / bmax;
 	if (bk == *b) {
 	    bp2 = bp;
 	    bk2 = bk;
@@ -316,14 +316,14 @@ void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
 	int go = (gp2 - gp) << gmult;
 	int bo = (bp2 - bp) << bmult;
 	int p = (rp << rmult) | (bp << bmult) | (gp << gmult);
-	pixels[0] = g_colorcube[p               ].pixel;
-	pixels[1] = g_colorcube[p           + bo].pixel;
-	pixels[2] = g_colorcube[p      + go     ].pixel;
-	pixels[3] = g_colorcube[p      + go + bo].pixel;
-	pixels[4] = g_colorcube[p + ro          ].pixel;
-	pixels[5] = g_colorcube[p + ro      + bo].pixel;
-	pixels[6] = g_colorcube[p + ro + go     ].pixel;
-	pixels[7] = g_colorcube[p + ro + go + bo].pixel;
+	pixels[0] = p               ;
+	pixels[1] = p           + bo;
+	pixels[2] = p      + go     ;
+	pixels[3] = p      + go + bo;
+	pixels[4] = p + ro          ;
+	pixels[5] = p + ro      + bo;
+	pixels[6] = p + ro + go     ;
+	pixels[7] = p + ro + go + bo;
     }
 }
 

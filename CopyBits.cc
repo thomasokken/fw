@@ -4,6 +4,34 @@
 #include "main.h"
 
 
+static bool inited = false;
+static int rmax, rmult, bmax, bmult, gmax, gmult;
+
+static void calc_rgb_masks() {
+    if (inited)
+	return;
+    rmax = g_visual->red_mask;
+    rmult = 0;
+    while ((rmax & 1) == 0) {
+	rmax >>= 1;
+	rmult++;
+    }
+    gmax = g_visual->green_mask;
+    gmult = 0;
+    while ((gmax & 1) == 0) {
+	gmax >>= 1;
+	gmult++;
+    }
+    bmax = g_visual->blue_mask;
+    bmult = 0;
+    while ((bmax & 1) == 0) {
+	bmax >>= 1;
+	bmult++;
+    }
+    inited = true;
+}
+
+
 /* public static */ void
 CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			bool priv_cmap, bool no_grays, bool dither,
@@ -52,7 +80,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    int gerr = (g + 25) % 51 - 25;
 		    int berr = (b + 25) % 51 - 25;
 		    int color_err = rerr * rerr + gerr * gerr + berr * berr;
-		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    int k = (r * 306 + g * 601 + b * 117) / 1024;
 		    rerr = r - k;
 		    gerr = g - k;
 		    berr = b - k;
@@ -63,47 +91,24 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			int bb = (b + 25) / 51;
 			pixel = 36 * rr + 6 * gg + bb;
 		    } else {
-			int kk = (int) (k * 3 / 17.0 + 0.5);
+			int kk = (k * 6 + 17) / 34;
 			if (kk % 9 == 0)
 			    pixel = kk * 43 / 9;
 			else
 			    pixel = (kk / 9) * 8 + (kk % 9) + 215;
 		    }
 		} else if (g_colorcube != NULL) {
-		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+		    int index = (((r * (g_cubesize - 1) + 127) / 255)
 			    * g_cubesize
-			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    + ((g * (g_cubesize - 1) + 127) / 255))
 			    * g_cubesize
-			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    static bool inited = false;
-		    static int rmax, rmult, bmax, bmult, gmax, gmult;
-		    if (!inited) {
-			rmax = g_visual->red_mask;
-			rmult = 0;
-			while ((rmax & 1) == 0) {
-			    rmax >>= 1;
-			    rmult++;
-			}
-			gmax = g_visual->green_mask;
-			gmult = 0;
-			while ((gmax & 1) == 0) {
-			    gmax >>= 1;
-			    gmult++;
-			}
-			bmax = g_visual->blue_mask;
-			bmult = 0;
-			while ((bmax & 1) == 0) {
-			    bmax >>= 1;
-			    bmult++;
-			}
-			inited = true;
-		    }
-
-		    pixel = ((r * rmax / 255) << rmult)
-			    + ((g * gmax / 255) << gmult)
-			    + ((b * bmax / 255) << bmult);
+		    calc_rgb_masks();
+		    pixel = (((r * rmax + 127) / 255) << rmult)
+			    + (((g * gmax + 127) / 255) << gmult)
+			    + (((b * bmax + 127) / 255) << bmult);
 		}
 		XPutPixel(image, x, y, pixel);
 	    }
@@ -167,7 +172,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    int dg1 = (g + 25) % 51 - 25;
 		    int db1 = (b + 25) % 51 - 25;
 		    int color_err = dr1 * dr1 + dg1 * dg1 + db1 * db1;
-		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    int k = (r * 306 + g * 601 + b * 117) / 1024;
 		    int dr2 = r - k;
 		    int dg2 = g - k;
 		    int db2 = b - k;
@@ -181,7 +186,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			dG = dg1;
 			dB = db1;
 		    } else {
-			int kk = (int) (k * 3 / 17.0 + 0.5);
+			int kk = (k * 6 + 17) / 34;
 			if (kk % 9 == 0)
 			    pixel = kk * 43 / 9;
 			else
@@ -191,46 +196,24 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			dB = db2;
 		    }
 		} else if (g_colorcube != NULL) {
-		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+		    int index = (((r * (g_cubesize - 1) + 127) / 255)
 			    * g_cubesize
-			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    + ((g * (g_cubesize - 1) + 127) / 255))
 			    * g_cubesize
-			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    dR = r - (g_colorcube[index].red >> 8);
 		    dG = g - (g_colorcube[index].green >> 8);
 		    dB = b - (g_colorcube[index].blue >> 8);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    static bool inited = false;
-		    static int rmax, rmult, bmax, bmult, gmax, gmult;
-		    if (!inited) {
-			rmax = g_visual->red_mask;
-			rmult = 0;
-			while ((rmax & 1) == 0) {
-			    rmax >>= 1;
-			    rmult++;
-			}
-			gmax = g_visual->green_mask;
-			gmult = 0;
-			while ((gmax & 1) == 0) {
-			    gmax >>= 1;
-			    gmult++;
-			}
-			bmax = g_visual->blue_mask;
-			bmult = 0;
-			while ((bmax & 1) == 0) {
-			    bmax >>= 1;
-			    bmult++;
-			}
-			inited = true;
-		    }
-
-		    pixel = ((r * rmax / 255) << rmult)
-			    + ((g * gmax / 255) << gmult)
-			    + ((b * bmax / 255) << bmult);
-		    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
-		    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
-		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
+		    calc_rgb_masks();
+		    int ri = (r * rmax + 127) / 255;
+		    int gi = (g * gmax + 127) / 255;
+		    int bi = (b * bmax + 127) / 255;
+		    pixel = (ri << rmult) + (gi << gmult) + (bi << bmult);
+		    dR = r - ri * 255 / rmax;
+		    dG = g - gi * 255 / gmax;
+		    dB = b - bi * 255 / bmax;
 		}
 		XPutPixel(image, x, y, pixel);
 		int prevx = x - dir;
@@ -274,9 +257,8 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    g = pm->pixels[y * pm->bytesperline + (x << 2) + 2];
 		    b = pm->pixels[y * pm->bytesperline + (x << 2) + 3];
 		}
-		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
-		int graylevel = 
-		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		int k = (r * 306 + g * 601 + b * 117) / 1024;
+		int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 		if (graylevel >= g_rampsize)
 		    graylevel = g_rampsize - 1;
 		unsigned long pixel = g_grayramp[graylevel].pixel;
@@ -315,12 +297,11 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    g = pm->pixels[y * pm->bytesperline + (x << 2) + 2];
 		    b = pm->pixels[y * pm->bytesperline + (x << 2) + 3];
 		}
-		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		int k = (r * 306 + g * 601 + b * 117) / 1024;
 		k += (dk[x - left] + dK) >> 4;
 		if (k < 0) k = 0; else if (k > 255) k = 255;
 		dk[x - left] = 0;
-		int graylevel = 
-		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 		if (graylevel >= g_rampsize)
 		    graylevel = g_rampsize - 1;
 		dK = k - (g_grayramp[graylevel].red >> 8);
@@ -411,7 +392,7 @@ CopyBits::copy_enlarged(int factor,
 		    int gerr = (g + 25) % 51 - 25;
 		    int berr = (b + 25) % 51 - 25;
 		    int color_err = rerr * rerr + gerr * gerr + berr * berr;
-		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    int k = (r * 306 + g * 601 + b * 117) / 1024;
 		    rerr = r - k;
 		    gerr = g - k;
 		    berr = b - k;
@@ -422,47 +403,24 @@ CopyBits::copy_enlarged(int factor,
 			int bb = (b + 25) / 51;
 			pixel = 36 * rr + 6 * gg + bb;
 		    } else {
-			int kk = (int) (k * 3 / 17.0 + 0.5);
+			int kk = (k * 6 + 17) / 34;
 			if (kk % 9 == 0)
 			    pixel = kk * 43 / 9;
 			else
 			    pixel = (kk / 9) * 8 + (kk % 9) + 215;
 		    }
 		} else if (g_colorcube != NULL) {
-		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+		    int index = (((r * (g_cubesize - 1) + 127) / 255)
 			    * g_cubesize
-			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    + ((g * (g_cubesize - 1) + 127) / 255))
 			    * g_cubesize
-			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    static bool inited = false;
-		    static int rmax, rmult, bmax, bmult, gmax, gmult;
-		    if (!inited) {
-			rmax = g_visual->red_mask;
-			rmult = 0;
-			while ((rmax & 1) == 0) {
-			    rmax >>= 1;
-			    rmult++;
-			}
-			gmax = g_visual->green_mask;
-			gmult = 0;
-			while ((gmax & 1) == 0) {
-			    gmax >>= 1;
-			    gmult++;
-			}
-			bmax = g_visual->blue_mask;
-			bmult = 0;
-			while ((bmax & 1) == 0) {
-			    bmax >>= 1;
-			    bmult++;
-			}
-			inited = true;
-		    }
-
-		    pixel = ((r * rmax / 255) << rmult)
-			    + ((g * gmax / 255) << gmult)
-			    + ((b * bmax / 255) << bmult);
+		    calc_rgb_masks();
+		    pixel = (((r * rmax + 127) / 255) << rmult)
+			    + (((g * gmax + 127) / 255) << gmult)
+			    + (((b * bmax + 127) / 255) << bmult);
 		}
 		for (int XX = X; XX < X + factor; XX++)
 		    for (int YY = Y; YY < Y + factor; YY++)
@@ -530,7 +488,7 @@ CopyBits::copy_enlarged(int factor,
 		    int dg1 = (g + 25) % 51 - 25;
 		    int db1 = (b + 25) % 51 - 25;
 		    int color_err = dr1 * dr1 + dg1 * dg1 + db1 * db1;
-		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    int k = (r * 306 + g * 601 + b * 117) / 1024;
 		    int dr2 = r - k;
 		    int dg2 = g - k;
 		    int db2 = b - k;
@@ -544,7 +502,7 @@ CopyBits::copy_enlarged(int factor,
 			dG = dg1;
 			dB = db1;
 		    } else {
-			int kk = (int) (k * 3 / 17.0 + 0.5);
+			int kk = (k * 6 + 17) / 34;
 			if (kk % 9 == 0)
 			    pixel = kk * 43 / 9;
 			else
@@ -554,46 +512,24 @@ CopyBits::copy_enlarged(int factor,
 			dB = db2;
 		    }
 		} else if (g_colorcube != NULL) {
-		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+		    int index = (((r * (g_cubesize - 1) + 127) / 255)
 			    * g_cubesize
-			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    + ((g * (g_cubesize - 1) + 127) / 255))
 			    * g_cubesize
-			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    dR = r - (g_colorcube[index].red >> 8);
 		    dG = g - (g_colorcube[index].green >> 8);
 		    dB = b - (g_colorcube[index].blue >> 8);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    static bool inited = false;
-		    static int rmax, rmult, bmax, bmult, gmax, gmult;
-		    if (!inited) {
-			rmax = g_visual->red_mask;
-			rmult = 0;
-			while ((rmax & 1) == 0) {
-			    rmax >>= 1;
-			    rmult++;
-			}
-			gmax = g_visual->green_mask;
-			gmult = 0;
-			while ((gmax & 1) == 0) {
-			    gmax >>= 1;
-			    gmult++;
-			}
-			bmax = g_visual->blue_mask;
-			bmult = 0;
-			while ((bmax & 1) == 0) {
-			    bmax >>= 1;
-			    bmult++;
-			}
-			inited = true;
-		    }
-
-		    pixel = ((r * rmax / 255) << rmult)
-			    + ((g * gmax / 255) << gmult)
-			    + ((b * bmax / 255) << bmult);
-		    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
-		    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
-		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
+		    calc_rgb_masks();
+		    int ri = (r * rmax + 127) / 255;
+		    int gi = (g * gmax + 127) / 255;
+		    int bi = (b * bmax + 127) / 255;
+		    pixel = (ri << rmult) + (gi << gmult) + (bi << bmult);
+		    dR = r - ri * 255 / rmax;
+		    dG = g - gi * 255 / gmax;
+		    dB = b - bi * 255 / bmax;
 		}
 		XPutPixel(image, X, Y, pixel);
 		int PREVX = X - dir;
@@ -639,9 +575,8 @@ CopyBits::copy_enlarged(int factor,
 		    g = pm->pixels[y * pm->bytesperline + (x << 2) + 2];
 		    b = pm->pixels[y * pm->bytesperline + (x << 2) + 3];
 		}
-		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
-		int graylevel = 
-		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		int k = (r * 306 + g * 601 + b * 117) / 1024;
+		int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 		if (graylevel >= g_rampsize)
 		    graylevel = g_rampsize - 1;
 		unsigned long pixel = g_grayramp[graylevel].pixel;
@@ -684,12 +619,11 @@ CopyBits::copy_enlarged(int factor,
 		    g = pm->pixels[y * pm->bytesperline + (x << 2) + 2];
 		    b = pm->pixels[y * pm->bytesperline + (x << 2) + 3];
 		}
-		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		int k = (r * 306 + g * 601 + b * 117) / 1024;
 		k += (dk[X - LEFT] + dK) >> 4;
 		if (k < 0) k = 0; else if (k > 255) k = 255;
 		dk[X - LEFT] = 0;
-		int graylevel = 
-		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 		if (graylevel >= g_rampsize)
 		    graylevel = g_rampsize - 1;
 		dK = k - (g_grayramp[graylevel].red >> 8);
@@ -785,7 +719,7 @@ CopyBits::copy_reduced(int factor,
 		    if (priv_cmap) {
 			// Find the closest match to (R, G, B) in the colormap...
 			if (pm->depth == 1) {
-			    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			    int k = (r * 306 + g * 601 + b * 117) / 1024;
 			    if (k > 255)
 				k = 255;
 			    XPutPixel(image, X + LEFT, Y, k);
@@ -801,7 +735,7 @@ CopyBits::copy_reduced(int factor,
 			    int gerr = (g + 25) % 51 - 25;
 			    int berr = (b + 25) % 51 - 25;
 			    int color_err = rerr * rerr + gerr * gerr + berr * berr;
-			    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114); 
+			    int k = (r * 306 + g * 601 + b * 117) / 1024;
 			    rerr = r - k; 
 			    gerr = g - k;
 			    berr = b - k;
@@ -813,7 +747,7 @@ CopyBits::copy_reduced(int factor,
 				int bb = (b + 25) / 51;
 				pixel = 36 * rr + 6 * gg + bb;
 			    } else {
-				int kk = (int) (k * 3 / 17.0 + 0.5);
+				int kk = (k * 6 + 17) / 34;
 				if (kk % 9 == 0)
 				    pixel = kk * 43 / 9;
 				else
@@ -839,46 +773,22 @@ CopyBits::copy_reduced(int factor,
 		    } else if (g_grayramp == NULL) {
 			unsigned long pixel;
 			if (g_colorcube != NULL) {
-			    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    int index = (((r * (g_cubesize - 1) + 127) / 255)
 				    * g_cubesize
-				    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+				    + ((g * (g_cubesize - 1) + 127) / 255))
 				    * g_cubesize
-				    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+				    + ((b * (g_cubesize - 1) + 127) / 255);
 			    pixel = g_colorcube[index].pixel;
 			} else {
-			    static bool inited = false;
-			    static int rmax, rmult, bmax, bmult, gmax, gmult;
-			    if (!inited) {
-				rmax = g_visual->red_mask;
-				rmult = 0;
-				while ((rmax & 1) == 0) {
-				    rmax >>= 1;
-				    rmult++;
-				}
-				gmax = g_visual->green_mask;
-				gmult = 0;
-				while ((gmax & 1) == 0) {
-				    gmax >>= 1;
-				    gmult++;
-				}
-				bmax = g_visual->blue_mask;
-				bmult = 0;
-				while ((bmax & 1) == 0) {
-				    bmax >>= 1;
-				    bmult++;
-				}
-				inited = true;
-			    }
-
-			    pixel = ((r * rmax / 255) << rmult)
-				    + ((g * gmax / 255) << gmult)
-				    + ((b * bmax / 255) << bmult);
+			    calc_rgb_masks();
+			    pixel = (((r * rmax + 127) / 255) << rmult)
+				    + (((g * gmax + 127) / 255) << gmult)
+				    + (((b * bmax + 127) / 255) << bmult);
 			}
 			XPutPixel(image, X + LEFT, Y, pixel);
 		    } else {
-			int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
-			int graylevel = 
-			    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+			int k = (r * 306 + g * 601 + b * 117) / 1024;
+			int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 			if (graylevel >= g_rampsize)
 			    graylevel = g_rampsize - 1;
 			unsigned long pixel = g_grayramp[graylevel].pixel;
@@ -991,7 +901,7 @@ CopyBits::copy_reduced(int factor,
 			int dg1 = (g + 25) % 51 - 25;
 			int db1 = (b + 25) % 51 - 25;
 			int color_err = dr1 * dr1 + dg1 * dg1 + db1 * db1;
-			int k = (int) (r * 0.299 + g * 0.587 + b * 0.114); 
+			int k = (r * 306 + g * 601 + b * 117) / 1024;
 			int dr2 = r - k; 
 			int dg2 = g - k;
 			int db2 = b - k;
@@ -1006,7 +916,7 @@ CopyBits::copy_reduced(int factor,
 			    dG = dg1;
 			    dB = db1;
 			} else {
-			    int kk = (int) (k * 3 / 17.0 + 0.5);
+			    int kk = (k * 6 + 17) / 34;
 			    if (kk % 9 == 0)
 				pixel = kk * 43 / 9;
 			    else
@@ -1038,46 +948,24 @@ CopyBits::copy_reduced(int factor,
 		    } else {
 			unsigned long pixel;
 			if (g_colorcube != NULL) {
-			    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    int index = (((r * (g_cubesize - 1) + 127) / 255)
 				    * g_cubesize
-				    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+				    + ((g * (g_cubesize - 1) + 127) / 255))
 				    * g_cubesize
-				    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+				    + ((b * (g_cubesize - 1) + 127) / 255);
 			    pixel = g_colorcube[index].pixel;
 			    dR = r - (g_colorcube[index].red >> 8);
 			    dG = g - (g_colorcube[index].green >> 8);
 			    dB = b - (g_colorcube[index].blue >> 8);
 			} else {
-			    static bool inited = false;
-			    static int rmax, rmult, bmax, bmult, gmax, gmult;
-			    if (!inited) {
-				rmax = g_visual->red_mask;
-				rmult = 0;
-				while ((rmax & 1) == 0) {
-				    rmax >>= 1;
-				    rmult++;
-				}
-				gmax = g_visual->green_mask;
-				gmult = 0;
-				while ((gmax & 1) == 0) {
-				    gmax >>= 1;
-				    gmult++;
-				}
-				bmax = g_visual->blue_mask;
-				bmult = 0;
-				while ((bmax & 1) == 0) {
-				    bmax >>= 1;
-				    bmult++;
-				}
-				inited = true;
-			    }
-
-			    pixel = ((r * rmax / 255) << rmult)
-				    + ((g * gmax / 255) << gmult)
-				    + ((b * bmax / 255) << bmult);
-			    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
-			    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
-			    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
+			    calc_rgb_masks();
+			    int ri = (r * rmax + 127) / 255;
+			    int gi = (g * gmax + 127) / 255;
+			    int bi = (b * bmax + 127) / 255;
+			    pixel = (ri << rmult) + (gi << gmult) + (bi << bmult);
+			    dR = r - ri * 255 / rmax;
+			    dG = g - gi * 255 / gmax;
+			    dB = b - bi * 255 / bmax;
 			}
 			XPutPixel(image, X + LEFT, Y, pixel);
 		    }
@@ -1182,7 +1070,7 @@ CopyBits::copy_reduced(int factor,
 			int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
 			int g = (G[X] + w / 2) / w; if (g > 255) g = 255;
 			int b = (B[X] + w / 2) / w; if (b > 255) b = 255;
-			k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			int k = (r * 306 + g * 601 + b * 117) / 1024;
 			if (k > 255)
 			    k = 255;
 			R[X] = G[X] = B[X] = W[X] = 0;
@@ -1192,8 +1080,7 @@ CopyBits::copy_reduced(int factor,
 		    if (k < 0) k = 0; else if (k > 255) k = 255;
 		    dk[X] = 0;
 
-		    int graylevel = 
-			(int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		    int graylevel = (k * (g_rampsize - 1) + 127) / 255;
 		    if (graylevel >= g_rampsize)
 			graylevel = g_rampsize - 1;
 		    unsigned long pixel = g_grayramp[graylevel].pixel;
