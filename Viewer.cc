@@ -115,11 +115,11 @@ Viewer::finish_init() {
     filemenu->addCommand("Open...", NULL, "Ctrl+O", "File.Open");
     filemenu->addSeparator();
     filemenu->addCommand("Close", NULL, "Ctrl+W", "File.Close");
-    filemenu->addCommand("Save", NULL, NULL, "File.Save");
+    filemenu->addCommand("Save", NULL, "Ctrl+S", "File.Save");
     filemenu->addCommand("Save As...", NULL, NULL, "File.SaveAs");
-    filemenu->addCommand("Get Info...", NULL, NULL, "File.GetInfo");
+    filemenu->addCommand("Get Info...", NULL, "Ctrl+I", "File.GetInfo");
     filemenu->addSeparator();
-    filemenu->addCommand("Print...", NULL, NULL, "File.Print");
+    filemenu->addCommand("Print...", NULL, "Ctrl+P", "File.Print");
     filemenu->addSeparator();
     filemenu->addCommand("Quit", "Q", "Ctrl+Q", "File.Quit");
     topmenu->addMenu("File", "F", NULL, "File", filemenu);
@@ -137,14 +137,14 @@ Viewer::finish_init() {
     colormenu->addCommand("Load Colors...", NULL, NULL, "Color.LoadColors");
     colormenu->addCommand("Save Colors...", NULL, NULL, "Color.SaveColors");
     colormenu->addSeparator();
-    colormenu->addCommand("Edit Colors...", NULL, NULL, "Color.EditColors");
+    colormenu->addCommand("Edit Colors...", NULL, "Ctrl+E", "Color.EditColors");
     topmenu->addMenu("Color", NULL, NULL, "Color", colormenu);
 
     Menu *drawmenu = new Menu;
     drawmenu->addCommand("Stop Others", NULL, NULL, "Draw.StopOthers");
-    drawmenu->addCommand("Stop", NULL, NULL, "Draw.Stop");
+    drawmenu->addCommand("Stop", NULL, "Ctrl+K", "Draw.Stop");
     drawmenu->addCommand("Stop All", NULL, NULL, "Draw.StopAll");
-    drawmenu->addCommand("Continue", NULL, NULL, "Draw.Continue");
+    drawmenu->addCommand("Continue", NULL, "Ctrl+L", "Draw.Continue");
     drawmenu->addCommand("Continue All", NULL, NULL, "Draw.ContinueAll");
     drawmenu->addSeparator();
     drawmenu->addCommand("Update Now", NULL, "Ctrl+U", "Draw.UpdateNow");
@@ -165,7 +165,7 @@ Viewer::finish_init() {
     scalemenu->addRadio(" 25%", NULL, NULL, "Windows.Scale@-4");
     scalemenu->addRadio(" 33%", NULL, NULL, "Windows.Scale@-3");
     scalemenu->addRadio(" 50%", NULL, NULL, "Windows.Scale@-2");
-    scalemenu->addRadio("100%", NULL, NULL, "Windows.Scale@1");
+    scalemenu->addRadio("100%", NULL, "Ctrl+1", "Windows.Scale@1");
     scalemenu->addRadio("200%", NULL, NULL, "Windows.Scale@2");
     scalemenu->addRadio("300%", NULL, NULL, "Windows.Scale@3");
     scalemenu->addRadio("400%", NULL, NULL, "Windows.Scale@4");

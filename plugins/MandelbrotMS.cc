@@ -16,14 +16,17 @@ struct rect {
     void empty() {
 	top = left = bottom = right = -1;
     }
+    bool isEmpty() const {
+	return top == -1 && left == -1 && bottom == -1 && right == -1;
+    }
     void merge(const rect &r) {
-	if (top == -1 && left == -1 && bottom == -1 && right == -1) {
+	if (isEmpty()) {
 	    top = r.top;
 	    left = r.left;
 	    bottom = r.bottom;
 	    right = r.right;
 	} else {
-	    if (r.top != -1 || r.left != -1 || r.bottom != -1 || r.right != -1) {
+	    if (!r.isEmpty()) {
 		if (r.top < top)
 		    top = r.top;
 		if (r.left < left)
@@ -155,7 +158,11 @@ class MandelbrotMS : public Plugin {
 
 	virtual void stop() {
 	    stop_working();
-	    paint();
+	    if (!dirty.isEmpty()) {
+		paint(dirty.top, dirty.left, dirty.bottom + 1, dirty.right + 1);
+		dirty.empty();
+		ndirty = 0;
+	    }
 	}
 
 	virtual bool work() {
