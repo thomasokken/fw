@@ -1,3 +1,10 @@
+The PGM reading/writing code has a bug. Take a look at fwpix/kaos.pgm.
+Take that look using xv or xpaint -- whatever mistake I'm making (my guess
+is end-of-line padding), I'm making it in *both* the reader and the writer.
+
+The aspect ratio mainenance support is still missing. Need a notification
+mechanism, plus code in MarianiSilver to use it.
+
 YesNoCancelDialog and SaveImageDialog should not be application-modal.
 How to reduce modality to one window only, and still make sure that the user
 can't throw the application into an inconsistent state by mucking about in
