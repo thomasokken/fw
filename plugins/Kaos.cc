@@ -23,6 +23,16 @@ struct rggb_struct {
     int rg, gb;
 };
 
+static int my_round(double x) {
+    if (x >= 0)
+	return (int) (x + 0.5);
+    else
+	return (int) (x - 0.5);
+}
+
+static double my_rand() {
+    return ((double) (rand() - RAND_MAX / 2)) / RAND_MAX * 2;
+}
 
 class Kaos : public Plugin {
     private:
@@ -41,7 +51,6 @@ class Kaos : public Plugin {
 	Kaos(void *dl) : Plugin(dl) {
 	    settings = &s;
 	    settings_layout = my_settings_layout;
-	    jOud1 = 0;
 	}
 	virtual ~Kaos() {}
 	virtual const char *name() const {
@@ -77,10 +86,10 @@ class Kaos : public Plugin {
 		q_struct *q = Q + i;
 		q->a11 = tscale;
 		q->a22 = tscale;
-		q->a12 = (((double) rand()) / RAND_MAX) * tscale;
-		q->a21 = (((double) rand()) / RAND_MAX) * tscale;
-		q->b1 = (((double) rand()) / RAND_MAX) * tscale;
-		q->b2 = (((double) rand()) / RAND_MAX) * tscale;
+		q->a12 = my_rand() * tscale;
+		q->a21 = my_rand() * tscale;
+		q->b1 = my_rand() * tscale;
+		q->b2 = my_rand() * tscale;
 
 		if (depth == 24) {
 		    int r1 = rand();
@@ -97,8 +106,10 @@ class Kaos : public Plugin {
 
 	    x = 0;
 	    y = 0;
+	    int j = 0;
 	    for (int i = 0; i < 100; i++) {
-		int j = rand() % n;
+		jOud1 = j;
+		j = rand() % n;
 		double xOud = x;
 		q_struct *q = Q + j;
 		x = q->a11 * x + q->a12 * y + q->b1;
@@ -136,8 +147,8 @@ class Kaos : public Plugin {
 		    q_struct *q = Q + j;
 		    x = q->a11 * x + q->a12 * y + q->b1;
 		    y = q->a21 * xOud + q->a22 * y + q->b2;
-		    int xs = xmid + (int) (x * maxmid + 0.5);
-		    int ys = ymid + (int) (y * maxmid + 0.5);
+		    int xs = xmid + my_round(x * maxmid);
+		    int ys = ymid + my_round(y * maxmid);
 		    if (xs >= 0 && ys >= 0 && xs < (int) width && ys < (int) height) {
 			char *p = pixels + (ys * bytesperline + xs);
 			unsigned char c = *((unsigned char *) p);
@@ -159,8 +170,8 @@ class Kaos : public Plugin {
 		    q_struct *q = Q + j;
 		    x = q->a11 * x + q->a12 * y + q->b1;
 		    y = q->a21 * xOud + q->a22 * y + q->b2;
-		    int xs = xmid + (int) (x * maxmid + 0.5);
-		    int ys = ymid + (int) (y * maxmid + 0.5);
+		    int xs = xmid + my_round(x * maxmid);
+		    int ys = ymid + my_round(y * maxmid);
 		    if (xs >= 0 && ys >= 0 && xs < (int) width && ys < (int) height) {
 			int i, comp;
 			switch (rand() % 3) {
