@@ -63,20 +63,20 @@ class Kaos : public Plugin {
 	    get_settings();
 	}
 	virtual void set_depth(int depth) {
-	    this->depth = depth;
+	    vw->depth = depth;
 	}
 	virtual void get_settings_ok() {
-	    width = s.width;
-	    height = s.height;
-	    bytesperline = depth == 8 ? (width + 3 & ~3) : (width * 4);
-	    pixels = (char *) malloc(bytesperline * height);
-	    if (depth == 8) { 
-		cmap = new Color[256];
+	    vw->width = s.width;
+	    vw->height = s.height;
+	    vw->bytesperline = vw->depth == 8 ? (vw->width + 3 & ~3) : (vw->width * 4);
+	    vw->pixels = (unsigned char *) malloc(vw->bytesperline * vw->height);
+	    if (vw->depth == 8) { 
+		vw->cmap = new Color[256];
 		for (int k = 0; k < 256; k++)
-		    cmap[k].r = cmap[k].g = cmap[k].b = k;
+		    vw->cmap[k].r = vw->cmap[k].g = vw->cmap[k].b = k;
 	    }
 
-	    memset(pixels, 0, bytesperline * height);
+	    memset(vw->pixels, 0, vw->bytesperline * vw->height);
 
 	    // Reinoud's Kaos initializations
 
@@ -91,7 +91,7 @@ class Kaos : public Plugin {
 		q->b1 = my_rand() * tscale;
 		q->b2 = my_rand() * tscale;
 
-		if (depth == 24) {
+		if (vw->depth == 24) {
 		    int r1 = rand();
 		    int r2 = rand();
 		    if (r1 > r2) {
@@ -116,12 +116,12 @@ class Kaos : public Plugin {
 		y = q->a21 * xOud + q->a22 * y + q->b2;
 	    }
 
-	    xmid = width / 2;
-	    ymid = height / 2;
+	    xmid = vw->width / 2;
+	    ymid = vw->height / 2;
 	    maxmid = xmid > ymid ? xmid : ymid;
 	    jop = 0;
 	    jopmax = ((long ) xmid) * ymid;
-	    if (depth == 8)
+	    if (vw->depth == 8)
 		jopmax /= 4;
 
 	    Plugin::get_settings_ok();
@@ -140,7 +140,7 @@ class Kaos : public Plugin {
 		start_prodding();
 	}
 	virtual bool work() {
-	    if (depth == 8) {
+	    if (vw->depth == 8) {
 		for (int k = 0; k < ITERS && !finished; k++) {
 		    int j = rand() % n;
 		    double xOud = x;
@@ -149,9 +149,9 @@ class Kaos : public Plugin {
 		    y = q->a21 * xOud + q->a22 * y + q->b2;
 		    int xs = xmid + my_round(x * maxmid);
 		    int ys = ymid + my_round(y * maxmid);
-		    if (xs >= 0 && ys >= 0 && xs < (int) width && ys < (int) height) {
-			char *p = pixels + (ys * bytesperline + xs);
-			unsigned char c = *((unsigned char *) p);
+		    if (xs >= 0 && ys >= 0 && xs < vw->width && ys < vw->height) {
+			unsigned char *p = vw->pixels + (ys * vw->bytesperline + xs);
+			unsigned char c = *p;
 			if (c < 254)
 			    *p = c + 1;
 			else
@@ -172,7 +172,7 @@ class Kaos : public Plugin {
 		    y = q->a21 * xOud + q->a22 * y + q->b2;
 		    int xs = xmid + my_round(x * maxmid);
 		    int ys = ymid + my_round(y * maxmid);
-		    if (xs >= 0 && ys >= 0 && xs < (int) width && ys < (int) height) {
+		    if (xs >= 0 && ys >= 0 && xs < vw->width && ys < vw->height) {
 			int i, comp;
 			switch (rand() % 3) {
 			    case 0:
@@ -191,8 +191,8 @@ class Kaos : public Plugin {
 			    comp = 2;
 			else
 			    comp = 3;
-			char *p = pixels + (ys * bytesperline + xs * 4 + comp);
-			unsigned char c = *((unsigned char *) p);
+			unsigned char *p = vw->pixels + (ys * vw->bytesperline + xs * 4 + comp);
+			unsigned char c = *p;
 			if (c < 254)
 			    *p = c + 1;
 			else

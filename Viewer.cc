@@ -39,6 +39,10 @@ Viewer::Viewer(const char *pluginname, const char *filename)
 Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
     instances++;
     image = NULL;
+    priv_cmap = None;
+    pixels = NULL;
+    cmap = NULL;
+
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
 	delete this;
@@ -187,11 +191,6 @@ Viewer::finish_init() {
     topmenu->setRadioListener(radiocallback, this);
     setMenu(topmenu);
 
-    unsigned int W, H;
-    plugin->getsize(&W, &H);
-    width = W;
-    height = H;
-
     Widget scroll = XtVaCreateManagedWidget("ScrolledWindow",
 					    xmScrolledWindowWidgetClass,
 					    getContainer(),
@@ -210,8 +209,8 @@ Viewer::finish_init() {
     Widget draw = XtVaCreateManagedWidget("DrawingArea",
 					  xmDrawingAreaWidgetClass,
 					  scroll,
-					  XmNwidth, width,
-					  XmNheight, height,
+					  XmNwidth, (Dimension) width,
+					  XmNheight, (Dimension) height,
 					  NULL);
 
     Widget hsb, vsb;
@@ -299,9 +298,9 @@ Viewer::finish_init() {
     raise();
     drawwindow = XtWindow(draw);
 
-    image = XCreateImage(display,
-			 visual,
-			 depth,
+    image = XCreateImage(g_display,
+			 g_visual,
+			 g_depth,
 			 ZPixmap,
 			 0,
 			 NULL,
@@ -316,10 +315,17 @@ Viewer::finish_init() {
 
 /* public */
 Viewer::~Viewer() {
-    if (image != NULL)
+    if (image != NULL) {
+	if (priv_cmap == None)
+	    free(image->data);
 	XFree(image);
+    }
     if (plugin != NULL)
 	Plugin::release(plugin);
+    if (pixels != NULL)
+	free(pixels);
+    if (cmap != NULL)
+	delete[] cmap;
     if (--instances == 0)
 	exit(0);
 }
@@ -339,7 +345,7 @@ Viewer::deleteLater() {
     // can't mess things up in the meantime.
     //hide();
 
-    XtAppAddWorkProc(appcontext, deleteLater2, (XtPointer) this);
+    XtAppAddWorkProc(g_appcontext, deleteLater2, (XtPointer) this);
 }
 
 /* private static */ Boolean
@@ -350,11 +356,7 @@ Viewer::deleteLater2(XtPointer ud) {
 }
 
 /* public */ void
-Viewer::paint(const char *pixels, Color *cmap,
-	      int depth, int width,
-	      int height, int bytesperline,
-	      int top, int left,
-	      int bottom, int right) {
+Viewer::paint(int top, int left, int bottom, int right) {
     // FIXME do something to take advantage of those cases where it is not
     // even necessary to copy pixels to an XImage, i.e. the cases where
     // depth = 1, or (depth = 8 and idepth = 8 and priv), or
@@ -365,14 +367,18 @@ Viewer::paint(const char *pixels, Color *cmap,
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
 	// special-case code that does not do the error diffusion thing.
-	unsigned long black = BlackPixel(display, screennumber);
-	unsigned long white = WhitePixel(display, screennumber);
+	unsigned long black = BlackPixel(g_display, g_screennumber);
+	unsigned long white = WhitePixel(g_display, g_screennumber);
 	for (int y = top; y < bottom; y++)
 	    for (int x = left; x < right; x++)
 		XPutPixel(image, x, y,
 			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white);
-    } else if (grayramp == NULL) {
+    } else if (priv_cmap != None) {
+	// Using private colormap: our colormap and the one on the screen
+	// contain the same values, so we have nothing to do here (except
+	// for the XPutImage at the end of this function).
+    } else if (g_grayramp == NULL) {
 	// FIXME handle special cases that do not require dithering:
 	// depth = 24, and also depth = 8 && idepth = 8 && using priv cmap
 	int *dr = new int[right - left];
@@ -424,34 +430,34 @@ Viewer::paint(const char *pixels, Color *cmap,
 		if (b < 0) b = 0; else if (b > 255) b = 255;
 		db[x - left] = 0;
 		unsigned long pixel;
-		if (colorcube != NULL) {
-		    int index = ((int) (r * (cubesize - 1) / 255.0 + 0.5)
-			    * cubesize
-			    + (int) (g * (cubesize - 1) / 255.0 + 0.5))
-			    * cubesize
-			    + (int) (b * (cubesize - 1) / 255.0 + 0.5);
-		    dR = r - (colorcube[index].red >> 8);
-		    dG = g - (colorcube[index].green >> 8);
-		    dB = b - (colorcube[index].blue >> 8);
-		    pixel = colorcube[index].pixel;
+		if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    dR = r - (g_colorcube[index].red >> 8);
+		    dG = g - (g_colorcube[index].green >> 8);
+		    dB = b - (g_colorcube[index].blue >> 8);
+		    pixel = g_colorcube[index].pixel;
 		} else {
 		    static bool inited = false;
 		    static int rmax, rmult, bmax, bmult,
 							gmax, gmult;
 		    if (!inited) {
-			rmax = visual->red_mask;
+			rmax = g_visual->red_mask;
 			rmult = 1;
 			while ((rmax & 1) == 0) {
 			    rmax >>= 1;
 			    rmult <<= 1;
 			}
-			gmax = visual->green_mask;
+			gmax = g_visual->green_mask;
 			gmult = 1;
 			while ((gmax & 1) == 0) {
 			    gmax >>= 1;
 			    gmult <<= 1;
 			}
-			bmax = visual->blue_mask;
+			bmax = g_visual->blue_mask;
 			bmult = 1;
 			while ((bmax & 1) == 0) {
 			    bmax >>= 1;
@@ -494,7 +500,7 @@ Viewer::paint(const char *pixels, Color *cmap,
 	    }
 	}
 
-	if (verbosity >= 2) {
+	if (g_verbosity >= 2) {
 	    long p = ((long) bottom - top) * (right - left);
 	    fprintf(stderr, "Average pixel error:\n");
 	    fprintf(stderr, "  red:   %6.2f\n", ((double) tot_dr) / p);
@@ -547,11 +553,11 @@ Viewer::paint(const char *pixels, Color *cmap,
 		if (k < 0) k = 0; else if (k > 255) k = 255;
 		dk[x - left] = 0;
 		int graylevel = 
-		    (int) (k * (rampsize - 1) / 255.0 + 0.5);
-		if (graylevel >= rampsize)
-		    graylevel = rampsize - 1;
-		dK = k - (grayramp[graylevel].red >> 8);
-		unsigned long pixel = grayramp[graylevel].pixel;
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		dK = k - (g_grayramp[graylevel].red >> 8);
+		unsigned long pixel = g_grayramp[graylevel].pixel;
 		XPutPixel(image, x, y, pixel);
 
 		if (dK >= 0) tot_dk += dK; else tot_dk -= dK;
@@ -567,7 +573,7 @@ Viewer::paint(const char *pixels, Color *cmap,
 	    }
 	}
 
-	if (verbosity >= 2) {
+	if (g_verbosity >= 2) {
 	    long p = ((long) bottom - top) * (right - left);
 	    fprintf(stderr, "Average pixel error:\n");
 	    fprintf(stderr, "  gray:  %6.2f\n", ((double) tot_dk) / p);
@@ -576,9 +582,26 @@ Viewer::paint(const char *pixels, Color *cmap,
 	delete[] dk;
 	delete[] nextdk;
     }
-    XPutImage(display, drawwindow, gc, image,
+    XPutImage(g_display, drawwindow, g_gc, image,
 	      left, top, left, top,
 	      right - left, bottom - top);
+}
+
+/* public */ void
+Viewer::colormapChanged() {
+    if (priv_cmap == None) {
+	paint(0, 0, height, width);
+    } else {
+	XColor colors[256];
+	for (int i = 0; i < 256; i++) {
+	    colors[i].pixel = i;
+	    colors[i].red = 257 * cmap[i].r;
+	    colors[i].green = 257 * cmap[i].g;
+	    colors[i].blue = 257 * cmap[i].b;
+	    colors[i].flags = DoRed | DoGreen | DoBlue;
+	}
+	XStoreColors(g_display, priv_cmap, colors, 256);
+    }
 }
 
 /* private static */ void
@@ -605,7 +628,7 @@ Viewer::expose(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 Viewer::expose2(int x, int y, int w, int h) {
-    XPutImage(display, drawwindow, gc, image, x, y, x, y, w, h);
+    XPutImage(g_display, drawwindow, g_gc, image, x, y, x, y, w, h);
 }
 
 /* private virtual */ void
@@ -666,12 +689,6 @@ Viewer::menucallback2(const char *id) {
 	doContinueAll();
     else if (strcmp(id, "Draw.UpdateNow") == 0)
 	doUpdateNow();
-    else if (strcmp(id, "Options.PrivateColormap") == 0)
-	doPrivateColormap();
-    else if (strcmp(id, "Options.Dither") == 0)
-	doDither();
-    else if (strcmp(id, "Options.Notify") == 0)
-	doNotify();
     else if (strcmp(id, "Windows.Enlarge") == 0)
 	doEnlarge();
     else if (strcmp(id, "Windows.Reduce") == 0)
@@ -692,6 +709,12 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
     fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
+    if (strcmp(id, "Options.PrivateColormap") == 0)
+	doPrivateColormap(value);
+    else if (strcmp(id, "Options.Dither") == 0)
+	doDither(value);
+    else if (strcmp(id, "Options.Notify") == 0)
+	doNotify(value);
 }
 
 /* private static */ void
@@ -706,7 +729,7 @@ Viewer::radiocallback2(const char *id, const char *value) {
 
 /* private */ void
 Viewer::doBeep() {
-    XBell(display, 100);
+    XBell(g_display, 100);
 }
 
 /* private */ void
@@ -718,7 +741,11 @@ Viewer::doNew(const char *plugin) {
 Viewer::doOpen() {
     Arg arg;
     XtSetArg(arg, XmNdirectory, curr_path_name);
-    Widget fsb = XmCreateFileSelectionDialog(getContainer(), "Open", &arg, 1);
+    // Using g_appshell as the parent, instead of our own toplevel shell,
+    // because I don't want the file selection dialog to inherit our colormap.
+    // The drawback is that the dialog does not get positioned very nicely.
+    // TODO...
+    Widget fsb = XmCreateFileSelectionDialog(g_appshell, "Open", &arg, 1);
     XtAddCallback(fsb, XmNokCallback, doOpen2, (XtPointer) this);
     XtAddCallback(fsb, XmNcancelCallback, doOpen2, (XtPointer) this);
     XtManageChild(fsb);
@@ -736,7 +763,7 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 	char *filename;
 	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
 	    if (!Viewer::openFile(filename))
-		XBell(display, 100);
+		XBell(g_display, 100);
 	    XtFree(filename);
 	}
     }
@@ -745,7 +772,7 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 
 /* public static */ bool
 Viewer::openFile(const char *filename) {
-    if (verbosity >= 1)
+    if (g_verbosity >= 1)
 	fprintf(stderr, "Opening \"%s\"...\n", filename);
     char **names = Plugin::list();
     if (names != NULL) {
@@ -892,21 +919,42 @@ Viewer::doContinueAll() {
 
 /* private */ void
 Viewer::doUpdateNow() {
-    plugin->paint();
+    paint(0, 0, height, width);
 }
 
 /* private */ void
-Viewer::doPrivateColormap() {
+Viewer::doPrivateColormap(bool value) {
+    if (depth != 8 || g_depth != 8 || g_visual->c_class != PseudoColor) {
+	if (value) {
+	    doBeep();
+	    optionsmenu->setToggleValue("Options.PrivateColormap", false, false);
+	}
+	return;
+    }
+
+    if (value) {
+	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	setColormap(priv_cmap);
+	delete image->data;
+	image->data = (char *) pixels;
+	colormapChanged();
+	paint(0, 0, height, width);
+    } else {
+	XFreeColormap(g_display, priv_cmap);
+	priv_cmap = None;
+	image->data = (char *) malloc(image->bytes_per_line * height);
+	setColormap(g_colormap);
+	colormapChanged();
+    }
+}
+
+/* private */ void
+Viewer::doDither(bool) {
     doBeep();
 }
 
 /* private */ void
-Viewer::doDither() {
-    doBeep();
-}
-
-/* private */ void
-Viewer::doNotify() {
+Viewer::doNotify(bool) {
     doBeep();
 }
 

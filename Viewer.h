@@ -12,10 +12,17 @@ class Viewer : private Frame {
 	Plugin *plugin;
 	Window drawwindow;
 	XImage *image;
-	Dimension width, height;
-	static int instances;
+	Colormap priv_cmap;
 	Menu *optionsmenu;
 	Menu *scalemenu;
+	static int instances;
+
+    public:
+	// These are public so Viewer can access them
+	unsigned char *pixels;
+	Color *cmap;
+	int depth;
+	int width, height, bytesperline;
 
     public:
 	Viewer(const char *pluginname);
@@ -24,11 +31,8 @@ class Viewer : private Frame {
 	void finish_init();
 	~Viewer();
 	void deleteLater();
-	void paint(const char *pixels, Color *cmap,
-		   int depth, int width,
-		   int height, int bytesperline,
-		   int top, int left,
-		   int bottom, int right);
+	void paint(int top, int left, int bottom, int right);
+	void colormapChanged();
 	static bool openFile(const char *filename);
 
     private:
@@ -72,9 +76,9 @@ class Viewer : private Frame {
 	void doContinue();
 	void doContinueAll();
 	void doUpdateNow();
-	void doPrivateColormap();
-	void doDither();
-	void doNotify();
+	void doPrivateColormap(bool value);
+	void doDither(bool value);
+	void doNotify(bool value);
 	void doEnlarge();
 	void doReduce();
 	void doScale(const char *scale);

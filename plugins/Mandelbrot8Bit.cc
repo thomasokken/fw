@@ -7,7 +7,7 @@
 
 class Mandelbrot8Bit : public Plugin {
     private:
-	unsigned int x, y;
+	int x, y;
     public:
 	Mandelbrot8Bit(void *dl) : Plugin(dl) {}
 	virtual ~Mandelbrot8Bit() {}
@@ -15,18 +15,18 @@ class Mandelbrot8Bit : public Plugin {
 	    return "Mandelbrot8Bit";
 	}
 	virtual void init_new() {
-	    width = 500;
-	    height = 300;
-	    bytesperline = width + 3 & ~3;
-	    unsigned int size = bytesperline * height;
-	    pixels = (char *) malloc(size);
-	    for (unsigned int i = 0; i < size; i++)
-		pixels[i] = 0;
-	    cmap = new Color[256];
+	    vw->width = 500;
+	    vw->height = 300;
+	    vw->bytesperline = vw->width + 3 & ~3;
+	    int size = vw->bytesperline * vw->height;
+	    vw->pixels = (unsigned char *) malloc(size);
+	    for (int i = 0; i < size; i++)
+		vw->pixels[i] = 0;
+	    vw->cmap = new Color[256];
 	    for (int i = 0; i < 255; i++)
-		cmap[i].r = cmap[i].g = cmap[i].b = i;
-	    depth = 8;
-	    viewer->finish_init();
+		vw->cmap[i].r = vw->cmap[i].g = vw->cmap[i].b = i;
+	    vw->depth = 8;
+	    vw->finish_init();
 	}
 	virtual void run() {
 	    paint();
@@ -35,7 +35,7 @@ class Mandelbrot8Bit : public Plugin {
 	    start_prodding();
 	}
 	virtual void restart() {
-	    if (y < height)
+	    if (y < vw->height)
 		start_prodding();
 	}
 	virtual void stop() {
@@ -43,8 +43,8 @@ class Mandelbrot8Bit : public Plugin {
 	    paint();
 	}
 	virtual bool work() {
-	    unsigned int firsty = y;
-	    unsigned int endy = y + 10;
+	    int firsty = y;
+	    int endy = y + 10;
 	    while (y < endy) {
 		double dx = (((double) x) - 250) / 150;
 		double dy = (((double) y) - 150) / 150;
@@ -58,18 +58,18 @@ class Mandelbrot8Bit : public Plugin {
 		    n++;
 		}
 		if (n == 1000)
-		    pixels[y * bytesperline + x] = 0;
+		    vw->pixels[y * vw->bytesperline + x] = 0;
 		else
-		    pixels[y * bytesperline + x] = ((n % 100) * 255) / 100;
-		if (++x == width) {
+		    vw->pixels[y * vw->bytesperline + x] = ((n % 100) * 255) / 100;
+		if (++x == vw->width) {
 		    x = 0;
-		    if (++y == height) {
-			paint(firsty, 0, height, width);
+		    if (++y == vw->height) {
+			paint(firsty, 0, vw->height, vw->width);
 			return true;
 		    }
 		}
 	    }
-	    paint(firsty, 0, endy, width);
+	    paint(firsty, 0, endy, vw->width);
 	    return false;
 	}
 

@@ -27,6 +27,7 @@ class Frame {
 
     protected:
 	Widget getContainer();
+	void setColormap(Colormap xcmap);
 
     private:
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);

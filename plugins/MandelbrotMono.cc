@@ -7,7 +7,7 @@
 
 class MandelbrotMono : public Plugin {
     private:
-	unsigned int x, y;
+	int x, y;
     public:
 	MandelbrotMono(void *dl) : Plugin(dl) {}
 	virtual ~MandelbrotMono() {}
@@ -15,15 +15,15 @@ class MandelbrotMono : public Plugin {
 	    return "MandelbrotMono";
 	}
 	virtual void init_new() {
-	    width = 500;
-	    height = 300;
-	    bytesperline = width + 7 >> 3;
-	    unsigned int size = bytesperline * height;
-	    pixels = (char *) malloc(size);
-	    for (unsigned int i = 0; i < size; i++)
-		pixels[i] = 0;
-	    depth = 1;
-	    viewer->finish_init();
+	    vw->width = 500;
+	    vw->height = 300;
+	    vw->bytesperline = vw->width + 7 >> 3;
+	    int size = vw->bytesperline * vw->height;
+	    vw->pixels = (unsigned char *) malloc(size);
+	    for (int i = 0; i < size; i++)
+		vw->pixels[i] = 0;
+	    vw->depth = 1;
+	    vw->finish_init();
 	}
 	virtual void run() {
 	    paint();
@@ -32,7 +32,7 @@ class MandelbrotMono : public Plugin {
 	    start_prodding();
 	}
 	virtual void restart() {
-	    if (y < height)
+	    if (y < vw->height)
 		start_prodding();
 	}
 	virtual void stop() {
@@ -40,8 +40,8 @@ class MandelbrotMono : public Plugin {
 	    paint();
 	}
 	virtual bool work() {
-	    unsigned int firsty = y;
-	    unsigned int endy = y + 10;
+	    int firsty = y;
+	    int endy = y + 10;
 	    while (y < endy) {
 		double dx = (((double) x) - 250) / 150;
 		double dy = (((double) y) - 150) / 150;
@@ -55,16 +55,16 @@ class MandelbrotMono : public Plugin {
 		    n++;
 		}
 		if (n & 1)
-		    pixels[y * bytesperline + (x >> 3)] |= 1 << (x & 7);
-		if (++x == width) {
+		    vw->pixels[y * vw->bytesperline + (x >> 3)] |= 1 << (x & 7);
+		if (++x == vw->width) {
 		    x = 0;
-		    if (++y == height) {
-			paint(firsty, 0, height, width);
+		    if (++y == vw->height) {
+			paint(firsty, 0, vw->height, vw->width);
 			return true;
 		    }
 		}
 	    }
-	    paint(firsty, 0, endy, width);
+	    paint(firsty, 0, endy, vw->width);
 	    return false;
 	}
 

@@ -18,11 +18,7 @@ class Plugin {
 	static XtWorkProcId workproc_id;
 
     protected:
-	Viewer *viewer;
-	char *pixels;
-	Color *cmap;
-	int depth;
-	unsigned int width, height, bytesperline;
+	Viewer *vw;
 	void *settings;
 	char **settings_layout;
 
@@ -30,12 +26,12 @@ class Plugin {
 	static Plugin *get(const char *name);
 	static void release(Plugin *plugin);
 	static char **list();
-	void setviewer(Viewer *viewer) { this->viewer = viewer; }
+	void setviewer(Viewer *vw) { this->vw = vw; }
 	void getsize(unsigned int *width, unsigned int *height);
 	virtual int can_open(const char *filename) { return false; }
 	virtual bool does_depth(int depth) { return false; }
 	virtual void set_depth(int depth) {}
-	virtual void init_new() { beep(); delete viewer; }
+	virtual void init_new() { beep(); vw->deleteLater(); }
 	virtual bool init_clone(const Plugin *src) { beep(); return false; }
 	virtual bool init_load(const char *filename) { beep(); return false; }
 	virtual void save(const char *filename) { beep(); }
@@ -48,14 +44,14 @@ class Plugin {
 	virtual bool work() { return true; }
 	virtual const char *name() const = 0;
 	virtual const char *help() { return NULL; }
-	void paint();
 
     protected:
 	Plugin(void *dl);
 	virtual ~Plugin();
 	static void beep();
-	void paint(unsigned int top, unsigned int left,
-		   unsigned int bottom, unsigned int right);
+	void paint();
+	void paint(int top, int left, int bottom, int right);
+	void colormapChanged();
 	void start_prodding();
 	void stop_prodding();
 	void make_graymap();

@@ -308,7 +308,7 @@ SettingsDialog::help(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 SettingsDialog::help2() {
-    XBell(display, 100);
+    XBell(g_display, 100);
 }
 
 /* private static */ void

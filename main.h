@@ -1,19 +1,19 @@
 #ifndef MAIN_H
 #define MAIN_H
 
-extern XtAppContext appcontext;
-extern Widget appshell;
-extern Display *display;
-extern Screen *screen;
-extern int screennumber;
-extern Window rootwindow;
-extern Visual *visual;
-extern int depth;
-extern Colormap colormap;
-extern GC gc;
-extern Pixmap icon, iconmask;
-extern XColor *colorcube, *grayramp;
-extern int cubesize, rampsize;
-extern int verbosity;
+extern XtAppContext g_appcontext;
+extern Widget g_appshell;
+extern Display *g_display;
+extern Screen *g_screen;
+extern int g_screennumber;
+extern Window g_rootwindow;
+extern Visual *g_visual;
+extern int g_depth;
+extern Colormap g_colormap;
+extern GC g_gc;
+extern Pixmap g_icon, g_iconmask;
+extern XColor *g_colorcube, *g_grayramp;
+extern int g_cubesize, g_rampsize;
+extern int g_verbosity;
 
 #endif

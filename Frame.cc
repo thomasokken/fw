@@ -32,9 +32,9 @@ Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
     XtSetArg(args[nargs], XmNmappedWhenManaged, False); nargs++;
     XtSetArg(args[nargs], XmNallowShellResize, True); nargs++;
     XtSetArg(args[nargs], XmNdeleteResponse, XmDO_NOTHING); nargs++;
-    XtSetArg(args[nargs], XmNscreen, screen); nargs++;
-    XtSetArg(args[nargs], XmNiconPixmap, icon); nargs++;
-    XtSetArg(args[nargs], XmNiconMask, iconmask); nargs++;
+    XtSetArg(args[nargs], XmNscreen, g_screen); nargs++;
+    XtSetArg(args[nargs], XmNiconPixmap, g_icon); nargs++;
+    XtSetArg(args[nargs], XmNiconMask, g_iconmask); nargs++;
     XtSetArg(args[nargs], XmNiconName, "Icon"); nargs++;
     if (!resizable) {
 	XtSetArg(args[nargs], XmNmwmFunctions,
@@ -43,10 +43,10 @@ Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
 	    MWM_DECOR_ALL | MWM_DECOR_RESIZEH | MWM_DECOR_MAXIMIZE); nargs++;
     }
     toplevel = XtAppCreateShell("fw", "FW", topLevelShellWidgetClass,
-				display, args, nargs);
+				g_display, args, nargs);
 
     XmAddWMProtocolCallback(toplevel,
-			    XmInternAtom(display, "WM_DELETE_WINDOW", False),
+			    XmInternAtom(g_display, "WM_DELETE_WINDOW", False),
 			    deleteWindow,
 			    (XtPointer) this);
 
@@ -126,8 +126,8 @@ Frame::raise() {
 	    XtSetArg(args[0], XmNwidth, &width);
 	    XtSetArg(args[1], XmNheight, &height);
 	    XtGetValues(toplevel, args, 2);
-	    int x = (XWidthOfScreen(screen) - width) / 2;
-	    int y = (XHeightOfScreen(screen) - height) / 2;
+	    int x = (XWidthOfScreen(g_screen) - width) / 2;
+	    int y = (XHeightOfScreen(g_screen) - height) / 2;
 	    XtSetArg(args[0], XmNx, x);
 	    XtSetArg(args[1], XmNy, y);
 	    XtSetValues(toplevel, args, 2);
@@ -140,7 +140,7 @@ Frame::raise() {
 	    hints.flags = USPosition;
 	    hints.x = x;
 	    hints.y = y;
-	    XSetWMNormalHints(display, XtWindow(toplevel), &hints);
+	    XSetWMNormalHints(g_display, XtWindow(toplevel), &hints);
 	}
 
 	if (!decor_known) {
@@ -151,7 +151,7 @@ Frame::raise() {
 	    fitToScreen();
 	}
 
-	XMapRaised(display, XtWindow(toplevel));
+	XMapRaised(g_display, XtWindow(toplevel));
     } else {
 	Window win = XtWindow(toplevel);
 
@@ -159,21 +159,21 @@ Frame::raise() {
 	// if the window was iconified between the XGetWindowAttributes()
 	// and XSetInputFocus() calls.
 
-	XGrabServer(display);
+	XGrabServer(g_display);
 	XWindowAttributes atts;
-	XGetWindowAttributes(display, win, &atts);
+	XGetWindowAttributes(g_display, win, &atts);
 	if (atts.map_state == IsViewable) {
-	    XRaiseWindow(display, win);
-	    XSetInputFocus(display, win, RevertToNone, CurrentTime);
+	    XRaiseWindow(g_display, win);
+	    XSetInputFocus(g_display, win, RevertToNone, CurrentTime);
 	} else
-	    XMapRaised(display, win);
-	XUngrabServer(display);
+	    XMapRaised(g_display, win);
+	XUngrabServer(g_display);
     }
 }
 
 /* public */ void
 Frame::hide() {
-    XWithdrawWindow(display, XtWindow(toplevel), screennumber);
+    XWithdrawWindow(g_display, XtWindow(toplevel), g_screennumber);
 }
 
 /* public */ void
@@ -201,6 +201,13 @@ Frame::getContainer() {
     return container;
 }
 
+/* protected */ void
+Frame::setColormap(Colormap xcmap) {
+    Arg arg;
+    XtSetArg(arg, XmNcolormap, xcmap);
+    XtSetValues(toplevel, &arg, 1);
+}
+
 /* private static */ void
 Frame::deleteWindow(Widget w, XtPointer ud, XtPointer cd) {
     ((Frame *) ud)->close();
@@ -221,7 +228,7 @@ Frame::findDecorSize() {
 	Window parent;
 	Window *children;
 	unsigned int nchildren;
-	if (XQueryTree(display, w, &root, &parent, &children, &nchildren) == 0)
+	if (XQueryTree(g_display, w, &root, &parent, &children, &nchildren) == 0)
 	    // Fatal error
 	    return;
 	if (children != NULL)
@@ -240,7 +247,7 @@ Frame::findDecorSize() {
     int x, y;
     unsigned int width, height;
     unsigned int border_width, depth;
-    if (XGetGeometry(display, w, &root, &x, &y, &width, &height,
+    if (XGetGeometry(g_display, w, &root, &x, &y, &width, &height,
 			&border_width, &depth) == 0)
 	// Fatal error
 	return;
@@ -261,8 +268,8 @@ Frame::findDecorSize() {
 
 /* private */ void
 Frame::fitToScreen() {
-    unsigned int scrnwidth = XWidthOfScreen(screen);
-    unsigned int scrnheight = XHeightOfScreen(screen);
+    unsigned int scrnwidth = XWidthOfScreen(g_screen);
+    unsigned int scrnheight = XHeightOfScreen(g_screen);
 
     // Look for a Task Bar and figure out how much space to leave for it
     int taskbarwidth = 0;
@@ -272,7 +279,7 @@ Frame::fitToScreen() {
     Window parent;
     Window *children;
     unsigned int nchildren;
-    if (XQueryTree(display, rootwindow, &root, &parent,
+    if (XQueryTree(g_display, g_rootwindow, &root, &parent,
 		&children, &nchildren) == 0) 
 	goto taskbar_done;
 
@@ -281,7 +288,7 @@ Frame::fitToScreen() {
 	int x, y;
 	unsigned int width, height;
 	unsigned int border_width, depth;
-	if (XGetGeometry(display, children[n], &root, &x, &y,
+	if (XGetGeometry(g_display, children[n], &root, &x, &y,
 			    &width, &height,
 			    &border_width, &depth) == 0)
 	    // Fatal error

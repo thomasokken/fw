@@ -14,21 +14,25 @@
 
 // Exported globals
 
-XtAppContext appcontext;
-Widget appshell;
-Display *display;
-Screen *screen;
-int screennumber;
-Window rootwindow;
-Visual *visual;
-Colormap colormap;
-int depth;
-GC gc;
-Pixmap icon, iconmask;
-XColor *colorcube = NULL, *grayramp = NULL;
-int cubesize, rampsize;
-int verbosity = 0;
-bool x_errors_coredump = false;
+XtAppContext g_appcontext;
+Widget g_appshell;
+Display *g_display;
+Screen *g_screen;
+int g_screennumber;
+Window g_rootwindow;
+Visual *g_visual;
+Colormap g_colormap;
+int g_depth;
+GC g_gc;
+Pixmap g_icon, g_iconmask;
+XColor *g_colorcube = NULL, *g_grayramp = NULL;
+int g_cubesize, g_rampsize;
+int g_verbosity = 0;
+
+
+// Private globals
+
+static bool x_errors_coredump = false;
 
 
 struct req_code {
@@ -196,7 +200,7 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
 
 int main(int argc, char **argv) {
     XtSetLanguageProc(NULL, NULL, NULL);
-    appshell = XtVaAppInitialize(&appcontext,	/* application context */
+    g_appshell = XtVaAppInitialize(&g_appcontext,	/* application context */
 				 "FW",		/* class name */
 				 NULL, 0,	/* cmd line option descr. */
 				 &argc, argv,	/* cmd line args */
@@ -208,7 +212,7 @@ int main(int argc, char **argv) {
 	if (strncmp(argv[i], "-v", 2) == 0) {
 	    char *p = argv[i] + 1;
 	    while (*p++ == 'v')
-		verbosity++;
+		g_verbosity++;
 	    remove = 1;
 	} else if (strcmp(argv[i], "-xdump") == 0) {
 	    x_errors_coredump = true;
@@ -219,7 +223,7 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "Usage: fw [options] [files...]\n");
 	    fprintf(stderr, "    available options:\n");
 	    fprintf(stderr, "    X Toolkit options (see \"man X\")\n");
-	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more verbosity)\n");
+	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more g_verbosity)\n");
 	    fprintf(stderr, "    -xdump : dump core on X errors (implies -synchronous)\n");
 	    fprintf(stderr, "    -h , -help , --help : print usage information & exit\n");
 	    exit(0);
@@ -241,8 +245,8 @@ int main(int argc, char **argv) {
     if (getenv("FW_XDUMP") != NULL)
 	x_errors_coredump = true;
 
-    if (verbosity >= 1) {
-	fprintf(stderr, "Verbosity level set to %d.\n", verbosity);
+    if (g_verbosity >= 1) {
+	fprintf(stderr, "Verbosity level set to %d.\n", g_verbosity);
 	if (x_errors_coredump)
 	    fprintf(stderr, "Dumping core on X errors.\n");
     }
@@ -253,12 +257,12 @@ int main(int argc, char **argv) {
     srand(time(NULL));
 
 
-    display = XtDisplay(appshell);
-    screen = XtScreen(appshell);
-    screennumber = 0;
-    while (screen != ScreenOfDisplay(display, screennumber))
-	screennumber++;
-    rootwindow = RootWindowOfScreen(screen);
+    g_display = XtDisplay(g_appshell);
+    g_screen = XtScreen(g_appshell);
+    g_screennumber = 0;
+    while (g_screen != ScreenOfDisplay(g_display, g_screennumber))
+	g_screennumber++;
+    g_rootwindow = RootWindowOfScreen(g_screen);
 
     // If the user has requested core dumps for X errors, turn on X
     // synchronization as well (like using the "-synchronize" Xt switch).
@@ -266,69 +270,69 @@ int main(int argc, char **argv) {
     // via the stack trace, to the context in which the offending call
     // was made.
     if (x_errors_coredump)
-	XSynchronize(display, True);
+	XSynchronize(g_display, True);
     XSetErrorHandler(x_error_handler);
 
-    visual = DefaultVisual(display, screennumber);
-    colormap = DefaultColormap(display, screennumber);
-    depth = DefaultDepth(display, screennumber);
+    g_visual = DefaultVisual(g_display, g_screennumber);
+    g_colormap = DefaultColormap(g_display, g_screennumber);
+    g_depth = DefaultDepth(g_display, g_screennumber);
 
-    if (visual->c_class == StaticColor
-		|| visual->c_class == PseudoColor) {
+    if (g_visual->c_class == StaticColor
+		|| g_visual->c_class == PseudoColor) {
 	// Try to allocate as large as possible a color cube
-	cubesize = 1;
-	while (cubesize * cubesize * cubesize <= (1 << depth))
-	    cubesize++;
-	cubesize--;
-	while (colorcube == NULL && cubesize > 1) {
+	g_cubesize = 1;
+	while (g_cubesize * g_cubesize * g_cubesize <= (1 << g_depth))
+	    g_cubesize++;
+	g_cubesize--;
+	while (g_colorcube == NULL && g_cubesize > 1) {
 	    int n = 0;
-	    colorcube = new XColor[cubesize * cubesize * cubesize];
-	    for (int r = 0; r < cubesize; r++)
-		for (int g = 0; g < cubesize; g++)
-		    for (int b = 0; b < cubesize; b++) {
-			colorcube[n].red = r * 65535 / (cubesize - 1);
-			colorcube[n].green = g * 65535 / (cubesize - 1);
-			colorcube[n].blue = b * 65535 / (cubesize - 1);
-			int success = XAllocColor(display, colormap,
-						  &colorcube[n]);
+	    g_colorcube = new XColor[g_cubesize * g_cubesize * g_cubesize];
+	    for (int r = 0; r < g_cubesize; r++)
+		for (int g = 0; g < g_cubesize; g++)
+		    for (int b = 0; b < g_cubesize; b++) {
+			g_colorcube[n].red = r * 65535 / (g_cubesize - 1);
+			g_colorcube[n].green = g * 65535 / (g_cubesize - 1);
+			g_colorcube[n].blue = b * 65535 / (g_cubesize - 1);
+			int success = XAllocColor(g_display, g_colormap,
+						  &g_colorcube[n]);
 			if (!success) {
 			    if (n > 0) {
 				unsigned long *pixels = new unsigned long[n];
 				for (int i = 0; i < n; i++)
-				    pixels[i] = colorcube[i].pixel;
-				XFreeColors(display, colormap, pixels, n, 0);
+				    pixels[i] = g_colorcube[i].pixel;
+				XFreeColors(g_display, g_colormap, pixels, n, 0);
 				delete[] pixels;
-				delete[] colorcube;
-				colorcube = NULL;
+				delete[] g_colorcube;
+				g_colorcube = NULL;
 			    }
 			    goto endloop;
 			}
 			n++;
 		    }
 	    endloop:
-	    if (colorcube == NULL)
-		cubesize--;
+	    if (g_colorcube == NULL)
+		g_cubesize--;
 	}
     }
 
-    if ((visual->c_class == StaticGray || visual->c_class == GrayScale)
-	|| (visual->c_class == StaticColor || visual->c_class == PseudoColor)
-	    && colorcube == NULL) {
-	int realdepth = depth;
-	if (realdepth > visual->bits_per_rgb);
-	    realdepth = visual->bits_per_rgb;
+    if ((g_visual->c_class == StaticGray || g_visual->c_class == GrayScale)
+	|| (g_visual->c_class == StaticColor || g_visual->c_class == PseudoColor)
+	    && g_colorcube == NULL) {
+	int realdepth = g_depth;
+	if (realdepth > g_visual->bits_per_rgb);
+	    realdepth = g_visual->bits_per_rgb;
 	if (realdepth > 8)
 	    realdepth = 8;
 
-	if (visual->c_class == TrueColor || visual->c_class == DirectColor) {
+	if (g_visual->c_class == TrueColor || g_visual->c_class == DirectColor) {
 	    // Seems pointless, but we need to handle this to make the
 	    // -gray option work properly. Without this, you get a 64-level
 	    // gray ramp on a 16-bit TrueColor display, even though with the
 	    // usual 5-6-5 component sizes, the display is only capable of
 	    // 32 pure shades of gray.
-	    unsigned long redmask = visual->red_mask;
-	    unsigned long greenmask = visual->green_mask;
-	    unsigned long bluemask = visual->blue_mask;
+	    unsigned long redmask = g_visual->red_mask;
+	    unsigned long greenmask = g_visual->green_mask;
+	    unsigned long bluemask = g_visual->blue_mask;
 	    int redbits = 0, greenbits = 0, bluebits = 0;
 	    while (redmask != 0 || greenmask != 0 || bluemask != 0) {
 		redbits += redmask & 1;
@@ -346,72 +350,72 @@ int main(int argc, char **argv) {
 		realdepth = bluebits;
 	}
 
-	rampsize = 1 << realdepth;
-	while (grayramp == NULL) {
-	    grayramp = new XColor[rampsize];
-	    if (rampsize == 2) {
-		grayramp[0].pixel = BlackPixel(display, screennumber);
-		grayramp[0].red = grayramp[0].green = grayramp[0].blue = 0;
-		grayramp[1].pixel = WhitePixel(display, screennumber);
-		grayramp[1].red = grayramp[1].green = grayramp[1].blue = 65535;
+	g_rampsize = 1 << realdepth;
+	while (g_grayramp == NULL) {
+	    g_grayramp = new XColor[g_rampsize];
+	    if (g_rampsize == 2) {
+		g_grayramp[0].pixel = BlackPixel(g_display, g_screennumber);
+		g_grayramp[0].red = g_grayramp[0].green = g_grayramp[0].blue = 0;
+		g_grayramp[1].pixel = WhitePixel(g_display, g_screennumber);
+		g_grayramp[1].red = g_grayramp[1].green = g_grayramp[1].blue = 65535;
 		break;
 	    }
-	    for (int n = 0; n < rampsize; n++) {
-		grayramp[n].red = grayramp[n].green = grayramp[n].blue
-			= n * 65535 / (rampsize - 1);
-		int success = XAllocColor(display, colormap, &grayramp[n]);
+	    for (int n = 0; n < g_rampsize; n++) {
+		g_grayramp[n].red = g_grayramp[n].green = g_grayramp[n].blue
+			= n * 65535 / (g_rampsize - 1);
+		int success = XAllocColor(g_display, g_colormap, &g_grayramp[n]);
 		if (!success) {
 		    if (n > 0) {
 			unsigned long *pixels = new unsigned long[n];
 			for (int i = 0; i < n; i++)
-			    pixels[i] = grayramp[i].pixel;
-			XFreeColors(display, colormap, pixels, n, 0);
+			    pixels[i] = g_grayramp[i].pixel;
+			XFreeColors(g_display, g_colormap, pixels, n, 0);
 			delete[] pixels;
-			delete[] grayramp;
-			grayramp = NULL;
+			delete[] g_grayramp;
+			g_grayramp = NULL;
 		    }
 		    break;
 		}
 	    }
-	    if (grayramp == NULL)
-		rampsize >>= 1;
+	    if (g_grayramp == NULL)
+		g_rampsize >>= 1;
 	}
     }
 
-    if (verbosity >= 1) {
-	if (colorcube != NULL)
-	    fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", cubesize,
-		    cubesize, cubesize);
-	if (grayramp != NULL)
-	    fprintf(stderr, "Allocated a %d-entry gray ramp.\n", rampsize);
+    if (g_verbosity >= 1) {
+	if (g_colorcube != NULL)
+	    fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", g_cubesize,
+		    g_cubesize, g_cubesize);
+	if (g_grayramp != NULL)
+	    fprintf(stderr, "Allocated a %d-entry gray ramp.\n", g_rampsize);
     }
 
     XGCValues values;
-    values.foreground = WhitePixel(display, screennumber);
-    values.background = BlackPixel(display, screennumber);
-    gc = XCreateGC(display,
-		   rootwindow,
+    values.foreground = WhitePixel(g_display, g_screennumber);
+    values.background = BlackPixel(g_display, g_screennumber);
+    g_gc = XCreateGC(g_display,
+		   g_rootwindow,
 		   GCForeground | GCBackground,
 		   &values);
 
-    XpmCreatePixmapFromData(display,
-			    rootwindow,
+    XpmCreatePixmapFromData(g_display,
+			    g_rootwindow,
 			    fw,
-			    &icon,
-			    &iconmask,
+			    &g_icon,
+			    &g_iconmask,
 			    NULL);
 
     bool nothingOpened = true;
     for (int i = 1; i < argc; i++) {
 	if (Viewer::openFile(argv[i]))
 	    nothingOpened = false;
-	else if (verbosity >= 1)
+	else if (g_verbosity >= 1)
 	    fprintf(stderr, "Can't open \"%s\".\n", argv[i]);
     }
     if (nothingOpened)
 	new Viewer("AboutViewer");
 
-    XtAppMainLoop(appcontext);
+    XtAppMainLoop(g_appcontext);
 
     return 0;
 }

@@ -48,17 +48,17 @@ class Ramp : public Plugin {
 	    return depth == 8 || depth == 24;
 	}
 	virtual void set_depth(int depth) {
-	    this->depth = depth;
+	    vw->depth = depth;
 	}
 	virtual void init_new() {
 	    get_settings();
 	}
 	virtual void get_settings_ok() {
-	    width = s.width;
-	    height = s.height;
-	    bytesperline = depth == 8 ? (width + 3 & ~3) : (width * 4);
-	    pixels = (char *) malloc(bytesperline * height);
-	    char *dst = pixels;
+	    vw->width = s.width;
+	    vw->height = s.height;
+	    vw->bytesperline = vw->depth == 8 ? (vw->width + 3 & ~3) : (vw->width * 4);
+	    vw->pixels = (unsigned char *) malloc(vw->bytesperline * vw->height);
+	    unsigned char *dst = vw->pixels;
 
 	    int roffset = 0, boffset = 0, goffset = 0;
 	    int rshift = 0, bshift = 0, gshift = 0;
@@ -100,27 +100,27 @@ class Ramp : public Plugin {
 	    gshift = s.xg != 0 && s.yg != 0 ? 1 : 0;
 	    bshift = s.xb != 0 && s.yb != 0 ? 1 : 0;
 
-	    for (unsigned int y = 0; y < height; y++) {
-		int yy = (y * 255) / (height - 1);
-		for (unsigned int x = 0; x < width; x++) {
-		    int xx = (x * 255) / (width - 1);
-		    if (depth == 24)
+	    for (int y = 0; y < vw->height; y++) {
+		int yy = (y * 255) / (vw->height - 1);
+		for (int x = 0; x < vw->width; x++) {
+		    int xx = (x * 255) / (vw->width - 1);
+		    if (vw->depth == 24)
 			*dst++ = 0;
 		    *dst++ = (roffset + s.xr * xx + s.yr * yy) >> rshift;
-		    if (depth == 24) {
+		    if (vw->depth == 24) {
 			*dst++ = (goffset + s.xg * xx + s.yg * yy) >> gshift;
 			*dst++ = (boffset + s.xb * xx + s.yb * yy) >> bshift;
 		    }
 		}
 	    }
 
-	    if (depth == 8) {
-		cmap = new Color[256];
+	    if (vw->depth == 8) {
+		vw->cmap = new Color[256];
 		for (int k = 0; k < 256; k++)
-		    cmap[k].r = cmap[k].g = cmap[k].b = k;
+		    vw->cmap[k].r = vw->cmap[k].g = vw->cmap[k].b = k;
 	    }
 
-	    viewer->finish_init();
+	    vw->finish_init();
 	}
 	virtual void run() {
 	    paint();

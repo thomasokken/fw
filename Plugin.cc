@@ -19,8 +19,6 @@ Plugin::workproc_id;
 /* protected */
 Plugin::Plugin(void *dl) {
     this->dl = dl;
-    pixels = NULL;
-    cmap = NULL;
     settings = NULL;
     settings_layout = NULL;
 }
@@ -28,10 +26,6 @@ Plugin::Plugin(void *dl) {
 /* protected virtual */
 Plugin::~Plugin() {
     stop_prodding();
-    if (pixels != NULL)
-	free(pixels);
-    if (cmap != NULL)
-	delete[] cmap;
 }
 
 /* public static */ Plugin *
@@ -40,7 +34,7 @@ Plugin::get(const char *name) {
     snprintf(dlname, _POSIX_PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
     if (dl == NULL) {
-	if (verbosity >= 1)
+	if (g_verbosity >= 1)
 	    fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
 	return NULL;
     }
@@ -92,12 +86,6 @@ Plugin::list_compar(const void *a, const void *b) {
     return strcmp(*(const char **) a, *(const char **) b);
 }
 
-/* public */ void
-Plugin::getsize(unsigned int *width, unsigned int *height) {
-    *width = this->width;
-    *height = this->height;
-}
-
 /* public virtual */ void
 Plugin::get_settings() {
     new SettingsDialog(settings, settings_layout, this);
@@ -105,29 +93,32 @@ Plugin::get_settings() {
 
 /* public virtual */ void
 Plugin::get_settings_ok() {
-    viewer->finish_init();
+    vw->finish_init();
 }
 
 /* public virtual */ void
 Plugin::get_settings_cancel() {
-    viewer->deleteLater();
+    vw->deleteLater();
 }
 
 /* protected static */ void
 Plugin::beep() {
-    XBell(display, 100);
-}
-
-/* public */ void
-Plugin::paint() {
-    paint(0, 0, height, width);
+    XBell(g_display, 100);
 }
 
 /* protected */ void
-Plugin::paint(unsigned int top, unsigned int left,
-	      unsigned int bottom, unsigned int right) {
-    viewer->paint(pixels, cmap, depth, width, height, bytesperline,
-		  top, left, bottom, right);
+Plugin::paint() {
+    vw->paint(0, 0, vw->height, vw->width);
+}
+
+/* protected */ void
+Plugin::paint(int top, int left, int bottom, int right) {
+    vw->paint(top, left, bottom, right);
+}
+
+/* protected */ void
+Plugin::colormapChanged() {
+    vw->colormapChanged();
 }
 
 /* protected */ void
@@ -143,7 +134,7 @@ Plugin::start_prodding() {
     }
     if (!found) {
 	if (prodlist == NULL)
-	    workproc_id = XtAppAddWorkProc(appcontext, workproc, NULL);
+	    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
 	node = new ProdNode;
 	node->proddee = this;
 	node->next = prodlist;
@@ -201,11 +192,4 @@ Plugin::workproc(XtPointer ud) {
     }
     n++;
     return False;
-}
-
-/* private */ void
-Plugin::make_graymap() {
-    cmap = new Color[256];
-    for (int i = 0; i < 256; i++)
-	cmap[i].r = cmap[i].g = cmap[i].b = i;
 }
