@@ -171,7 +171,7 @@ class Polynomial : public Plugin {
 	    init_proceed();
 	}
 
-	virtual void start() {
+	virtual bool start() {
 	    degree = 5;
 	    while (a[5 - degree] == 0 && degree > 0)
 		degree--;
@@ -185,6 +185,7 @@ class Polynomial : public Plugin {
 	    finished = false;
 	    paint();
 	    start_working();
+	    return false;
 	}
 
 	virtual void stop() {
@@ -196,9 +197,10 @@ class Polynomial : public Plugin {
 	    }
 	}
 
-	virtual void restart() {
+	virtual bool restart() {
 	    if (!finished)
 		start_working();
+	    return finished;
 	}
 	
 	virtual bool work() {

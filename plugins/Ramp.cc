@@ -108,8 +108,9 @@ class Ramp : public Plugin {
 
 	    init_proceed();
 	}
-	virtual void start() {
+	virtual bool start() {
 	    paint();
+	    return true;
 	}
 };
 

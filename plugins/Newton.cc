@@ -154,7 +154,7 @@ class Newton : public Plugin {
 	    init_proceed();
 	}
 
-	virtual void start() {
+	virtual bool start() {
 	    conv2 = conv * conv;
 	    step = (xmax - xmin) / pm->width;
 	    sp = 0;
@@ -165,6 +165,7 @@ class Newton : public Plugin {
 	    finished = false;
 	    paint();
 	    start_working();
+	    return false;
 	}
 
 	virtual void stop() {
@@ -176,9 +177,10 @@ class Newton : public Plugin {
 	    }
 	}
 
-	virtual void restart() {
+	virtual bool restart() {
 	    if (!finished)
 		start_working();
+	    return finished;
 	}
 	
 	virtual bool work() {

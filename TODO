@@ -1,3 +1,14 @@
+The UndoManager should operate at the Viewer level. Colormap changes made in
+the Colormap Editor should not be private to the Colormap Editor. In other
+words, after dismissing a CME by pressing OK, all the changes you made should
+still be undoable -- and while we're at it, after dismissing a CME by pressing
+Cancel, all the changes you made should still be REdoable. And when you bring
+up another CME, you should be able to use it to peer at all those changes close
+up. So, the CME is merely a window on pm.cmap, which is allowed to add
+colormap-changing actions to the Viewer's UndoManager.
+All actions should handle the new viewer.dirty flag, so we can get proper "Save
+changes before quitting/closing" behavior implemented.
+
 ColorPicker: when constraining HSL coordinates (the MotionNotify case), make
 sure the actual screen coordinates (cross_[xy], slider_x) are also constrained!
 

@@ -18,6 +18,9 @@ class Viewer : private Frame {
 	char *filetype;
 	bool is_brand_new;
 	bool finished;
+	bool untitled;
+	bool dirty;
+	bool reallydirty;
 	SaveImageDialog *savedialog;
 	ColormapEditor *cme;
 	Plugin *plugin;
@@ -58,7 +61,8 @@ class Viewer : private Frame {
 	int get_scale();
 	void colormapChanged();
 	void setFile(const char *filename, const char *filetype);
-	void pluginFinished();
+	void setReallyDirty();
+	void pluginFinished(bool notify);
 
     private:
 	void init(const char *pluginname, Plugin *clonee, void *plugin_data,

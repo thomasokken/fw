@@ -50,6 +50,8 @@ Viewer::inner_decor_height = 0;
 /* public */
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
+
+    // This constructor is called in response to "File->New->(Plugin)"
     is_brand_new = true;
     init(pluginname, NULL, NULL, 0, NULL);
 }
@@ -57,6 +59,8 @@ Viewer::Viewer(const char *pluginname)
 /* public */
 Viewer::Viewer(Plugin *clonee)
     : Frame(true, false, true) {
+
+    // This constructor is called in response to "File->New->Clone"
     is_brand_new = true;
     init(NULL, clonee, NULL, 0, NULL);
 }
@@ -65,6 +69,9 @@ Viewer::Viewer(Plugin *clonee)
 Viewer::Viewer(const char *pluginname, void *plugin_data,
 	               int plugin_data_length, FWPixmap *fpm)
     : Frame(true, false, true) {
+
+    // This constructor is called in response to "File->Open"
+    // and for files passed as command line arguments
     is_brand_new = false;
     init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
@@ -80,9 +87,28 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     savedialog = NULL;
     cme = NULL;
     finished = false;
+    untitled = true;
+
+    // The 'dirty' flag is used to keep track of changes made by the user.
+    // These are the kind of changes that could be undone. That is, the Actions
+    // that are pushed onto the UndoManager, which do/undo/redo the actual work
+    // of making the user's events turn into actual changes to FW's state, also
+    // update the 'dirty' flag, so that if you start hitting Ctrl-Z until
+    // you're back at the beginning, 'dirty' will be 'false' once again.
+    // The 'reallydirty' flag, on the other hand, is used to track changes made
+    // by the plugin. Viewer sets this flag whenever it calls plugin->start()
+    // or plugin->restart() and they return 'false' (if they return 'true', it
+    // is assumed that no changes took place, in addition to 'finished' being
+    // set). Also, SlaveDriver sets 'reallydirty' thenever it invokes 'work()'
+    // on our plugin, regardless of the value returned by 'work()'.
+
+    dirty = false;
+    reallydirty = false;
 
     if (clonee != NULL)
 	pluginname = clonee->name();
+
+    bool nullplugin = pluginname == NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
@@ -93,6 +119,9 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 	    // Since the plugin was not found, we're falling back on the Null
 	    // plugin.
 	    plugin = Plugin::get("Null");
+	    nullplugin = true;
+	    finished = true;
+	    plugin->setFinished();
 	} else {
 	    delete this;
 	    return;
@@ -102,7 +131,8 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     plugin->setPixmap(&pm);
     if (fpm != NULL) {
 	pm = *fpm;
-	plugin->deserialize(plugin_data, plugin_data_length);
+	if (!nullplugin)
+	    plugin->deserialize(plugin_data, plugin_data_length);
 	finish_init();
     } else if (clonee != NULL) {
 	plugin->init_clone(clonee);
@@ -479,12 +509,21 @@ Viewer::finish_init() {
 	else
 	    fprintf(stderr, "Not using direct copy.\n");
 
-    if (is_brand_new)
-	plugin->start();
-    else {
+    if (is_brand_new) {
+	if (plugin->start()) {
+	    finished = true;
+	    plugin->setFinished();
+	} else
+	    reallydirty = true;
+    } else {
 	paint(0, 0, pm.height, pm.width);
-	if (!finished)
-	    plugin->restart();
+	if (!finished) {
+	    if (plugin->restart()) {
+		finished = true;
+		plugin->setFinished();
+	    } else
+		reallydirty = true;
+	}
     }
 
     addViewer(this);
@@ -589,8 +628,24 @@ Viewer::setFile(const char *name, const char *type) {
 }
 
 /* public */ void
-Viewer::pluginFinished() {
+Viewer::setReallyDirty() {
+    reallydirty = true;
+}
+
+/* public */ void
+Viewer::pluginFinished(bool notify) {
     finished = true;
+    // The 'notify' parameter is 'false' when we get called by
+    // Plugin::deserialize(), and 'true' when we get called by SlaveDriver.
+    // Even if it's 'true', we won't actually do anything to attract the user's
+    // attention unless they have requested we do so.
+    if (notify && optionsmenu->getToggleValue("Options.Notify")) {
+	char buf[1024];
+	snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), filename == NULL ? "(null)" : filename);
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
+	doBeep();
+    }
 }
 
 /* public */ void
@@ -1174,12 +1229,18 @@ Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
     const char *plugin_name = This->plugin->name();
     void *plugin_data;
     int plugin_data_length;
-    This->plugin->serialize(&plugin_data, &plugin_data_length);
+    if (strcmp(plugin_name, "Null") == 0) {
+	plugin_data = NULL;
+	plugin_data_length = 0;
+    } else
+	This->plugin->serialize(&plugin_data, &plugin_data_length);
     char *message = NULL;
     if (!ImageIO::swrite(filename, type, plugin_name, plugin_data,
 			 plugin_data_length, &This->pm, &message)) {
-	// TODO: nicer error reporting
-	fprintf(stderr, "Saving \"%s\" failed (%s).\n", filename, message);
+	char buf[1024];
+	snprintf(buf, 1024, "Saving \"%s\" failed (%s).\n", filename, message);
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
     }
     if (plugin_data != NULL)
 	free(plugin_data);
@@ -1322,7 +1383,8 @@ Viewer::doGetInfo() {
 
 /* private */ void
 Viewer::doPrint() {
-    doBeep();
+    TextViewer *tv = new TextViewer("Printing is not yet implemented.\nAnd, until I feel like spending the money to buy a PostScript manual\n(and read it and all that!), it won't be, either.\nUnless YOU wish to donate some code? :-)");
+    tv->raise();
 }
 
 /* private */ void
@@ -1450,8 +1512,13 @@ Viewer::doStopAll() {
 Viewer::doContinue() {
     if (finished)
 	doBeep();
-    else
-	plugin->restart();
+    else {
+	if (plugin->restart()) {
+	    finished = true;
+	    plugin->setFinished();
+	} else
+	    reallydirty = true;
+    }
 }
 
 /* private */ void
@@ -1459,8 +1526,13 @@ Viewer::doContinueAll() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
 	Viewer *viewer = (Viewer *) iter->next();
-	if (!viewer->finished)
-	    viewer->plugin->restart();
+	if (!viewer->finished) {
+	    if (viewer->plugin->restart()) {
+		viewer->finished = true;
+		viewer->plugin->setFinished();
+	    } else
+		viewer->reallydirty = true;
+	}
     }
     delete iter;
 }
@@ -1515,7 +1587,9 @@ Viewer::doDither(bool value) {
 
 /* private */ void
 Viewer::doNotify(bool) {
-    doBeep();
+    // There's actually nothing to do here. pluginFinished() checks the
+    // "Options.Notify" toggle, but changing the state of the toggle does not
+    // cause anything to happen immediately.
 }
 
 /* private */ void

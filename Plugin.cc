@@ -91,9 +91,10 @@ class SlaveDriver {
 		}
 	    }
 
+	    node->worker->viewer->setReallyDirty();
 	    if (node->worker->work()) {
 		node->worker->finished = true;
-		node->worker->viewer->pluginFinished();
+		node->worker->viewer->pluginFinished(true);
 		*prev = node->next;
 		delete node;
 		if (worklist == NULL)
@@ -124,8 +125,9 @@ class Null : public Plugin {
 	virtual const char *name() {
 	    return "Null";
 	}
-	virtual void start() {
+	virtual bool start() {
 	    paint();
+	    return true;
 	}
 };
 
@@ -153,8 +155,9 @@ class About : public Plugin {
 	    pm->depth = 1;
 	    init_proceed();
 	}
-	virtual void start() {
+	virtual bool start() {
 	    paint();
+	    return true;
 	}
 };
 
@@ -272,11 +275,6 @@ Plugin::register_for_serialization(const char **layout, void *base) {
 
 /* public */ void
 Plugin::serialize(void **buf, int *nbytes) {
-    if (settings_count == 1) {
-	*buf = NULL;
-	*nbytes = 0;
-	return;
-    }
     if (settings_helper == NULL)
 	settings_helper = new SettingsHelper(this);
     settings_helper->serialize(buf, nbytes);
@@ -284,19 +282,15 @@ Plugin::serialize(void **buf, int *nbytes) {
 
 /* public */ void
 Plugin::deserialize(void *buf, int nbytes) {
-    if (settings_count == 1)
-	return;
     if (settings_helper == NULL)
 	settings_helper = new SettingsHelper(this);
     settings_helper->deserialize(buf, nbytes);
     if (finished)
-	viewer->pluginFinished();
+	viewer->pluginFinished(false);
 }
 
 /* public */ char *
 Plugin::dumpSettings() {
-    if (settings_count == 1)
-	return NULL;
     if (settings_helper == NULL)
 	settings_helper = new SettingsHelper(this);
     return settings_helper->dumpSettings();
@@ -328,9 +322,10 @@ Plugin::get_settings_cancel() {
     init_abort();
 }
 
-/* public virtual */ void
+/* public virtual */ bool
 Plugin::start() {
-    //
+    // 'true' means we're done, don't call us again
+    return true;
 }
 
 /* public virtual */ void
@@ -338,9 +333,10 @@ Plugin::stop() {
     //
 }
 
-/* public virtual */ void
+/* public virtual */ bool
 Plugin::restart() {
-    //
+    // 'true' means we're done, don't call us again
+    return true;
 }
 
 /* public virtual */ bool

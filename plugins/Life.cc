@@ -131,7 +131,7 @@ class Life : public Plugin {
 	    init_proceed();
 	}
 
-	virtual void start() {
+	virtual bool start() {
 	    hwords = pm->width + 31 >> 5;
 	    bitmapsize = hwords * sizeof(unsigned int) * pm->height;
 	    if (bigendian)
@@ -143,13 +143,14 @@ class Life : public Plugin {
 	    repeats = 0;
 	    rightedgemask = 0xffffffff >> 31 - (pm->width - 1 & 31);
 	    start_working();
+	    return false;
 	}
 
 	virtual void stop() {
 	    stop_working();
 	}
 	
-	virtual void restart() {
+	virtual bool restart() {
 	    if (!initialized) {
 		// Only pm->pixels is saved when FW serializes a plugin;
 		// we need to reallocate and repopulate our other dynamic
@@ -169,6 +170,7 @@ class Life : public Plugin {
 	    }
 
 	    start_working();
+	    return false;
 	}
 
 	virtual bool work() {

@@ -161,7 +161,7 @@ class Julia : public Plugin {
 	    init_proceed();
 	}
 
-	virtual void start() {
+	virtual bool start() {
 	    b2 = bands * 253;
 	    limit2 = limit * limit;
 	    step = (xmax - xmin) / pm->width;
@@ -173,6 +173,7 @@ class Julia : public Plugin {
 	    finished = false;
 	    paint();
 	    start_working();
+	    return false;
 	}
 
 	virtual void stop() {
@@ -184,9 +185,10 @@ class Julia : public Plugin {
 	    }
 	}
 
-	virtual void restart() {
+	virtual bool restart() {
 	    if (!finished)
 		start_working();
+	    return finished;
 	}
 	
 	virtual bool work() {

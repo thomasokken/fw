@@ -55,6 +55,7 @@ class Plugin {
 	static char **list();
 	void setPixmap(FWPixmap *pm) { this->pm = pm; }
 	void setViewer(Viewer *viewer) { this->viewer = viewer; }
+	void setFinished() { this->finished = true; }
 	void serialize(void **buf, int *nbytes);
 	void deserialize(void *buf, int nbytes);
 	char *dumpSettings();
@@ -62,15 +63,21 @@ class Plugin {
 	// Methods implemented by Plugins
 	// (Reasonable default implementations are provided for all of
 	// these, except for name().)
+	// NOTE: when any of start(), restart(), or work() return 'true',
+	// FW marks the document as 'finished', and will never invoke any
+	// of those methods again. If start() or restart() return 'true',
+	// FW assumes that no changes were made, and 'reallydirty' is not set.
+	// The default implementations of all three methods do nothing and
+	// return 'true'.
 	virtual bool does_depth(int depth);
 	virtual void init_new();
 	virtual void init_clone(Plugin *src);
 	virtual void get_settings_ok();
 	virtual void get_settings_cancel();
-	virtual void start();
+	virtual bool start();	// returns 'true' when finished
 	virtual void stop();
-	virtual void restart();
-	virtual bool work();
+	virtual bool restart();	// returns 'true' when finished
+	virtual bool work();	// returns 'true' when finished
 	virtual const char *name() = 0;
 	virtual const char *help();
 
