@@ -29,6 +29,7 @@
 
 static bool read_byte(FILE *file, int *n);
 static bool read_short(FILE *file, int *n);
+static unsigned char hash(short prefix, short pixel);
 
 /* public virtual */ bool
 ImageIO_GIF::can_read(const char *filename) {
@@ -736,12 +737,18 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 
     short prefix_table[4096];
     short code_table[4096];
+    short hash_next[4096];
+    short hash_head[256];
 
     int maxcode = 1 << codesize;
     for (int i = 0; i < maxcode; i++) {
 	prefix_table[i] = -1;
 	code_table[i] = i;
+	hash_next[i] = -1;
     }
+    for (int i = 0; i < 256; i++)
+	hash_head[i] = -1;
+
     int clear_code = maxcode++;
     int end_code = maxcode++;
 
@@ -752,11 +759,17 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
     bool initial_clear = true;
     bool really_done = false;
 
+    long long hash_comparisons = 0;
+    long long hash_searches = 0;
+    long long hash_max_comparisons = 0;
+
     fputc(codesize, gif);
     for (int v = 0; v <= pm->height; v++) {
 	bool done = v == pm->height;
 	for (int h = 0; h < pm->width; h++) {
 	    int new_code;
+	    unsigned char hash_code;
+	    int hash_index;
 
 	    if (really_done) {
 		new_code = end_code;
@@ -778,17 +791,27 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 		prefix = pixel;
 		goto no_emit;
 	    }
-	    for (int i = end_code + 1; i < maxcode; i++)
-		if (prefix_table[i] == prefix
-			&& code_table[i] == pixel) {
-		    prefix = i;
+	    
+	    hash_code = hash(prefix, pixel);
+	    hash_index = hash_head[hash_code];
+	    hash_searches++;
+	    hash_max_comparisons += maxcode - end_code;
+	    while (hash_index != -1) {
+		hash_comparisons++;
+		if (prefix_table[hash_index] == prefix
+			 && code_table[hash_index] == pixel) {
+		    prefix = hash_index;
 		    goto no_emit;
 		}
-
+		hash_index = hash_next[hash_index];
+	    }
+	    
 	    // Not found:
 	    if (maxcode < 4096) {
 		prefix_table[maxcode] = prefix;
 		code_table[maxcode] = pixel;
+		hash_next[maxcode] = hash_head[hash_code];
+		hash_head[hash_code] = maxcode;
 		maxcode++;
 	    }
 	    new_code = prefix;
@@ -835,6 +858,8 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 		    } else if (new_code == clear_code) {
 			maxcode = (1 << codesize) + 2;
 			curr_code_size = codesize + 1;
+			for (int i = 0; i < 256; i++)
+			    hash_head[i] = -1;
 		    } else if (maxcode == 4096) {
 			new_code = clear_code;
 			goto emit;
@@ -847,6 +872,17 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
     }
 
     data_done:
+
+    if (g_verbosity >= 2) {
+	if (hash_searches == 0)
+	    fprintf(stderr, "No hashing statistics available.\n");
+	else {
+	    fprintf(stderr, "%lld searches, %lld comparisons - %g comp/search.\n",
+		    hash_searches, hash_comparisons,
+		    ((double) hash_comparisons) / hash_searches);
+	    fprintf(stderr, "Search percentage: %g\n", (100.0f * hash_comparisons) / hash_max_comparisons);
+	}
+    }
 
     if (bytecount > 0) {
 	fputc(bytecount, gif);
@@ -862,6 +898,18 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 
     fclose(gif);
     return true;
+}
+
+static unsigned char hash(short prefix, short pixel) {
+    // TODO: There's a lot of room for improvement here!
+    // I'm getting search percentages of over 30%; looking for something
+    // in single digits.
+    unsigned long x = (((long) prefix) << 20) + (((long) pixel) << 12);
+    x /= 997;
+    unsigned char b1 = x >> 16;
+    unsigned char b2 = x >> 8;
+    unsigned char b3 = x;
+    return b1 ^ b2 ^ b3;
 }
 
 static bool read_byte(FILE *file, int *n) {

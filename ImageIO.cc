@@ -53,7 +53,6 @@ ImageIO::swrite(const char *filename, const char *type,
 		const char *plugin_name, const void *plugin_data,
 		int plugin_data_length, const FWPixmap *pm,
 		char **message) {
-    fprintf(stderr, "Trying to write \"%s\" (type %s)...\n", filename, type);
     ImageIO *imgio = (ImageIO *) map->get(type);
     if (imgio == NULL) {
 	*message = strclone("Unsupported file type.");
