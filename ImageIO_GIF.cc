@@ -159,7 +159,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		&& pm->cmap[1].b == 0) {
 	    mono = true;
 	    invert = true;
-	}
+	} else
+	    mono = false;
     } else
 	mono = false;
 
@@ -450,40 +451,51 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	} else if (whatnext == '!') {
 	    // Extension block
 	    int function_code, byte_count;
-	    if (!read_byte(gif, &function_code) || !read_byte(gif, &byte_count))
+	    if (!read_byte(gif, &function_code))
 		goto unexp_eof;
-	    if (function_code == 255 && byte_count == 11) {
-		char app_id[12];
-		int c;
-		for (int i = 0; i < 11; i++) {
-		    if (!read_byte(gif, &c))
-			goto unexp_eof;
-		    app_id[i] = c;
-		}
-		app_id[11] = 0;
-		if (strcmp(app_id, "FractWiz2.0") == 0) {
-		    // Yup, it's ours, collect the data!
-		    if (!read_byte(gif, &byte_count))
-			goto unexp_eof;
-		    while (byte_count != 0) {
-			for (int i = 0; i < byte_count; i++) {
-			    if (!read_byte(gif, &c))
-				goto unexp_eof;
-			    if (bufpos == bufsize) {
-				bufsize += 1024;
-				buf = (unsigned char *) realloc(buf, bufsize);
-			    }
-			    buf[bufpos++] = c;
-			}
+	    if (function_code == 255) {
+		if (!read_byte(gif, &byte_count))
+		    goto unexp_eof;
+		if (byte_count != 11) {
+		    // Fall through to block-skipping code, but jump over the
+		    // reading of the byte count character, since we have it
+		    // already.
+		    goto not_fw_app_blk;
+		} else {
+		    char app_id[12];
+		    int c;
+		    for (int i = 0; i < 11; i++) {
+			if (!read_byte(gif, &c))
+			    goto unexp_eof;
+			app_id[i] = c;
+		    }
+		    app_id[11] = 0;
+		    if (strcmp(app_id, "FractWiz2.0") == 0) {
+			// Yup, it's ours, collect the data!
 			if (!read_byte(gif, &byte_count))
 			    goto unexp_eof;
+			while (byte_count != 0) {
+			    for (int i = 0; i < byte_count; i++) {
+				if (!read_byte(gif, &c))
+				    goto unexp_eof;
+				if (bufpos == bufsize) {
+				    bufsize += 1024;
+				    buf = (unsigned char *) realloc(buf, bufsize);
+				}
+				buf[bufpos++] = c;
+			    }
+			    if (!read_byte(gif, &byte_count))
+				goto unexp_eof;
+			}
+			// Done; don't fall through to block-skipping code
+			goto app_blk_done;
 		    }
 		}
-		// Done; don't fall through to block-skipping code
-		continue;
 	    }
+	    // Not one of our extension blocks; we just skip it.
 	    if (!read_byte(gif, &byte_count))
 		goto unexp_eof;
+	    not_fw_app_blk:
 	    while (byte_count != 0) {
 		for (int i = 0; i < byte_count; i++) {
 		    int dummy;
@@ -493,6 +505,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		if (!read_byte(gif, &byte_count))
 		    goto unexp_eof;
 	    }
+	    app_blk_done:;
 	} else if (whatnext == ';') {
 	    // Terminator
 	    break;
