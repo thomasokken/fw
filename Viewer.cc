@@ -524,7 +524,7 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 		    // 256-entry color map, with first 216 entries containing a
 		    // 6x6x6 color cube, and the remaining 40 entries containing
 		    // 40 shades of gray (which, together with the 6 shades of
-		    // gray in the color cube, make up a 46-entry gray ramp
+		    // gray in the color cube, make up a 46-entry gray ramp)
 		    // We look for a color match and a graylevel match, and pick
 		    // the best fit.
 		    int rerr = (r + 25) % 51 - 25;

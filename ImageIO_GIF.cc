@@ -1,4 +1,5 @@
 #include <ctype.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,6 +25,8 @@
  * then move both decoder and encoder to some nice GIF support class.
  */
 
+#define MSGLEN 1024
+
 static bool read_byte(FILE *file, int *n);
 static bool read_short(FILE *file, int *n);
 
@@ -44,10 +47,9 @@ ImageIO_GIF::can_read(const char *filename) {
 /* public virtual */ bool
 ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		  int *plugin_data_length, FWPixmap *pm, char **message) {
-    *plugin_name = NULL;
-    *plugin_data = NULL;
-    *plugin_data_length = 0;
-    *message = strclone("foo");
+    unsigned char *buf = NULL;
+    int bufsize = 0;
+    int bufpos = 0;
 
     FILE *gif = fopen(filename, "r");
     if (gif == NULL) {
@@ -144,10 +146,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 
     while (1) {
 	int whatnext;
-	if (!read_byte(gif, &whatnext)) {
-	    fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-	    goto done;
-	}
+	if (!read_byte(gif, &whatnext))
+	    goto unexp_eof;
 	if (whatnext == ',') {
 	    // Image
 	    int ileft, itop, iwidth, iheight;
@@ -156,10 +156,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		    || !read_short(gif, &itop)
 		    || !read_short(gif, &iwidth)
 		    || !read_short(gif, &iheight)
-		    || !read_byte(gif, &info)) {
-		fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-		goto done;
-	    }
+		    || !read_byte(gif, &info))
+		goto unexp_eof;
 	    
 	    if (itop + iheight > pm->height
 		    || ileft + iwidth > pm->width) {
@@ -196,8 +194,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 			    || !read_byte(gif, &g)
 			    || !read_byte(gif, &b)) {
 			delete[] lcmap;
-			fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-			goto done;
+			goto unexp_eof;
 		    }
 		    lcmap[i].r = r;
 		    lcmap[i].g = g;
@@ -231,11 +228,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    int v = 0;
 	    int codesize;
 	    int bytecount;
-	    if (!read_byte(gif, &codesize)
-		    || !read_byte(gif, &bytecount)) {
-		fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-		goto done;
-	    }
+	    if (!read_byte(gif, &codesize) || !read_byte(gif, &bytecount))
+		goto unexp_eof;
 
 	    short prefix_table[4096];
 	    short code_table[4096];
@@ -258,10 +252,9 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		for (int i = 0; i < bytecount; i++) {
 		    int currbyte;
 		    if (!read_byte(gif, &currbyte)) {
-			fprintf(stderr, "GIFViewer: unexpected EOF.\n");
 			if (lcmap != pm->cmap)
 			    delete[] lcmap;
-			goto done;
+			goto unexp_eof;
 		    }
 		    if (end_code_seen)
 			continue;
@@ -397,10 +390,9 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		    }
 		}
 		if (!read_byte(gif, &bytecount)) {
-		    fprintf(stderr, "GIFViewer: unexpected EOF.\n");
 		    if (lcmap != pm->cmap)
 			delete[] lcmap;
-		    goto done;
+		    goto unexp_eof;
 		}
 	    }
 
@@ -409,29 +401,55 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	} else if (whatnext == '!') {
 	    // Extension block
 	    int function_code, byte_count;
-	    read_byte(gif, &function_code);
-	    if (!read_byte(gif, &byte_count)) {
-		fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-		goto done;
+	    if (!read_byte(gif, &function_code) || !read_byte(gif, &byte_count))
+		goto unexp_eof;
+	    if (function_code == 255 && byte_count == 11) {
+		char app_id[12];
+		int c;
+		for (int i = 0; i < 11; i++) {
+		    if (!read_byte(gif, &c))
+			goto unexp_eof;
+		    app_id[i] = c;
+		}
+		app_id[11] = 0;
+		if (strcmp(app_id, "FractWiz2.0") == 0) {
+		    // Yup, it's ours, collect the data!
+		    if (!read_byte(gif, &byte_count))
+			goto unexp_eof;
+		    while (byte_count != 0) {
+			for (int i = 0; i < byte_count; i++) {
+			    if (!read_byte(gif, &c))
+				goto unexp_eof;
+			    if (bufpos == bufsize) {
+				bufsize += 1024;
+				buf = (unsigned char *) realloc(buf, bufsize);
+			    }
+			    buf[bufpos++] = c;
+			}
+			if (!read_byte(gif, &byte_count))
+			    goto unexp_eof;
+		    }
+		}
+		// Done; don't fall through to block-skipping code
+		continue;
 	    }
+	    if (!read_byte(gif, &byte_count))
+		goto unexp_eof;
 	    while (byte_count != 0) {
 		for (int i = 0; i < byte_count; i++) {
 		    int dummy;
-		    if (!read_byte(gif, &dummy)) {
-			fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-			goto done;
-		    }
+		    if (!read_byte(gif, &dummy))
+			goto unexp_eof;
 		}
-		if (!read_byte(gif, &byte_count)) {
-		    fprintf(stderr, "GIFViewer: unexpected EOF.\n");
-		    goto done;
-		}
+		if (!read_byte(gif, &byte_count))
+		    goto unexp_eof;
 	    }
 	} else if (whatnext == ';') {
 	    // Terminator
 	    break;
 	} else {
-	    fprintf(stderr, "GIFViewer: unrecognized tag '%c' (0x%02x).\n", whatnext, whatnext);
+	    fprintf(stderr, "GIFViewer: unrecognized tag '%c' (0x%02x).\n",
+		    whatnext, whatnext);
 	    goto failed;
 	}
     }
@@ -441,8 +459,47 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	delete[] pm->cmap;
 	pm->cmap = NULL;
     }
+
+    if (buf != NULL) {
+	// One or more Application Extension Blocks with our signature
+	// "FractWiz2.0" have been found.
+	// Let's see if we got anything good.
+	// The first 4 bytes should be the length; the next 4 bytes should be
+	// the CRC for the following 'length' bytes.
+	int length = (buf[0] << 24) | (buf[1] << 16) | (buf[2] << 8) | buf[3];
+	unsigned int crc =
+		     (buf[4] << 24) | (buf[5] << 16) | (buf[6] << 8) | buf[7];
+	unsigned int actualcrc;
+	if (length > bufpos - 8) {
+	    char msgbuf[MSGLEN];
+	    snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks truncated\n(%d bytes read, %d bytes expected).", bufpos - 8, length);
+	    *message = strclone(msgbuf);
+	    free(buf);
+	} else if (crc != (actualcrc = crc32(buf + 8, length))) {
+	    char msgbuf[MSGLEN];
+	    snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks corrupted\n(expected CRC: 0x%x, actual: 0x%x).", crc, actualcrc);
+	    *message = strclone(msgbuf);
+	    free(buf);
+	} else {
+	    // Looks good so far. Now, let's extract the plugin name. (No more
+	    // sanity checks; we trust the CRC to protect us from random
+	    // corruption. We don't expect plugins to check their data.)
+	    *plugin_name = strclone((char *) buf + 8);
+	    int pnl = strlen(*plugin_name);
+	    int data_offset = pnl + 9;
+	    length -= pnl + 1;
+	    memmove(buf, buf + data_offset, length);
+	    *plugin_data = buf;
+	    *plugin_data_length = length;
+	}
+    }
+    
     fclose(gif);
     return true;
+
+    unexp_eof:
+    fprintf(stderr, "GIFViewer: unexpected EOF.\n");
+    goto done;
 
     failed:
     if (pm->cmap != NULL) {
@@ -461,8 +518,138 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 ImageIO_GIF::write(const char *filename, const char *plugin_name,
 		   const void *plugin_data, int plugin_data_length,
 		   const FWPixmap *pm, char **message) {
-    *message = strclone("foo");
-    return false;
+    char msgbuf[MSGLEN];
+
+    FILE *gif = fopen(filename, "w");
+    if (gif == NULL) {
+	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).",
+		 filename, strerror(errno));
+	*message = strclone(msgbuf);
+	return false;
+    }
+
+
+    // GIF Header
+
+    fprintf(gif, "GIF87a");
+
+    
+    // Screen descriptor
+
+    fputc(pm->width & 255, gif);
+    fputc(pm->width >> 8, gif);
+    fputc(pm->height & 255, gif);
+    fputc(pm->height >> 8, gif);
+    fputc(pm->depth == 1 ? 0xF0 : 0xF7, gif);
+    fputc(0, gif);
+    fputc(0, gif);
+
+
+    // Global color map
+
+    if (pm->depth == 1) {
+	fputc(0, gif);
+	fputc(0, gif);
+	fputc(0, gif);
+	fputc(255, gif);
+	fputc(255, gif);
+	fputc(255, gif);
+    } else if (pm->depth == 8) {
+	for (int i = 0; i < 256; i++) {
+	    fputc(pm->cmap[i].r, gif);
+	    fputc(pm->cmap[i].g, gif);
+	    fputc(pm->cmap[i].b, gif);
+	}
+    } else {
+	// GIF only does up to 8 bits per pixel. So, for the 24-bit case,
+	// we use a hard-coded 256-entry color map, consisting of a 6x6x6
+	// color cube, plus an additional 40 shades of gray (spaced to fit
+	// in the gaps between the 6 shades of gray that we already have
+	// in the cube, for a total of 46 shades of gray).
+	int i = 0;
+	for (int r = 0; r < 6; r++)
+	    for (int g = 0; g < 6; g++)
+		for (int b = 0; b < 6; b++) {
+		    fputc(51 * r, gif);
+		    fputc(51 * g, gif);
+		    fputc(51 * b, gif);
+		    i++;
+		}
+	for (int m = 0; m < 5; m++)
+	    for (int n = 1; n < 9; n++) {
+		int p = 51 * m + (17 * n) / 3;
+		fputc(p, gif);
+		fputc(p, gif);
+		fputc(p, gif);
+		i++;
+	    }
+    }
+
+
+    // Extension Block
+
+    if (plugin_data != NULL && plugin_data_length > 0) {
+	fputc('!', gif);
+	fputc(255, gif);
+	fputc(11, gif);
+	fprintf(gif, "FractWiz2.0");
+
+	int total_length = plugin_data_length + 8;
+	int n = total_length < 255 ? total_length : 255;
+	unsigned int crc = crc32(plugin_data, plugin_data_length);
+
+	fputc(n, gif);
+	fputc(plugin_data_length >> 24, gif);
+	fputc(plugin_data_length >> 16, gif);
+	fputc(plugin_data_length >> 8, gif);
+	fputc(plugin_data_length, gif);
+	fputc(crc >> 24, gif);
+	fputc(crc >> 16, gif);
+	fputc(crc >> 8, gif);
+	fputc(crc, gif);
+
+	total_length -= 8;
+	n -= 8;
+	char *ptr = (char *) plugin_data;
+	do {
+	    fwrite(ptr, n, 1, gif);
+	    total_length -= n;
+	    ptr += n;
+	    n = total_length < 255 ? total_length : 255;
+	    fputc(n, gif);
+	} while (n > 0);
+    }
+
+
+    // Image Descriptor
+
+    fputc(',', gif);
+    fputc(0, gif);
+    fputc(0, gif);
+    fputc(0, gif);
+    fputc(0, gif);
+    fputc(pm->width & 255, gif);
+    fputc(pm->width >> 8, gif);
+    fputc(pm->height & 255, gif);
+    fputc(pm->height >> 8, gif);
+    fputc(pm->depth == 1 ? 0x00 : 0x07, gif);
+
+
+    // Image Data
+
+    fputc(pm->depth == 1 ? 2 : 8, gif);
+    // Now, LZW-compressed data, in blocks of up to 255 bytes, each preceded
+    // by a length byte, the whole sequence terminated by a 0 byte.
+    fputc(0, gif);
+
+
+    // GIF Trailer
+
+    fputc(';', gif);
+
+
+    fclose(gif);
+    return true;
 }
 
 static bool read_byte(FILE *file, int *n) {

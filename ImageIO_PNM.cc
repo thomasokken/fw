@@ -438,9 +438,9 @@ static bool match_uint(FILE *file, int *i) {
 ImageIO_PNM::write(const char *filename, const char *plugin_name,
 		   const void *plugin_data, int plugin_data_length,
 		   const FWPixmap *pm, char **message) {
-    FILE *pnm = fopen(filename, "w");
     char msgbuf[MSGLEN];
 
+    FILE *pnm = fopen(filename, "w");
     if (pnm == NULL) {
 	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).",
 		 filename, strerror(errno));
