@@ -19,7 +19,7 @@ class Viewer : private Frame {
 	char *filetype;
 	bool is_brand_new;
 	bool finished;
-	bool untitled;
+	int untitled;
 	bool dirty;
 	UndoManager *undomanager;
 	int saved_undo_id;
@@ -43,6 +43,7 @@ class Viewer : private Frame {
 	Widget clipwindow;
 	static List *instances;
 	static int idcount;
+	static int untitledcount;
 	static GC gc;
 	static char *file_directory;
 	static char *colormap_directory;

@@ -9,13 +9,6 @@ Maybe also "yes to all", but that would probably be less useful (because
 you would typically still have to deal with SaveImageDialogs since typically
 most 'dirty' images will be Untitled).
 
-Implement "Untitled" numbering. Without it, the Notify option is not as useful
-as it could be, because you can't tell which of many Untitled images has just
-finished! (Hmm, as an alternative, or maybe to complement it, the Notify option
-could raise() the viewer that just finished? Or is that too rude, considering
-the user might be working with another app? Having a cute little message pop up
-in front of your StarOffice desktop is one thing, but a full-screen FW window?)
-
 YesNoCancelDialog and SaveImageDialog should not be application-modal.
 How to reduce modality to one window only, and still make sure that the user
 can't throw the application into an inconsistent state by mucking about in

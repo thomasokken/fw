@@ -30,6 +30,9 @@ Viewer::instances = new List;
 /* private static */ int
 Viewer::idcount = 0;
 
+/* private static */ int
+Viewer::untitledcount = 0;
+
 /* private static */ GC
 Viewer::gc = None;
 
@@ -130,7 +133,6 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     colormap = g_colormap;
     cme = NULL;
     finished = false;
-    untitled = true;
     undomanager = new UndoManager;
     undomanager->addListener(new UndoManagerListener(this));
     saved_undo_id = undomanager->getCurrentId();
@@ -193,25 +195,29 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 
 /* public */ void
 Viewer::finish_init() {
-    char *name;
-    if (filename == NULL)
-	name = "Untitled";
-    else
-	name = basename(filename);
-    if (strcmp(plugin->name(), "Null") == 0) {
-	setTitle(name);
-	setIconTitle(name);
-    } else if (strcmp(plugin->name(), "About") == 0) {
+    if (strcmp(plugin->name(), "About") == 0) {
 	setTitle("Fractal Wizard");
 	setIconTitle("Fractal Wizard");
+    } else if (strcmp(plugin->name(), "Null") == 0) {
+	// No check if filename == NULL. The Null plugin is *only*
+	// used when opening files; you can't do File->New->Null.
+	char *name = basename(filename);
+	setTitle(name);
+	setIconTitle(name);
+	free(name);
     } else {
-	char buf[256];
-	snprintf(buf, 256, "%s (%s)", name, plugin->name());
+	char buf[1024];
+	if (filename == NULL) {
+	    untitled = ++untitledcount;
+	    snprintf(buf, 1024, "Untitled #%d (%s)", untitled, plugin->name());
+	} else {
+	    char *name = basename(filename);
+	    snprintf(buf, 1024, "%s (%s)", name, plugin->name());
+	    free(name);
+	}
 	setTitle(buf);
 	setIconTitle(buf);
     }
-    if (filename != NULL)
-	free(name);
 
     Menu *topmenu = new Menu;
 
@@ -698,7 +704,13 @@ Viewer::pluginFinished(bool notify) {
     // attention unless they have requested we do so.
     if (notify && optionsmenu->getToggleValue("Options.Notify")) {
 	char buf[1024];
-	snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), filename == NULL ? "Untitled" : filename);
+	if (filename == NULL)
+	    snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"Untitled #%d\" has been completed.", plugin->name(), untitled);
+	else {
+	    char *name = basename(filename);
+	    snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), name);
+	    free(name);
+	}
 	TextViewer *tv = new TextViewer(buf);
 	tv->raise();
 	beep();
@@ -1676,11 +1688,13 @@ Viewer::doQuit2() {
 	}
 
 	char buf[1024];
-	char *bn = viewer->filename == NULL ? (char *) "Untitled"
-					    : basename(viewer->filename);
-	snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
-	if (viewer->filename != NULL)
+	if (viewer->filename == NULL) {
+	    snprintf(buf, 1024, "Save changes to \"Untitled #%d\" before quitting?", viewer->untitled);
+	} else {
+	    char *bn = basename(viewer->filename);
+	    snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
 	    free(bn);
+	}
 
 	YesNoCancelBeforeQuittingListener *ynclistener =
 			    new YesNoCancelBeforeQuittingListener(viewer);
