@@ -30,11 +30,11 @@ class Frame {
 	void setColormap(Colormap xcmap);
 	void getSize(Dimension *width, Dimension *height);
 	void setSize(Dimension width, Dimension height);
+	void fitToScreen();
 
     private:
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);
 	void findDecorSize();
-	void fitToScreen();
 	static void config(Widget w, XtPointer closure,
 				XEvent *event, Boolean *cont);
 };

@@ -286,7 +286,7 @@ Frame::findDecorSize() {
     decor_known = true;
 }
 
-/* private */ void
+/* protected */ void
 Frame::fitToScreen() {
     unsigned int scrnwidth = XWidthOfScreen(g_screen);
     unsigned int scrnheight = XHeightOfScreen(g_screen);

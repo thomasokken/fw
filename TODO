@@ -1,5 +1,8 @@
-There's a line of garbage at the bottom of AboutViewer, when displayed at 50%
-or 25%, no private colormap, dithering on. Looks like a bug in paint_reduced().
+In paint_reduced(), the code for displaying 8-bit colormapped images when a
+private colormap is in effect, is painfully slow. Finding the closest match for
+a color within an arbitrary set of colors is the problem. The current
+implementation is totally naive... Even if a brute-force search really can't be
+avoided, that code still wants some optimizing.
 
 Find a better way for SettingsDialog to access the settings.
 The current approach is based on the assumption that structs are packed,

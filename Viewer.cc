@@ -651,7 +651,7 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 		XPutPixel(image, x, y, pixel);
 		int prevx = x - dir;
 		int nextx = x + dir;
-		if (prevx >= (int) left && prevx < (int) right) {
+		if (prevx >= left && prevx < right) {
 		    nextdr[prevx - left] += dR * 3;
 		    nextdg[prevx - left] += dG * 3;
 		    nextdb[prevx - left] += dB * 3;
@@ -659,7 +659,7 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 		nextdr[x - left] += dR * 5;
 		nextdg[x - left] += dG * 5;
 		nextdb[x - left] += dB * 5;
-		if (nextx >= (int) left && nextx < (int) right) {
+		if (nextx >= left && nextx < right) {
 		    nextdr[nextx - left] += dR;
 		    nextdg[nextx - left] += dG;
 		    nextdb[nextx - left] += dB;
@@ -744,10 +744,10 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 		XPutPixel(image, x, y, pixel);
 		int prevx = x - dir;
 		int nextx = x + dir;
-		if (prevx >= (int) left && prevx < (int) right)
+		if (prevx >= left && prevx < right)
 		    nextdk[prevx - left] += dK * 3;
 		nextdk[x - left] += dK * 5;
-		if (nextx >= (int) left && nextx < (int) right)
+		if (nextx >= left && nextx < right)
 		    nextdk[nextx - left] += dK;
 		dK *= 7;
 	    }
@@ -762,7 +762,371 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 
 /* private */ void
 Viewer::paint_enlarged(int top, int left, int bottom, int right) {
-    return;
+    int TOP = top * scale;
+    int BOTTOM = bottom * scale;
+    int LEFT = left * scale;
+    int RIGHT = right * scale;
+
+    if (depth == 1) {
+	// Black and white are always available, so we never have to
+	// do anything fancy to render 1-bit images, so we use this simple
+	// special-case code that does not do the error diffusion thing.
+	unsigned long black = BlackPixel(g_display, g_screennumber);
+	unsigned long white = WhitePixel(g_display, g_screennumber);
+	for (int y = top; y < bottom; y++) {
+	    int Y = y * scale;
+	    for (int x = left; x < right; x++) {
+		int X = x * scale;
+		unsigned long pixel =
+			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
+			    == 0 ? black : white;
+		for (int YY = Y; YY < Y + scale; YY++)
+		    for (int XX = X; XX < X + scale; XX++)
+			XPutPixel(image, XX, YY, pixel);
+	    }
+	}
+    } else if (depth == 8 && priv_cmap != None) {
+	// As in the 1-bit case, in this case we know all our colors are
+	// available, so no dithering is required and all we do is copy pixels.
+	for (int y = top; y < bottom; y++) {
+	    int Y = y * scale;
+	    for (int x = left; x < right; x++) {
+		int X = x * scale;
+		unsigned long pixel = pixels[y * bytesperline + x];
+		for (int YY = Y; YY < Y + scale; YY++)
+		    for (int XX = X; XX < X + scale; XX++)
+			XPutPixel(image, XX, YY, pixel);
+	    }
+	}
+    } else if (!dithering && (g_grayramp == NULL || priv_cmap != None)) {
+	// Color display, not dithered
+	for (int y = top; y < bottom; y++) {
+	    int Y = y * scale;
+	    for (int x = left; x < right; x++) {
+		int X = x * scale;
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		unsigned long pixel;
+		if (priv_cmap != None) {
+		    // 256-entry color map, with first 216 entries containing a
+		    // 6x6x6 color cube, and the remaining 40 entries containing
+		    // 40 shades of gray (which, together with the 6 shades of
+		    // gray in the color cube, make up a 46-entry gray ramp
+		    // We look for a color match and a graylevel match, and pick
+		    // the best fit.
+		    int rerr = (r + 25) % 51 - 25;
+		    int gerr = (g + 25) % 51 - 25;
+		    int berr = (b + 25) % 51 - 25;
+		    int color_err = rerr * rerr + gerr * gerr + berr * berr;
+		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    rerr = r - k;
+		    gerr = g - k;
+		    berr = b - k;
+		    int gray_err = rerr * rerr + gerr * gerr + berr * berr;
+		    if (color_err < gray_err) {
+			int rr = (r + 25) / 51;
+			int gg = (g + 25) / 51;
+			int bb = (b + 25) / 51;
+			pixel = 36 * rr + 6 * gg + bb;
+		    } else {
+			int kk = (int) (k * 3 / 17.0 + 0.5);
+			if (kk % 9 == 0)
+			    pixel = kk * 43 / 9;
+			else
+			    pixel = (kk / 9) * 8 + (kk % 9) + 215;
+		    }
+		} else if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    pixel = g_colorcube[index].pixel;
+		} else {
+		    static bool inited = false;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
+		    if (!inited) {
+			rmax = g_visual->red_mask;
+			rmult = 0;
+			while ((rmax & 1) == 0) {
+			    rmax >>= 1;
+			    rmult++;
+			}
+			gmax = g_visual->green_mask;
+			gmult = 0;
+			while ((gmax & 1) == 0) {
+			    gmax >>= 1;
+			    gmult++;
+			}
+			bmax = g_visual->blue_mask;
+			bmult = 0;
+			while ((bmax & 1) == 0) {
+			    bmax >>= 1;
+			    bmult++;
+			}
+			inited = true;
+		    }
+
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
+		}
+		for (int XX = X; XX < X + scale; XX++)
+		    for (int YY = Y; YY < Y + scale; YY++)
+			XPutPixel(image, XX, YY, pixel);
+	    }
+	}
+    } else if (dithering && (g_grayramp == NULL || priv_cmap != None)) {
+	// Color display, dithered
+	int *dr = new int[RIGHT - LEFT];
+	int *dg = new int[RIGHT - LEFT];
+	int *db = new int[RIGHT - LEFT];
+	int *nextdr = new int[RIGHT - LEFT];
+	int *nextdg = new int[RIGHT - LEFT];
+	int *nextdb = new int[RIGHT - LEFT];
+	for (int i = 0; i < RIGHT - LEFT; i++)
+	    dr[i] = dg[i] = db[i] = nextdr[i] = nextdg[i] = nextdb[i] = 0;
+	int dR = 0, dG = 0, dB = 0;
+	for (int Y = TOP; Y < BOTTOM; Y++) {
+	    int y = Y / scale;
+	    int dir = ((Y & 1) << 1) - 1;
+	    int START, END;
+	    if (dir == 1) {
+		START = LEFT;
+		END = RIGHT;
+	    } else {
+		START = RIGHT - 1;
+		END = LEFT - 1;
+	    }
+	    int *temp;
+	    temp = nextdr; nextdr = dr; dr = temp;
+	    temp = nextdg; nextdg = dg; dg = temp;
+	    temp = nextdb; nextdb = db; db = temp;
+	    dR = dG = dB = 0;
+	    for (int X = START; X != END; X += dir) {
+		int x = X / scale;
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		r += (dr[X - LEFT] + dR) >> 4;
+		if (r < 0) r = 0; else if (r > 255) r = 255;
+		dr[X - LEFT] = 0;
+		g += (dg[X - LEFT] + dG) >> 4;
+		if (g < 0) g = 0; else if (g > 255) g = 255;
+		dg[X - LEFT] = 0;
+		b += (db[X - LEFT] + dB) >> 4;
+		if (b < 0) b = 0; else if (b > 255) b = 255;
+		db[X - LEFT] = 0;
+		unsigned long pixel;
+		if (priv_cmap != None) {
+		    // 256-entry color map, with first 216 entries containing a
+		    // 6x6x6 color cube, and the remaining 40 entries containing
+		    // 40 shades of gray (which, together with the 6 shades of
+		    // gray in the color cube, make up a 46-entry gray ramp
+		    // We look for a color match and a graylevel match, and pick
+		    // the best fit.
+		    int dr1 = (r + 25) % 51 - 25;
+		    int dg1 = (g + 25) % 51 - 25;
+		    int db1 = (b + 25) % 51 - 25;
+		    int color_err = dr1 * dr1 + dg1 * dg1 + db1 * db1;
+		    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		    int dr2 = r - k;
+		    int dg2 = g - k;
+		    int db2 = b - k;
+		    int gray_err = dr2 * dr2 + dg2 * dg2 + db2 * db2;
+		    if (color_err < gray_err) {
+			int rr = (r + 25) / 51;
+			int gg = (g + 25) / 51;
+			int bb = (b + 25) / 51;
+			pixel = 36 * rr + 6 * gg + bb;
+			dR = dr1;
+			dG = dg1;
+			dB = db1;
+		    } else {
+			int kk = (int) (k * 3 / 17.0 + 0.5);
+			if (kk % 9 == 0)
+			    pixel = kk * 43 / 9;
+			else
+			    pixel = (kk / 9) * 8 + (kk % 9) + 215;
+			dR = dr2;
+			dG = dg2;
+			dB = db2;
+		    }
+		} else if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    dR = r - (g_colorcube[index].red >> 8);
+		    dG = g - (g_colorcube[index].green >> 8);
+		    dB = b - (g_colorcube[index].blue >> 8);
+		    pixel = g_colorcube[index].pixel;
+		} else {
+		    static bool inited = false;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
+		    if (!inited) {
+			rmax = g_visual->red_mask;
+			rmult = 0;
+			while ((rmax & 1) == 0) {
+			    rmax >>= 1;
+			    rmult++;
+			}
+			gmax = g_visual->green_mask;
+			gmult = 0;
+			while ((gmax & 1) == 0) {
+			    gmax >>= 1;
+			    gmult++;
+			}
+			bmax = g_visual->blue_mask;
+			bmult = 0;
+			while ((bmax & 1) == 0) {
+			    bmax >>= 1;
+			    bmult++;
+			}
+			inited = true;
+		    }
+
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
+		    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
+		    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
+		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
+		}
+		XPutPixel(image, X, Y, pixel);
+		int PREVX = X - dir;
+		int NEXTX = X + dir;
+		if (PREVX >= LEFT && PREVX < RIGHT) {
+		    nextdr[PREVX - LEFT] += dR * 3;
+		    nextdg[PREVX - LEFT] += dG * 3;
+		    nextdb[PREVX - LEFT] += dB * 3;
+		}
+		nextdr[X - LEFT] += dR * 5;
+		nextdg[X - LEFT] += dG * 5;
+		nextdb[X - LEFT] += dB * 5;
+		if (NEXTX >= LEFT && NEXTX < RIGHT) {
+		    nextdr[NEXTX - LEFT] += dR;
+		    nextdg[NEXTX - LEFT] += dG;
+		    nextdb[NEXTX - LEFT] += dB;
+		}
+		dR *= 7;
+		dG *= 7;
+		dB *= 7;
+	    }
+	}
+	delete[] dr;
+	delete[] dg;
+	delete[] db;
+	delete[] nextdr;
+	delete[] nextdg;
+	delete[] nextdb;
+    } else if (!dithering) {
+	// Grayscale display, not dithered
+	for (int y = top; y < bottom; y++) {
+	    int Y = y * scale;
+	    for (int x = left; x < right; x++) {
+		int X = x * scale;
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		int graylevel = 
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		unsigned long pixel = g_grayramp[graylevel].pixel;
+		for (int XX = X; XX < X + scale; XX++)
+		    for (int YY = Y; YY < Y + scale; YY++)
+			XPutPixel(image, XX, YY, pixel);
+	    }
+	}
+    } else {
+	// Grayscale display, dithered
+	int *dk = new int[right - left];
+	int *nextdk = new int[right - left];
+	for (int i = 0; i < right - left; i++)
+	    dk[i] = nextdk[i] = 0;
+	int dK = 0;
+	for (int Y = TOP; Y < BOTTOM; Y++) {
+	    int y = Y / scale;
+	    int dir = ((Y & 1) << 1) - 1;
+	    int START, END;
+	    if (dir == 1) {
+		START = LEFT;
+		END = RIGHT;
+	    } else {
+		START = RIGHT - 1;
+		END = LEFT - 1;
+	    }
+	    int *temp;
+	    temp = nextdk; nextdk = dk; dk = temp;
+	    dK = 0;
+	    for (int X = START; X != END; X += dir) {
+		int x = X / scale;
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		k += (dk[X - LEFT] + dK) >> 4;
+		if (k < 0) k = 0; else if (k > 255) k = 255;
+		dk[X - LEFT] = 0;
+		int graylevel = 
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		dK = k - (g_grayramp[graylevel].red >> 8);
+		unsigned long pixel = g_grayramp[graylevel].pixel;
+		XPutPixel(image, X, Y, pixel);
+		int PREVX = X - dir;
+		int NEXTX = X + dir;
+		if (PREVX >= LEFT && PREVX < RIGHT)
+		    nextdk[PREVX - LEFT] += dK * 3;
+		nextdk[X - LEFT] += dK * 5;
+		if (NEXTX >= LEFT && NEXTX < RIGHT)
+		    nextdk[NEXTX - LEFT] += dK;
+		dK *= 7;
+	    }
+	}
+	delete[] dk;
+	delete[] nextdk;
+    }
+    XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+	      LEFT, TOP, LEFT, TOP,
+	      RIGHT - LEFT, BOTTOM - TOP);
 }
 
 /* private */ void
@@ -1775,6 +2139,7 @@ Viewer::doScale(const char *value) {
 
     // Resize top-level window to fit
     setSize(w + extra_h, h + extra_v);
+    fitToScreen();
 
     if (!direct_copy)
 	free(image->data);
