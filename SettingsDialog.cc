@@ -237,6 +237,7 @@ SettingsDialog::SettingsDialog(void *settings, char **settings_layout,
 
     snprintf(text, 256, "New %s", plugin->name());
     setTitle(text);
+    setIconTitle(text);
     raise();
     XmProcessTraversal(tf[0], XmTRAVERSE_CURRENT);
 }

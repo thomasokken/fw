@@ -68,7 +68,7 @@ Plugin::get_settings_ok() {
 
 /* public virtual */ void
 Plugin::get_settings_cancel() {
-    delete viewer;
+    viewer->deleteLater();
 }
 
 /* protected static */ void

@@ -51,26 +51,7 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
 		delete this;
 	} else {
 	    plugin->init_new();
-	    // the plugin must call finish_init or delete the Viewer
-	    // TODO: The plugin can't currently delete the Viewer safely,
-	    // because deleting the Viewer causes the plugin's .so to be
-	    // unloaded if it was the only instance; the result being that
-	    // execution returns from ~Viewer() (or from
-	    // Plugin::get_settings_cancel(), which simply calls ~Viewer()
-	    // itself) BACK TO THE .so THAT WAS JUST UNLOADED -- causing a
-	    // SIGSEGV.
-	    // Can't init_new() simply return a bool to indicate success or
-	    // failure, like init_clone() and init_load(), so that deleting the
-	    // Viewer (if necessary, i.e. if init_new() returns 'false') can be
-	    // done *here*, in Viewer.cc, where it is safe to do so? Or is the
-	    // problem that bringing up a Settings dialog requires a return to
-	    // the main event loop (Java solves this by firing up a secondary
-	    // message pump, but let's not go there, it's a bit ugly)? If so,
-	    // then the fix would be to maintain a queue of viewers to be
-	    // deleted; the pluging would enqueue its viewer, end the queue
-	    // would be handled by a XtWorkProc. Hmm, actually, all this
-	    // XtWorkProc stuff makes me think it would be nice to have a nice
-	    // C++ wrapper, a la Java's SwingUtilities.invokeLater()...
+	    // the plugin must call finish_init or delete the Viewer.
 	}
     }
 }
@@ -80,6 +61,7 @@ Viewer::finish_init() {
     char title[256];
     snprintf(title, 256, "Fractal Wizard - %s", plugin->name());
     setTitle(title);
+    setIconTitle(title);
 
     Menu *topmenu = new Menu;
 
@@ -283,6 +265,31 @@ Viewer::~Viewer() {
 }
 
 /* public */ void
+Viewer::deleteLater() {
+    // This method is meant to be called in contexts where simply using the
+    // destructor directly is not safe, specifically: a Plugin cannot use
+    // ~Viewer() to delete its viewer because ~Viewer() will unload the plugin
+    // if it is the only instance, and then execution would return from
+    // ~Viewer() to a shared library that is no longer present => crash!
+    // By deferring the destructor invocation until the next pass through the
+    // main event loop, we make sure that the plugin is no longer on the stack
+    // by the time its viewer is deleted.
+
+    // It may take a while before deletion actually happens; make sure the user
+    // can't mess things up in the meantime.
+    //hide();
+
+    XtAppAddWorkProc(appcontext, deleteLater2, (XtPointer) this);
+}
+
+/* private static */ Boolean
+Viewer::deleteLater2(XtPointer ud) {
+    Viewer *This = (Viewer *) ud;
+    delete This;
+    return True;
+}
+
+/* public */ void
 Viewer::paint(const char *pixels, Color *cmap,
 	      int depth, int width,
 	      int height, int bytesperline,
@@ -305,7 +312,7 @@ Viewer::paint(const char *pixels, Color *cmap,
 		XPutPixel(image, x, y,
 			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white);
-    } else {
+    } else if (grayramp == NULL) {
 	// FIXME handle special cases that do not require dithering:
 	// depth = 24, and also depth = 8 && idepth = 8 && using priv cmap
 	int *dr = new int[right - left];
@@ -364,16 +371,6 @@ Viewer::paint(const char *pixels, Color *cmap,
 		    dG = g - (colorcube[index].green >> 8);
 		    dB = b - (colorcube[index].blue >> 8);
 		    pixel = colorcube[index].pixel;
-		} else if (grayramp != NULL) {
-		    int graylevel = (int) (r * 0.299 + g * 0.587 + b * 0.114);
-		    graylevel = 
-			(int) (graylevel * (rampsize - 1) / 255.0 + 0.5);
-		    if (graylevel >= rampsize)
-			graylevel = rampsize - 1;
-		    dR = r - (grayramp[graylevel].red >> 8);
-		    dG = g - (grayramp[graylevel].green >> 8);
-		    dB = b - (grayramp[graylevel].blue >> 8);
-		    pixel = grayramp[graylevel].pixel;
 		} else {
 		    static bool inited = false;
 		    static int rmax, rmult, bmax, bmult,
@@ -435,6 +432,63 @@ Viewer::paint(const char *pixels, Color *cmap,
 	delete[] nextdr;
 	delete[] nextdg;
 	delete[] nextdb;
+    } else {
+	// FIXME handle special cases that do not require dithering:
+	// depth = 8 && idepth = 8 && using priv cmap
+	int *dk = new int[right - left];
+	int *nextdk = new int[right - left];
+	for (int i = 0; i < right - left; i++)
+	    dk[i] = nextdk[i] = 0;
+	int dK = 0;
+	for (int y = top; y < bottom; y++) {
+	    int dir = ((y & 1) << 1) - 1;
+	    int start, end;
+	    if (dir == 1) {
+		start = left;
+		end = right;
+	    } else {
+		start = right - 1;
+		end = left - 1;
+	    }
+	    int *temp;
+	    temp = nextdk; nextdk = dk; dk = temp;
+	    dK = 0;
+	    for (int x = start; x != end; x += dir) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1] & 255;
+		    g = pixels[y * bytesperline + (x << 2) + 2] & 255;
+		    b = pixels[y * bytesperline + (x << 2) + 3] & 255;
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		k += (dk[x - left] + dK) >> 4;
+		if (k < 0) k = 0; else if (k > 255) k = 255;
+		dk[x - left] = 0;
+		int graylevel = 
+		    (int) (k * (rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= rampsize)
+		    graylevel = rampsize - 1;
+		dK = k - (grayramp[graylevel].red >> 8);
+		unsigned long pixel = grayramp[graylevel].pixel;
+		XPutPixel(image, x, y, pixel);
+
+		int prevx = x - dir;
+		int nextx = x + dir;
+		if (prevx >= (int) left && prevx < (int) right)
+		    nextdk[prevx - left] += dK * 3;
+		nextdk[x - left] += dK * 5;
+		if (nextx >= (int) left && nextx < (int) right)
+		    nextdk[nextx - left] += dK;
+		dK *= 7;
+	    }
+	}
+	delete[] dk;
+	delete[] nextdk;
     }
     XPutImage(display, drawwindow, gc, image,
 	      left, top, left, top,

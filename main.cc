@@ -117,6 +117,12 @@ int main(int argc, char **argv) {
 	}
     }
 
+    if (colorcube != NULL)
+	fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", cubesize,
+		cubesize, cubesize);
+    if (grayramp != NULL)
+	fprintf(stderr, "Allocated a %d-entry gray ramp.\n", rampsize);
+
     XGCValues values;
     values.foreground = WhitePixel(display, screennumber);
     values.background = BlackPixel(display, screennumber);

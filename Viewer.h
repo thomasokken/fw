@@ -21,6 +21,7 @@ class Viewer : private Frame {
 	Viewer(const char *pluginname, const char *filename);
 	void finish_init();
 	~Viewer();
+	void deleteLater();
 	void paint(const char *pixels, Color *cmap,
 		   int depth, int width,
 		   int height, int bytesperline,
@@ -37,6 +38,7 @@ class Viewer : private Frame {
 	virtual void close();
 	static void menucallback(void *closure, const char *id);
 	void menucallback2(const char *id);
+	static Boolean deleteLater2(XtPointer ud);
 
 	void doBeep();
 	void doNew(const char *plugin);
