@@ -31,7 +31,7 @@ SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
 
     Arg args[5];
     Widget pulldown = XmCreatePulldownMenu(form, "TypeList", NULL, 0);
-    XmString label = XmStringCreateLocalized("File Tpe:");
+    XmString label = XmStringCreateLocalized("File Type:");
     XtSetArg(args[0], XmNlabelString, label);
     XtSetArg(args[1], XmNsubMenuId, pulldown);
     XtSetArg(args[2], XmNtopAttachment, XmATTACH_FORM);
