@@ -8,16 +8,10 @@ TARGETS := $(SRCS:.cc=.so)
 all: $(OBJS) $(TARGETS)
 
 JPEGViewer.so: JPEGViewer.o
-	$(CXX) $(LDFLAGS) -Llibjpeg -o JPEGViewer.so JPEGViewer.o -ljpeg
-
-JPEGViewer.o: JPEGViewer.cc
-	$(CXX) $(CXXFLAGS) -Ilibjpeg -c -o JPEGViewer.o JPEGViewer.cc
+	$(CXX) $(LDFLAGS) -o JPEGViewer.so JPEGViewer.o -ljpeg
 
 PNGViewer.so: PNGViewer.o
-	$(CXX) $(LDFLAGS) -Llibpng -Lzlib -o PNGViewer.so PNGViewer.o -lpng -lz
-
-PNGViewer.o: PNGViewer.cc
-	$(CXX) $(CXXFLAGS) -Ilibpng -Izlib -c -o PNGViewer.o PNGViewer.cc
+	$(CXX) $(LDFLAGS) -o PNGViewer.so PNGViewer.o -lpng -lz
 
 %.so: %.o
 	$(CXX) $(LDFLAGS) -o $@ $<

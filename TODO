@@ -8,6 +8,10 @@ that XmToggleButton can deal with being reentered like that. If not, check
 the XmRowColumnWidget source code: *it* has to deal with the same problem
 somehow, no?)
 
+On a 16-bit display, jen.jpg (blown up to 1024x768 and smoothed in xv) looks
+posterized if you view 24-bit color and 8-bit grayscale versions. Check
+Viewer::paint(): it *should* be dithering, but is it really?
+
 Find a better way for SettingsDialog to access the settings.
 The current approach is based on the assumption that structs are packed,
 i.e. if a and b are consecutive members of a struct, that (&b - &a)
