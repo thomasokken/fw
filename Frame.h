@@ -14,6 +14,8 @@ class Frame {
 	bool centered;
 	static bool decor_known;
 	static int decor_width, decor_height;
+	static bool taskbar_known;
+	static int taskbar_width, taskbar_height;
 
     public:
 	Frame(bool resizable, bool centered, bool hasMenuBar);
@@ -29,13 +31,16 @@ class Frame {
     protected:
 	Widget getContainer();
 	void setColormap(Colormap xcmap);
-	void getSize(Dimension *width, Dimension *height);
-	void setSize(Dimension width, Dimension height);
+	void getSize(int *width, int *height);
+	void setSize(int width, int height);
+	void getDecorSize(int *width, int *height);
+	void getTaskBarSize(int *width, int *height);
 	void fitToScreen();
 
     private:
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);
 	void findDecorSize();
+	void findTaskBarSize();
 	static void config(Widget w, XtPointer closure,
 				XEvent *event, Boolean *cont);
 };

@@ -39,6 +39,8 @@ class Viewer : private Frame {
 	static GC gc;
 	static char *file_directory;
 	static char *colormap_directory;
+	static bool inner_decor_known;
+	static int inner_decor_width, inner_decor_height;
 
     public:
 	Viewer(const char *pluginname);

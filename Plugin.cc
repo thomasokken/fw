@@ -101,7 +101,7 @@ Plugin::get(const char *name) {
     snprintf(dlname, _POSIX_PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
     if (dl == NULL) {
-	if (g_verbosity >= 1)
+	if (g_prefs->verbosity >= 1)
 	    fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
 	return NULL;
     }
@@ -249,7 +249,7 @@ Plugin::beep() {
 
 /* protected static */ int
 Plugin::debug_level() {
-    return g_verbosity;
+    return g_prefs->verbosity;
 }
 
 /* protected */ void

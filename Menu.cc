@@ -64,7 +64,7 @@ Menu::remove(const char *id) {
 	previtem = item;
 	item = item->next;
     }
-    if (g_verbosity >= 2)
+    if (g_prefs->verbosity >= 2)
 	fprintf(stderr, "Attempt to remove nonexistent id \"%s\" from menu.\n", id);
     return;
 
@@ -235,7 +235,7 @@ Menu::setRadioValue(const char *id, const char *value, bool doCallbacks) {
     Widget new_w = (Widget) radioIdToWidgetMap->get(buf);
     free(buf);
     if (new_w == NULL) {
-	if (g_verbosity >= 2)
+	if (g_prefs->verbosity >= 2)
 	fprintf(stderr, "Attempt to set nonexistent radio \"%s@%s\".\n", id, value);
 	return;
     }
@@ -324,7 +324,7 @@ Menu::makeItem(Widget parent, ItemNode *item) {
     } else if (item->type == ITEM_RADIO) {
 	// Radio menu item
 	if (strchr(item->id, '@') == NULL) {
-	    if (g_verbosity >= 2)
+	    if (g_prefs->verbosity >= 2)
 		fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
 	} else {
 	    XtSetArg(args[nargs], XmNindicatorType, XmONE_OF_MANY); nargs++;

@@ -20,6 +20,15 @@ Frame::decor_width = 0;
 /* private static */ int
 Frame::decor_height = 0;
 
+/* private static */ bool
+Frame::taskbar_known = false;
+
+/* private static */ int
+Frame::taskbar_width = 0;
+
+/* private static */ int
+Frame::taskbar_height = 0;
+
 
 /* public */
 Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
@@ -216,15 +225,18 @@ Frame::setColormap(Colormap xcmap) {
 }
 
 /* protected */ void
-Frame::getSize(Dimension *width, Dimension *height) {
+Frame::getSize(int *width, int *height) {
+    Dimension w, h;
     Arg args[2];
-    XtSetArg(args[0], XmNwidth, width);
-    XtSetArg(args[1], XmNheight, height);
+    XtSetArg(args[0], XmNwidth, &w);
+    XtSetArg(args[1], XmNheight, &h);
     XtGetValues(toplevel, args, 2);
+    *width = w;
+    *height = h;
 }
 
 /* protected */ void
-Frame::setSize(Dimension width, Dimension height) {
+Frame::setSize(int width, int height) {
     XtWidgetGeometry wg;
     XtQueryGeometry(menubar, NULL, &wg);
     if (width < wg.width)
@@ -233,6 +245,20 @@ Frame::setSize(Dimension width, Dimension height) {
     XtSetArg(args[0], XmNwidth, width);
     XtSetArg(args[1], XmNheight, height);
     XtSetValues(toplevel, args, 2);
+}
+
+/* protected */ void
+Frame::getDecorSize(int *width, int *height) {
+    findDecorSize();
+    *width = decor_width;
+    *height = decor_height;
+}
+
+/* protected */ void
+Frame::getTaskBarSize(int *width, int *height) {
+    findTaskBarSize();
+    *width = taskbar_width;
+    *height = taskbar_height;
 }
 
 /* private static */ void
@@ -293,22 +319,21 @@ Frame::findDecorSize() {
     decor_known = true;
 }
 
-/* protected */ void
-Frame::fitToScreen() {
-    unsigned int scrnwidth = XWidthOfScreen(g_screen);
-    unsigned int scrnheight = XHeightOfScreen(g_screen);
+/* private */ void
+Frame::findTaskBarSize() {
+    if (taskbar_known)
+	return;
 
-    // Look for a Task Bar and figure out how much space to leave for it
-    int taskbarwidth = 0;
-    int taskbarheight = 0;
-    
     Window root;
     Window parent;
     Window *children;
     unsigned int nchildren;
     if (XQueryTree(g_display, g_rootwindow, &root, &parent,
 		&children, &nchildren) == 0) 
-	goto taskbar_done;
+	return;
+
+    unsigned int scrnwidth = XWidthOfScreen(g_screen);
+    unsigned int scrnheight = XHeightOfScreen(g_screen);
 
     for (unsigned int n = 0; n < nchildren; n++) {
 	Window root;
@@ -352,20 +377,50 @@ Frame::fitToScreen() {
 	// development :-) ).
 
 	if (width == scrnwidth)
-	    taskbarheight = height;
+	    taskbar_height = height;
 	else
-	    taskbarwidth = width;
+	    taskbar_width = width;
+
+	// Just the one task bar, thanks ma'am.
+	break;
     }
 
-    taskbar_done:
+    taskbar_known = true;
+}
+
+/* protected */ void
+Frame::fitToScreen() {
+    unsigned int scrnwidth = XWidthOfScreen(g_screen);
+    unsigned int scrnheight = XHeightOfScreen(g_screen);
+    
+    // We must not call findDecorSize() here, because that method must not be
+    // called before the window is mapped. Specifically, we need the window
+    // manager to reparent our window, and that happens only after we request
+    // to be mapped. For this reason, raise() registers a callback so we get
+    // notified at the appropriate time, *only* then do we try to find the
+    // decoration size.
+    // If we did call findDecorSize() here, it would first get called on the
+    // very first invocation of Frame::raise(), before the WM has reparented
+    // our window, and it would find decor_width = decor_size = 0, and then set
+    // decor_known = true, and that is not good.
+
+    // Calling findTaskBarSize() is fine at this time. Presumably the task bar
+    // will always exist before we get called.
+    // *Proper* task bar support is another story. You really want to track
+    // task bar geometry dynamically, instead of assuming (as we do here) that
+    // it never changes within a session. The way MS Windows resizes maximized
+    // windows when the task bar geometry changes is a good idea of how I would
+    // like FW (and every X11 client, for that matter!) to behave.
+
+    findTaskBarSize();
 
     Arg args[2];
     Dimension width, height;
     XtSetArg(args[0], XmNwidth, &width);
     XtSetArg(args[1], XmNheight, &height);
     XtGetValues(toplevel, args, 2);
-    int maxwidth = scrnwidth - decor_width - taskbarwidth;
-    int maxheight = scrnheight - decor_height - taskbarheight;
+    int maxwidth = scrnwidth - decor_width - taskbar_width;
+    int maxheight = scrnheight - decor_height - taskbar_height;
     int n = 0;
     if (width > maxwidth) {
 	XtSetArg(args[n], XmNwidth, maxwidth);

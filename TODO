@@ -3,6 +3,12 @@ Implement halftoning in color editor.
 ColorPicker: when constraining HSL coordinates (the MotionNotify case), make
 sure the actual screen coordinates (cross_[xy], slider_x) are also constrained!
 
+ColorPicker: in private colormap mode, hard-code appropriate background and
+foreground color values for all the regular widgets (i.e. all except the
+drawing areas), so it looks nicer and is more usable (it's nice to be able to
+see the text in the textfields etc.). Also, or maybe alternatively, support
+operation without a private colormap. Ugly, but still better than nothing.
+
 Take another careful look at the colormap editor. It needs a tidy API for
 the *Actions to control it by: changing the selection, changing color cell
 values; CME should repaint as necessary (which it may not be; if using a

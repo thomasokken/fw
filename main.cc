@@ -35,12 +35,7 @@ unsigned long g_black, g_white;
 Pixmap g_icon, g_iconmask;
 XColor *g_colorcube = NULL, *g_grayramp = NULL;
 int g_cubesize, g_rampsize;
-int g_verbosity = 0;
-
-
-// Private globals
-
-static bool x_errors_coredump = false;
+Preferences *g_prefs;
 
 
 struct req_code {
@@ -198,7 +193,7 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
     // internals?
     fprintf(stderr, "  Current serial number in output stream:  ???\n");
 
-    if (x_errors_coredump)
+    if (g_prefs->x_errors_coredump)
 	crash();
     else
 	fprintf(stderr, "\007\n");
@@ -208,56 +203,15 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
 
 int main(int argc, char **argv) {
     XtSetLanguageProc(NULL, NULL, NULL);
-    g_appshell = XtVaAppInitialize(&g_appcontext,	/* application context */
+    g_appshell = XtVaAppInitialize(&g_appcontext,/* application context */
 				 "FW",		/* class name */
 				 NULL, 0,	/* cmd line option descr. */
 				 &argc, argv,	/* cmd line args */
 				 NULL,		/* fallback resources */
 				 NULL);		/* end of varargs list */
 
-    for (int i = 1; i < argc; i++) {
-	int remove = 0;
-	if (strncmp(argv[i], "-v", 2) == 0) {
-	    char *p = argv[i] + 1;
-	    while (*p++ == 'v')
-		g_verbosity++;
-	    remove = 1;
-	} else if (strcmp(argv[i], "-xdump") == 0) {
-	    x_errors_coredump = true;
-	    remove = 1;
-	} else if (strcmp(argv[i], "-h") == 0
-		|| strcmp(argv[i], "-help") == 0
-		|| strcmp(argv[i], "--help") == 0) {
-	    fprintf(stderr, "Usage: fw [options] [files...]\n");
-	    fprintf(stderr, "    available options:\n");
-	    fprintf(stderr, "    X Toolkit options (see \"man X\")\n");
-	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more verbosity)\n");
-	    fprintf(stderr, "    -xdump : dump core on X errors (implies -synchronous)\n");
-	    fprintf(stderr, "    -h , -help , --help : print usage information & exit\n");
-	    exit(0);
-	    
-	} else if (argv[i][0] == '-') {
-	    fprintf(stderr, "Unrecognized option \"%s\" (see \"fw -h\" for help)\n", argv[i]);
-	    exit(1);
-	}
+    g_prefs = new Preferences(&argc, argv);
 
-	if (remove > 0) {
-	    for (int j = i; j <= argc - remove; j++)
-		argv[j] = argv[j + remove];
-	    argc -= remove;
-	    argv[argc] = NULL;
-	    i--;
-	}
-    }
-
-    if (getenv("FW_XDUMP") != NULL)
-	x_errors_coredump = true;
-
-    if (g_verbosity >= 1) {
-	fprintf(stderr, "Verbosity level set to %d.\n", g_verbosity);
-	if (x_errors_coredump)
-	    fprintf(stderr, "Dumping core on X errors.\n");
-    }
 
     // Seed random number generator so things like Kaos don't give you
     // the same pictures every time...
@@ -277,7 +231,7 @@ int main(int argc, char **argv) {
     // This is necessary if you want the core dump to actually lead you,
     // via the stack trace, to the context in which the offending call
     // was made.
-    if (x_errors_coredump)
+    if (g_prefs->x_errors_coredump)
 	XSynchronize(g_display, True);
     XSetErrorHandler(x_error_handler);
 
@@ -392,7 +346,7 @@ int main(int argc, char **argv) {
 	}
     }
 
-    if (g_verbosity >= 1) {
+    if (g_prefs->verbosity >= 1) {
 	if (g_colorcube != NULL)
 	    fprintf(stderr, "Allocated a %dx%dx%d color cube.\n", g_cubesize,
 		    g_cubesize, g_cubesize);

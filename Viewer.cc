@@ -37,6 +37,16 @@ Viewer::file_directory = NULL;
 /* private static */ char *
 Viewer::colormap_directory = NULL;
 
+/* private static */ bool
+Viewer::inner_decor_known = false;
+
+/* private static */ int
+Viewer::inner_decor_width = 0;
+
+/* private static */ int
+Viewer::inner_decor_height = 0;
+
+
 /* public */
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
@@ -358,6 +368,22 @@ Viewer::finish_init() {
     raise();
 
 
+    if (!inner_decor_known) {
+	// Find out the difference in size between the ScrolledWindow's
+	// ClipWindow and the overall window size
+	Dimension clipwidth, clipheight;
+	Arg args[2];
+	XtSetArg(args[0], XmNwidth, &clipwidth);
+	XtSetArg(args[1], XmNheight, &clipheight);
+	XtGetValues(clipwindow, args, 2);
+	int windowwidth, windowheight;
+	getSize(&windowwidth, &windowheight);
+	inner_decor_width = windowwidth - clipwidth;
+	inner_decor_height = windowheight - clipheight;
+	inner_decor_known = true;
+    }
+
+
     // TODO: better preferences handling, including persistence and
     // command-line option handling!
     // For now, enable dithering when fewer than 5 bits per component are
@@ -404,7 +430,7 @@ Viewer::finish_init() {
 	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_verbosity >= 1)
+    if (g_prefs->verbosity >= 1)
 	if (direct_copy)
 	    fprintf(stderr, "Using direct copy.\n");
 	else
@@ -581,8 +607,18 @@ Viewer::paint(int top, int left, int bottom, int right) {
 
 /* public */ void
 Viewer::get_recommended_size(int *width, int *height) {
-    // TODO -- factor in decor size!
-    get_screen_size(width, height);
+    // Task bar
+    int taskbar_width, taskbar_height;
+    getTaskBarSize(&taskbar_width, &taskbar_height);
+
+    // Outer decor (WM decorations)
+    int outer_decor_width, outer_decor_height;
+    getDecorSize(&outer_decor_width, &outer_decor_height);
+
+    *width = XWidthOfScreen(g_screen) - taskbar_width - inner_decor_width
+			    - outer_decor_width;
+    *height = XHeightOfScreen(g_screen) - taskbar_height - inner_decor_height
+			      - outer_decor_height;
 }
 
 /* public */ void
@@ -1023,7 +1059,7 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
-    if (g_verbosity >= 1)
+    if (g_prefs->verbosity >= 1)
 	fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
     if (strcmp(id, "Options.PrivateColormap") == 0)
 	doPrivateColormap(value);
@@ -1040,7 +1076,7 @@ Viewer::radiocallback(void *closure, const char *id, const char *value) {
 
 /* private */ void
 Viewer::radiocallback2(const char *id, const char *value) {
-    if (g_verbosity >= 1)
+    if (g_prefs->verbosity >= 1)
 	fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
     if (strcmp(id, "Windows.Scale") == 0)
 	doScale(value);
@@ -1391,7 +1427,7 @@ Viewer::doPrivateColormap(bool value) {
 	    free(image->data);
 	    image->data = (char *) pm.pixels;
 	    direct_copy = true;
-	    if (g_verbosity >= 1)
+	    if (g_prefs->verbosity >= 1)
 		fprintf(stderr, "Using direct copy.\n");
 	}
 	colormapChanged();
@@ -1404,7 +1440,7 @@ Viewer::doPrivateColormap(bool value) {
 	setColormap(g_colormap);
 	if (direct_copy) {
 	    image->data = (char *) malloc(image->bytes_per_line * image->height);
-	    if (g_verbosity >= 1 && direct_copy)
+	    if (g_prefs->verbosity >= 1 && direct_copy)
 		fprintf(stderr, "Not using direct copy.\n");
 	    direct_copy = false;
 	}
@@ -1475,18 +1511,6 @@ Viewer::doWindows(const char *sid) {
 Viewer::doScale(const char *value) {
     sscanf(value, "%d", &scale);
 
-    // Find out the difference in size between the ScrolledWindow's ClipWindow
-    // and the overall window size
-    Dimension clipwidth, clipheight;
-    Arg args[2];
-    XtSetArg(args[0], XmNwidth, &clipwidth);
-    XtSetArg(args[1], XmNheight, &clipheight);
-    XtGetValues(clipwindow, args, 2);
-    Dimension windowwidth, windowheight;
-    getSize(&windowwidth, &windowheight);
-    Dimension extra_h = windowwidth - clipwidth;
-    Dimension extra_v = windowheight - clipheight;
-    
     // Compute scaled image size
     int w, h;
     if (scale > 0) {
@@ -1499,12 +1523,13 @@ Viewer::doScale(const char *value) {
     }
 
     // Resize the DrawingArea
+    Arg args[2];
     XtSetArg(args[0], XmNwidth, w);
     XtSetArg(args[1], XmNheight, h);
     XtSetValues(drawingarea, args, 2);
 
     // Resize top-level window to fit
-    setSize(w + extra_h, h + extra_v);
+    setSize(w + inner_decor_width, h + inner_decor_height);
     fitToScreen();
 
     if (!direct_copy)
@@ -1544,7 +1569,7 @@ Viewer::doScale(const char *value) {
 	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_verbosity >= 1 && old_direct_copy != direct_copy)
+    if (g_prefs->verbosity >= 1 && old_direct_copy != direct_copy)
 	if (direct_copy)
 	    fprintf(stderr, "Using direct copy.\n");
 	else

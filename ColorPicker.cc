@@ -446,6 +446,9 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	// the "old" and "new" color display. So, now we play hardball and
 	// allocate a private colormap.
 	
+	if (g_prefs->no_priv_cmap_in_cpicker)
+	    goto color_alloc_done;
+
 	xcube = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
 	XColor colors[218];
 	for (int r = 0; r < 6; r++)
