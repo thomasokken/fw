@@ -301,12 +301,16 @@ Viewer::finish_init() {
     // TODO: better preferences handling, including persistence and
     // command-line option handling!
     // For now, enable dithering when fewer than 5 bits per component are
-    // available.
+    // available; scale always starts at 1.
     if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
 	dithering = true;
     else
 	dithering = g_visual->bits_per_rgb < 5;
     optionsmenu->setToggleValue("Options.Dither", dithering, false);
+    scale = 1;
+    scalemenu->setRadioValue("Windows.Scale", "1", false);
+
+    selection_active = false;
 
     image = XCreateImage(g_display,
 			 g_visual,

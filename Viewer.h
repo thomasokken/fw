@@ -14,6 +14,9 @@ class Viewer : private Frame {
 	XImage *image;
 	Colormap priv_cmap;
 	bool dithering;
+	int scale;
+	bool selection_active;
+	int sel_top, sel_left, sel_bottom, sel_right;
 	Menu *optionsmenu;
 	Menu *scalemenu;
 	static int instances;
