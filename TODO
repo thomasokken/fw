@@ -5,3 +5,5 @@ equals sizeof(a), and that is not a safe assumption.
 
 Sun-related issues: textfields are weird (repaint problem: backspaced-over
 characters do not disappear), and icons have wrong colors if display depth != 8
+
+Mandrake 8.1 requires -I/usr/X11R6/include and -lXp
