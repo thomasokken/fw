@@ -1,5 +1,8 @@
 Implement Paste in Colormap editor; wrap colormap "load" in an UndoableAction.
 
+Update window title & windows menu item when the user saves a file under a new
+name.
+
 The Mariani-Silver code in Mandelbrot, Newton, Julia, and Polynomial, should be
 moved to a base class, like EDPLib in FW 1.x.
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.
