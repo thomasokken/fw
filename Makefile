@@ -14,7 +14,7 @@ plugins: FORCE
 	cd plugins && $(MAKE)
 
 clean: FORCE
-	rm -f $(OBJS) $(SRCS:.cc=.d) fw core
+	rm -f $(OBJS) $(SRCS:.cc=.d) fw core.*
 	cd plugins && $(MAKE) clean
 
 FORCE:

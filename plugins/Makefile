@@ -23,7 +23,7 @@ PNGViewer.o: PNGViewer.cc
 	$(CXX) $(LDFLAGS) -o $@ $<
 
 clean: FORCE
-	rm -f $(OBJS) $(TARGETS) $(SRCS:.cc=.d) core
+	rm -f $(OBJS) $(TARGETS) $(SRCS:.cc=.d) core.*
 
 FORCE:
 
