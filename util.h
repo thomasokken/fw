@@ -7,7 +7,7 @@ class Map {
     private:
 	struct entry {
 	    char *key;
-	    void *value;
+	    const void *value;
 	};
 	entry *entries;
 	int nentries;
@@ -16,8 +16,8 @@ class Map {
     public:
 	Map();
 	~Map();
-	void put(const char *key, void *value);
-	void *get(const char *key);
+	void put(const char *key, const void *value);
+	const void *get(const char *key);
 	void remove(const char *key);
 
     private:

@@ -32,7 +32,7 @@ Map::~Map() {
 }
 
 /* public */ void
-Map::put(const char *key, void *value) {
+Map::put(const char *key, const void *value) {
     if (key == NULL || value == NULL) {
 	// dump core
 	kill(0, SIGQUIT);
@@ -45,6 +45,8 @@ Map::put(const char *key, void *value) {
 	entries[0].value = value;
 	nentries = 1;
 	size = 1;
+	if (verbosity >= 2)
+	    dump();
 	return;
     }
 
@@ -61,6 +63,8 @@ Map::put(const char *key, void *value) {
 	else {
 	    // Key found: replace value
 	    midVal->value = value;
+	    if (verbosity >= 2)
+		dump();
 	    return;
 	}
     }
@@ -79,13 +83,16 @@ Map::put(const char *key, void *value) {
 	dump();
 }
 
-/* public */ void *
+/* public */ const void *
 Map::get(const char *key) {
     if (key == NULL) {
 	// dump core
 	kill(0, SIGQUIT);
 	return NULL;
     }
+
+    if (entries == NULL)
+	return NULL;
 
     entry e;
     e.key = (char *) key;
@@ -101,6 +108,9 @@ Map::remove(const char *key) {
 	kill(0, SIGQUIT);
 	return;
     }
+
+    if (entries == NULL)
+	return;
 
     entry e;
     e.key = (char *) key;

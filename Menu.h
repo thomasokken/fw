@@ -11,7 +11,7 @@ class Menu {
 	void *commandClosure;
 	void (*toggleCallback)(void *closure, const char *id, bool value);
 	void *toggleClosure;
-	void (*radioCallback)(void *closure, const char *id, int value);
+	void (*radioCallback)(void *closure, const char *id, const char *value);
 	void *radioClosure;
 
 	// Menu item types
@@ -40,7 +40,10 @@ class Menu {
 	    ItemNode *next;
 	};
 	ItemNode *firstitem, *lastitem;
-	Map *toggleMap;
+	Map *toggleIdToWidgetMap;
+	Map *radioIdToWidgetMap;
+	Map *radioGroupToSelectedWidgetMap;
+	Map *radioGroupToSelectedIdMap;
 
     public:
 	Menu();
@@ -50,6 +53,8 @@ class Menu {
 		     const char *accelerator, const char *id);
 	void addToggle(const char *name, const char *mnemonic,
 		     const char *accelerator, const char *id);
+	void addRadio(const char *name, const char *mnemonic,
+		     const char *accelerator, const char *id);
 	void addMenu(const char *name, const char *mnemonic,
 		     const char *accelerator, const char *id, Menu *menu);
 	void addSeparator();
@@ -58,15 +63,16 @@ class Menu {
 	void setToggleListener(void (*callback)(void *closure, const char *id,
 			bool value), void *closure);
 	void setRadioListener(void (*callback)(void *closure, const char *id,
-			int value), void *closure);
-	void setToggleValue(const char *id, bool value);
-	void setRadioValue(const char *id, int value);
+			const char *value), void *closure);
+	void setToggleValue(const char *id, bool value, bool doCallbacks);
 	bool getToggleValue(const char *id);
-	int getRadioValue(const char *id);
+	void setRadioValue(const char *id, const char *value, bool doCallbacks);
+	const char *getRadioValue(const char *id);
 
     private:
 	static void commandCB(Widget w, XtPointer ud, XtPointer cd);
 	static void toggleCB(Widget w, XtPointer ud, XtPointer cd);
+	static void radioCB(Widget w, XtPointer ud, XtPointer cd);
 };
 
 #endif

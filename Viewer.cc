@@ -138,22 +138,24 @@ Viewer::finish_init() {
     optionsmenu->addToggle("Notify When Ready", NULL, NULL, "Options.Notify");
     topmenu->addMenu("Options", NULL, NULL, "Options", optionsmenu);
     
-    Menu *scalemenu = new Menu;
-    scalemenu->addCommand(" 12%", NULL, NULL, "Windows.Scale.-8");
-    scalemenu->addCommand(" 14%", NULL, NULL, "Windows.Scale.-7");
-    scalemenu->addCommand(" 16%", NULL, NULL, "Windows.Scale.-6");
-    scalemenu->addCommand(" 20%", NULL, NULL, "Windows.Scale.-5");
-    scalemenu->addCommand(" 25%", NULL, NULL, "Windows.Scale.-4");
-    scalemenu->addCommand(" 33%", NULL, NULL, "Windows.Scale.-3");
-    scalemenu->addCommand(" 50%", NULL, NULL, "Windows.Scale.-2");
-    scalemenu->addCommand("100%", NULL, NULL, "Windows.Scale.1");
-    scalemenu->addCommand("200%", NULL, NULL, "Windows.Scale.2");
-    scalemenu->addCommand("300%", NULL, NULL, "Windows.Scale.3");
-    scalemenu->addCommand("400%", NULL, NULL, "Windows.Scale.4");
-    scalemenu->addCommand("500%", NULL, NULL, "Windows.Scale.5");
-    scalemenu->addCommand("600%", NULL, NULL, "Windows.Scale.6");
-    scalemenu->addCommand("700%", NULL, NULL, "Windows.Scale.7");
-    scalemenu->addCommand("800%", NULL, NULL, "Windows.Scale.8");
+    //Scale menu is a member var -- we need it to read the radios
+    //Menu *scalemenu = new Menu;
+    scalemenu = new Menu;
+    scalemenu->addRadio(" 12%", NULL, NULL, "Windows.Scale@-8");
+    scalemenu->addRadio(" 14%", NULL, NULL, "Windows.Scale@-7");
+    scalemenu->addRadio(" 16%", NULL, NULL, "Windows.Scale@-6");
+    scalemenu->addRadio(" 20%", NULL, NULL, "Windows.Scale@-5");
+    scalemenu->addRadio(" 25%", NULL, NULL, "Windows.Scale@-4");
+    scalemenu->addRadio(" 33%", NULL, NULL, "Windows.Scale@-3");
+    scalemenu->addRadio(" 50%", NULL, NULL, "Windows.Scale@-2");
+    scalemenu->addRadio("100%", NULL, NULL, "Windows.Scale@1");
+    scalemenu->addRadio("200%", NULL, NULL, "Windows.Scale@2");
+    scalemenu->addRadio("300%", NULL, NULL, "Windows.Scale@3");
+    scalemenu->addRadio("400%", NULL, NULL, "Windows.Scale@4");
+    scalemenu->addRadio("500%", NULL, NULL, "Windows.Scale@5");
+    scalemenu->addRadio("600%", NULL, NULL, "Windows.Scale@6");
+    scalemenu->addRadio("700%", NULL, NULL, "Windows.Scale@7");
+    scalemenu->addRadio("800%", NULL, NULL, "Windows.Scale@8");
 
     Menu *windowsmenu = new Menu;
     windowsmenu->addCommand("Enlarge", NULL, NULL, "Windows.Enlarge");
@@ -182,6 +184,7 @@ Viewer::finish_init() {
 
     topmenu->setCommandListener(menucallback, this);
     topmenu->setToggleListener(togglecallback, this);
+    topmenu->setRadioListener(radiocallback, this);
     setMenu(topmenu);
 
     unsigned int W, H;
@@ -621,6 +624,16 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
     fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
+}
+
+/* private static */ void
+Viewer::radiocallback(void *closure, const char *id, const char *value) {
+    ((Viewer *) closure)->radiocallback2(id, value);
+}
+
+/* private */ void
+Viewer::radiocallback2(const char *id, const char *value) {
+    fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
 }
 
 /* private */ void

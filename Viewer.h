@@ -15,6 +15,7 @@ class Viewer : private Frame {
 	Dimension width, height;
 	static int instances;
 	Menu *optionsmenu;
+	Menu *scalemenu;
 
     public:
 	Viewer(const char *pluginname);
@@ -42,6 +43,8 @@ class Viewer : private Frame {
 	void menucallback2(const char *id);
 	static void togglecallback(void *closure, const char *id, bool value);
 	void togglecallback2(const char *id, bool value);
+	static void radiocallback(void *closure, const char *id, const char *value);
+	void radiocallback2(const char *id, const char *value);
 
 	static Boolean deleteLater2(XtPointer ud);
 	static void doOpen2(Widget w, XtPointer cd, XtPointer ud);

@@ -4,6 +4,7 @@
 #include <Xm/RowColumn.h>
 #include <Xm/Separator.h>
 #include <Xm/ToggleB.h>
+#include <stdlib.h>
 
 #include "Menu.h"
 #include "util.h"
@@ -14,7 +15,10 @@ Menu::Menu() {
     commandCallback = NULL;
     toggleCallback = NULL;
     radioCallback = NULL;
-    toggleMap = new Map;
+    toggleIdToWidgetMap = new Map;
+    radioIdToWidgetMap = new Map;
+    radioGroupToSelectedWidgetMap = new Map;
+    radioGroupToSelectedIdMap = new Map;
 }
 
 /* public */
@@ -24,7 +28,10 @@ Menu::~Menu() {
 	delete firstitem;
 	firstitem = next;
     }
-    delete toggleMap;
+    delete toggleIdToWidgetMap;
+    delete radioIdToWidgetMap;
+    delete radioGroupToSelectedWidgetMap;
+    delete radioGroupToSelectedIdMap;
 }
 
 /* public */ void
@@ -46,6 +53,20 @@ Menu::addToggle(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,
 					    id, ITEM_TOGGLE, this);
+    if (firstitem == NULL)
+	firstitem = lastitem = item;
+    else {
+	lastitem->next = item;
+	lastitem = item;
+    }
+    item->next = NULL;
+}
+
+/* public */ void
+Menu::addRadio(const char *name, const char *mnemonic,
+	      const char *accelerator, const char *id) {
+    ItemNode *item = new ItemNode(name, mnemonic, accelerator,
+					    id, ITEM_RADIO, this);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -115,21 +136,35 @@ Menu::makeWidgets(Widget parent) {
 				  NULL, 0);
 	} else if (item->type == ITEM_COMMAND) {
 	    // Regular menu item
-	    Widget w = XtCreateManagedWidget("Button",
+	    Widget w = XtCreateManagedWidget("Command",
 					     xmPushButtonWidgetClass,
 					     parent,
 					     args, nargs);
 	    XtAddCallback(w, XmNactivateCallback,
 			  commandCB, (XtPointer) item);
 	} else if (item->type == ITEM_TOGGLE) {
-	    // Regular menu item
-	    Widget w = XtCreateManagedWidget("Button",
+	    // Toggle menu item
+	    Widget w = XtCreateManagedWidget("Toggle",
 					     xmToggleButtonWidgetClass,
 					     parent,
 					     args, nargs);
+	    toggleIdToWidgetMap->put(item->id, w);
 	    XtAddCallback(w, XmNvalueChangedCallback,
 			  toggleCB, (XtPointer) item);
-	    toggleMap->put(item->id, w);
+	} else if (item->type == ITEM_RADIO) {
+	    // Radio menu item
+	    if (strchr(item->id, '@') == NULL) {
+		fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
+	    } else {
+		XtSetArg(args[nargs], XmNindicatorType, XmONE_OF_MANY); nargs++;
+		Widget w = XtCreateManagedWidget("Radio",
+						 xmToggleButtonWidgetClass,
+						 parent,
+						 args, nargs);
+		radioIdToWidgetMap->put(item->id, w);
+		XtAddCallback(w, XmNvalueChangedCallback,
+			    radioCB, (XtPointer) item);
+	    }
 	} else {
 	    // Submenu
 	    Widget submenu = XmCreatePulldownMenu(parent, "Menu", NULL, 0);
@@ -177,7 +212,7 @@ Menu::setToggleListener(void (*callback)(void *closure, const char *id,
 
 /* public */ void
 Menu::setRadioListener(void (*callback)(void *closure, const char *id,
-		    int value), void *closure) {
+		    const char *value), void *closure) {
     this->radioCallback = callback;
     this->radioClosure = closure;
     ItemNode *item = firstitem;
@@ -190,18 +225,46 @@ Menu::setRadioListener(void (*callback)(void *closure, const char *id,
 
 /* public */ bool
 Menu::getToggleValue(const char *id) {
-    Widget w = (Widget) toggleMap->get(id);
+    Widget w = (Widget) toggleIdToWidgetMap->get(id);
     if (w == NULL)
 	return false;
     return XmToggleButtonGetState(w) == True;
 }
 
 /* public */ void
-Menu::setToggleValue(const char *id, bool value) {
-    Widget w = (Widget) toggleMap->get(id);
+Menu::setToggleValue(const char *id, bool value, bool doCallbacks) {
+    Widget w = (Widget) toggleIdToWidgetMap->get(id);
     if (w != NULL)
-	// arg 3 being False means no callbacks are invoked.
-	XmToggleButtonSetState(w, value, False);
+	XmToggleButtonSetState(w, value, doCallbacks);
+}
+
+/* public */ const char *
+Menu::getRadioValue(const char *id) {
+    return (const char *) radioGroupToSelectedIdMap->get(id);
+}
+
+/* public */ void
+Menu::setRadioValue(const char *id, const char *value, bool doCallbacks) {
+    char *buf = (char *) malloc(strlen(id) + strlen(value) + 2);
+    strcpy(buf, id);
+    strcat(buf, "@");
+    strcat(buf, value);
+    Widget new_w = (Widget) radioIdToWidgetMap->get(buf);
+    free(buf);
+    if (new_w == NULL) {
+	fprintf(stderr, "Attempt to set nonexistent radio \"%s@%s\".\n", id, value);
+	return;
+    }
+    Widget old_w = (Widget) radioGroupToSelectedWidgetMap->get(id);
+    if (old_w != NULL)
+	XmToggleButtonSetState(old_w, False, False);
+
+    radioGroupToSelectedWidgetMap->put(id, new_w);
+    radioGroupToSelectedIdMap->put(id, value);
+    XmToggleButtonSetState(new_w, True, False);
+
+    if (doCallbacks && radioCallback != NULL)
+	radioCallback(radioClosure, id, value);
 }
 
 /* private static */ void
@@ -219,6 +282,30 @@ Menu::toggleCB(Widget w, XtPointer ud, XtPointer cd) {
     bool value = XmToggleButtonGetState(w) == True;
     if (menu->toggleCallback != NULL)
 	menu->toggleCallback(menu->toggleClosure, item->id, value);
+}
+
+/* private static */ void
+Menu::radioCB(Widget w, XtPointer ud, XtPointer cd) {
+    ItemNode *item = (ItemNode *) ud;
+    Menu *menu = item->owner;
+    bool state = XmToggleButtonGetState(w) == True;
+    if (!state) {
+	fprintf(stderr, "Menu::radioCB: deselection of \"%s\" ignored.\n",
+		    item->id);
+	return;
+    }
+    char *groupid = strclone(item->id);
+    *strchr(groupid, '@') = 0;
+    char *value = strchr(item->id, '@') + 1;
+    Widget selected = (Widget) menu->radioGroupToSelectedWidgetMap->get(groupid);
+    if (selected != NULL)
+	XmToggleButtonSetState(selected, False, False);
+    menu->radioGroupToSelectedWidgetMap->put(groupid, w);
+    menu->radioGroupToSelectedIdMap->put(groupid, value);
+	
+    if (menu->radioCallback != NULL)
+	menu->radioCallback(menu->radioClosure, groupid, value);
+    free(groupid);
 }
 
 /* private::public */
