@@ -33,6 +33,14 @@ class Ramp : public Plugin {
 	    return depth == 8 || depth == 24;
 	}
 	virtual void init_new() {
+	    pm->width = 256;
+	    pm->height = 256;
+	    xr = 1;
+	    yr = 0;
+	    xg = 0;
+	    yg = 1;
+	    xb = 0;
+	    yb = 0;
 	    get_settings_dialog();
 	}
 	virtual void get_settings_ok() {

@@ -2,11 +2,20 @@
 
 #include "Plugin.h"
 
+static const char *my_settings_layout[] = {
+    "int",	// x
+    "int",	// y
+    NULL
+};
+
 class MandelbrotMono : public Plugin {
     private:
 	int x, y;
     public:
-	MandelbrotMono(void *dl) : Plugin(dl) {}
+	MandelbrotMono(void *dl) : Plugin(dl) {
+	    settings_layout = my_settings_layout;
+	    settings_base = &x;
+	}
 	virtual ~MandelbrotMono() {}
 	virtual const char *name() {
 	    return "MandelbrotMono";
@@ -37,6 +46,8 @@ class MandelbrotMono : public Plugin {
 		start_working();
 	}
 	virtual bool work() {
+	    if (y >= pm->height)
+		return false;
 	    int firsty = y;
 	    int endy = y + 10;
 	    while (y < endy) {

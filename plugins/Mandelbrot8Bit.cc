@@ -3,11 +3,20 @@
 
 #include "Plugin.h"
 
+static const char *my_settings_layout[] = {
+    "int",      // x
+    "int",      // y
+    NULL
+};
+
 class Mandelbrot8Bit : public Plugin {
     private:
 	int x, y;
     public:
-	Mandelbrot8Bit(void *dl) : Plugin(dl) {}
+	Mandelbrot8Bit(void *dl) : Plugin(dl) {
+	    settings_layout = my_settings_layout;
+	    settings_base = &x;
+	}
 	virtual ~Mandelbrot8Bit() {}
 	virtual const char *name() {
 	    return "Mandelbrot8Bit";
@@ -21,7 +30,7 @@ class Mandelbrot8Bit : public Plugin {
 	    for (int i = 0; i < size; i++)
 		pm->pixels[i] = 0;
 	    pm->cmap = new FWColor[256];
-	    for (int i = 0; i < 255; i++)
+	    for (int i = 0; i < 256; i++)
 		pm->cmap[i].r = pm->cmap[i].g = pm->cmap[i].b = i;
 	    pm->depth = 8;
 	    init_proceed();
@@ -41,6 +50,8 @@ class Mandelbrot8Bit : public Plugin {
 		start_working();
 	}
 	virtual bool work() {
+	    if (y >= pm->height)
+		return false;
 	    int firsty = y;
 	    int endy = y + 10;
 	    while (y < endy) {
