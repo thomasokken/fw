@@ -32,6 +32,8 @@ class ColorPicker : public Frame {
 	char *rs, *gs, *bs;
 	int cross_x, cross_y, slider_x;
 	bool disable_rgbChanged;
+	static GC gc;
+	static int instances;
 
     public:
 	ColorPicker(Listener *listener, unsigned char r, unsigned char g,

@@ -49,6 +49,13 @@ static void set_geom(Widget w, int x, int y, int width, int height) {
 }
 
 
+/* private static */ GC
+ColorPicker::gc;
+
+/* private static */ int
+ColorPicker::instances = 0;
+
+
 /* public */
 ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	unsigned char g, unsigned char b) : Frame(false, true, false) {
@@ -70,6 +77,9 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
     cross_x = -1;
     cross_y = -1;
     slider_x = -1;
+
+    if (instances++ == 0)
+	gc = XCreateGC(g_display, g_rootwindow, 0, NULL);
 
     wheel_image = XCreateImage(g_display, g_visual, g_depth, ZPixmap,
 			       0, NULL, WHEEL_W, WHEEL_H, 32, 0);
@@ -494,6 +504,8 @@ ColorPicker::~ColorPicker() {
 	pixels[1] = new_pixel;
 	XFreeColors(g_display, g_colormap, pixels, 2, 0);
     }
+    if (--instances == 0)
+	XFreeGC(g_display, gc);
 }
 
 /* private */ void
@@ -586,7 +598,7 @@ ColorPicker::repaintOldNewImage() {
 
     // Paint it!
     if (XtIsRealized(oldnew))
-	XPutImage(g_display, XtWindow(oldnew), g_gc, oldnew_image,
+	XPutImage(g_display, XtWindow(oldnew), gc, oldnew_image,
 		  0, 0, 0, 0, OLDNEW_W, OLDNEW_H);
 }
 
@@ -658,7 +670,7 @@ ColorPicker::repaintWheelImage() {
 
     // Paint it!
     if (XtIsRealized(wheel))
-	XPutImage(g_display, XtWindow(wheel), g_gc, wheel_image,
+	XPutImage(g_display, XtWindow(wheel), gc, wheel_image,
 		  0, 0, 0, 0, WHEEL_W, WHEEL_H);
 }
 
@@ -712,7 +724,7 @@ ColorPicker::repaintSliderImage() {
 
     // Paint it!
     if (XtIsRealized(slider))
-	XPutImage(g_display, XtWindow(slider), g_gc, slider_image,
+	XPutImage(g_display, XtWindow(slider), gc, slider_image,
 		  0, 0, 0, 0, SLIDER_W, SLIDER_H);
 }
 
@@ -723,15 +735,15 @@ ColorPicker::drawCross() {
     if (!XtIsRealized(wheel))
 	return;
     int cw = CROSS_SIZE / 2;
-    XSetForeground(g_display, g_gc, private_colormap ? 215 : g_white);
-    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x + 1, cross_y - cw,
+    XSetForeground(g_display, gc, private_colormap ? 215 : g_white);
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x + 1, cross_y - cw,
 	      cross_x + 1, cross_y + cw);
-    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x - cw, cross_y + 1,
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x - cw, cross_y + 1,
 	      cross_x + cw, cross_y + 1);
-    XSetForeground(g_display, g_gc, private_colormap ? 0 : g_black);
-    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x, cross_y - cw,
+    XSetForeground(g_display, gc, private_colormap ? 0 : g_black);
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x, cross_y - cw,
 	      cross_x, cross_y + cw);
-    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x - cw, cross_y,
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x - cw, cross_y,
 	      cross_x + cw, cross_y);
 }
 
@@ -742,7 +754,7 @@ ColorPicker::removeCross() {
     if (!XtIsRealized(wheel))
 	return;
     int cw = CROSS_SIZE / 2;
-    XPutImage(g_display, XtWindow(wheel), g_gc, wheel_image,
+    XPutImage(g_display, XtWindow(wheel), gc, wheel_image,
 	      cross_x - cw, cross_y - cw,
 	      cross_x - cw, cross_y - cw,
 	      cross_x + cw, cross_y + cw);
@@ -754,17 +766,17 @@ ColorPicker::drawThumb() {
 	return;
     if (!XtIsRealized(slider))
 	return;
-    XSetForeground(g_display, g_gc, private_colormap ? 215 : g_white);
-    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+    XSetForeground(g_display, gc, private_colormap ? 215 : g_white);
+    XDrawRectangle(g_display, XtWindow(slider), gc,
 		   slider_x - THUMB_WIDTH / 2 + 1,
 		   (SLIDER_H - THUMB_HEIGHT) / 2 + 1,
 		   THUMB_WIDTH - 3, THUMB_HEIGHT - 3);
-    XSetForeground(g_display, g_gc, private_colormap ? 0 : g_black);
-    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+    XSetForeground(g_display, gc, private_colormap ? 0 : g_black);
+    XDrawRectangle(g_display, XtWindow(slider), gc,
 		   slider_x - THUMB_WIDTH / 2,
 		   (SLIDER_H - THUMB_HEIGHT) / 2,
 		   THUMB_WIDTH - 1, THUMB_HEIGHT - 1);
-    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+    XDrawRectangle(g_display, XtWindow(slider), gc,
 		   slider_x - THUMB_WIDTH / 2 + 2,
 		   (SLIDER_H - THUMB_HEIGHT) / 2 + 2,
 		   THUMB_WIDTH - 5, THUMB_HEIGHT - 5);
@@ -776,7 +788,7 @@ ColorPicker::removeThumb() {
 	return;
     if (!XtIsRealized(slider))
 	return;
-    XPutImage(g_display, XtWindow(slider), g_gc, slider_image,
+    XPutImage(g_display, XtWindow(slider), gc, slider_image,
 	      slider_x - THUMB_WIDTH / 2, (SLIDER_H - THUMB_HEIGHT) / 2,
 	      slider_x - THUMB_WIDTH / 2, (SLIDER_H - THUMB_HEIGHT) / 2,
 	      THUMB_WIDTH, THUMB_HEIGHT);
@@ -893,7 +905,7 @@ ColorPicker::expose(Widget w, XtPointer ud, XtPointer cd) {
 	image = This->oldnew_image;
     else
 	return;
-    XPutImage(g_display, XtWindow(w), g_gc, image,
+    XPutImage(g_display, XtWindow(w), gc, image,
 	      ev.x, ev.y, ev.x, ev.y, ev.width, ev.height);
     if (w == This->wheel)
 	This->drawCross();

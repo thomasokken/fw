@@ -284,12 +284,13 @@ ColormapEditor::~ColormapEditor() {
 
 /* public virtual */ void
 ColormapEditor::colormapChanged(Colormap colormap) {
+    if (colormap == None)
+	colormap = g_colormap;
     Colormap prevcolormap = this->colormap;
     this->colormap = colormap;
-    if (colormap != prevcolormap) {
-	setColormap(colormap == None ? g_colormap : colormap);
-    }
-    if (colormap == None || colormap != prevcolormap) {
+    if (colormap != prevcolormap)
+	setColormap(colormap);
+    if (colormap == g_colormap || colormap != prevcolormap) {
 	update_image();
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  0, 0, 0, 0, imagesize, imagesize);

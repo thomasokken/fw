@@ -1,19 +1,5 @@
 Implement halftoning in color editor.
 
-In 8-bit PseudoColor mode, running fvwm95 and therefore limited to a 2x2x2
-color cube, About looks solid black! WTF?!? (May need to open another window
-and use color editor and color picker a bit before it starts to do this.)
-Very odd, because according to xcmap, pixels 0 and 1 are black and white,
-as always, and aren't those the only ones that FW uses when rendering un-
-reduced bitmaps?
-Happens with mwm too. Problem kicks in after playing with the color picker.
-Suddenly FW can't render any bitmaps any more (Life is all black, too).
-
-8-bit PseudoColor: if you turn priv_cmap on and then off while the color editor
-is active, the latter gets messed up. Kinda like it never gets notified that it
-needs to re-rended the XImage. Or maybe it just doesn't handle the notification
-right. Maybe related to the issue above.
-
 ColorPicker: when constraining HSL coordinates (the MotionNotify case), make
 sure the actual screen coordinates (cross_[xy], slider_x) are also constrained!
 
@@ -24,6 +10,7 @@ private colormap, repainting is only needed when the selection changes)
 and select_cell() etc. should not appear in the Actions.
 
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.
+Newton, Polynomial, Julia, Ramp: implement init_clone().
 
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftoppm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
