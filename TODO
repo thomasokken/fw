@@ -1,3 +1,5 @@
+The new Newton and Polynomial plugins don't use the 'bands' setting yet.
+
 In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
 can't set focus on a text field any more). Am I doing something wrong there, or
 is this an OpenMotif 2.2.2 bug? Take a look at...

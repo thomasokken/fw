@@ -1,7 +1,5 @@
 #include <stdlib.h>
 #include <string.h>
-#include <sys/time.h>
-#include <unistd.h>
 
 #include "Plugin.h"
 
@@ -48,11 +46,18 @@ static const char *my_settings_layout[] = {
     "double 'Lower Imaginary Bound'",	// ymin
     "double 'Upper Imaginary Bound'",	// ymax
     "int 'Maximum Iterations'",		// maxiter
-    "double 'Cutoff Value'",		// limit
+    "double 'Escape Limit'",		// limit
     "int 'Color Bands'",		// bands
+    "double 'a[5]'",			// a[0] (watch out!)
+    "double 'a[4]'",			// a[1]
+    "double 'a[3]'",			// a[2]
+    "double 'a[2]'",			// a[3]
+    "double 'a[1]'",			// a[4]
+    "double 'a[0]'",			// a[5]
+    "double 'b'",			// b
     "double",		// limit2
+    "int",		// degree
     "int",		// ndirty
-    "int",		// b2
     "double",		// step
     "double",		// x1
     "double",		// y1
@@ -82,15 +87,16 @@ static const char *my_settings_layout[] = {
     NULL
 };
 
-class MandelbrotMS : public Plugin {
+class Polynomial : public Plugin {
     private:
 	double xmin, xmax, ymin, ymax;
 	int maxiter;
 	double limit;
 	int bands;
+	double a[6], b;
 	double limit2;
+	int degree;
 	int ndirty;
-	int b2;
 	double step;
 	double x1, y1;
 	double x2, y2;
@@ -113,15 +119,15 @@ class MandelbrotMS : public Plugin {
 		    pm->pixels[y * pm->bytesperline + x] = value;
 	}
 
-	MandelbrotMS(void *dl) : Plugin(dl) {
+	Polynomial(void *dl) : Plugin(dl) {
 	    settings_layout = my_settings_layout;
 	    settings_base = &xmin;
 	}
 
-	virtual ~MandelbrotMS() {}
+	virtual ~Polynomial() {}
 
 	virtual const char *name() {
-	    return "MandelbrotMS";
+	    return "Polynomial";
 	}
 
 	virtual bool does_depth(int depth) {
@@ -131,13 +137,20 @@ class MandelbrotMS : public Plugin {
 	virtual void init_new() {
 	    pm->width = 700;
 	    pm->height = 500;
-	    xmin = -1.6 * pm->width / pm->height;
-	    xmax = 0.55 * pm->width / pm->height;
-	    ymin = -1.075;
-	    ymax = 1.075;
-	    maxiter = 100;
-	    limit = 2.0;
+	    xmin = -1.0 * pm->width / pm->height;
+	    xmax = 1.0 * pm->width / pm->height;
+	    ymin = -1;
+	    ymax = 1;
+	    maxiter = 25;
+	    limit = 10;
 	    bands = 1;
+	    a[0] = 0; // Remember, a[0] is the coefficient of x^5
+	    a[1] = 0; // x^4
+	    a[2] = 0; // x^3
+	    a[3] = 1; // x^2
+	    a[4] = 0; // x
+	    a[5] = 0; // 1
+	    b = 1;
 	    get_settings_dialog();
 	}
 
@@ -155,7 +168,9 @@ class MandelbrotMS : public Plugin {
 	}
 
 	virtual void start() {
-	    b2 = bands * 253;
+	    degree = 5;
+	    while (a[5 - degree] == 0 && degree > 0)
+		degree--;
 	    limit2 = limit * limit;
 	    step = (xmax - xmin) / pm->width;
 	    sp = 0;
@@ -330,26 +345,34 @@ class MandelbrotMS : public Plugin {
 	    finished = sp < 0;
 	}
 
-	int calcandset(int h, int v, double x, double y) {
-	    int n = 0;
-	    double re = x, im = y;
-	    double re2 = re * re;
-	    double im2 = im * im;
-	    while (n < maxiter && re2 + im2 < limit2) {
-		double tmp = re2 - im2 + x;
-		im = 2 * re * im + y;
-		re = tmp;
-		re2 = re * re;
-		im2 = im * im;
-		n++;
+	int calcandset(int h, int v, double re, double im) {
+	    int i, count;
+	    double x1, y1, x2, y2, temp, b_re, b_im;
+
+	    x2 = re;
+	    y2 = im;
+	    b_re = b * re;
+	    b_im = b * im;
+	    count = 0;
+	    while (count < maxiter && x2 * x2 + y2 * y2 <= limit2) {
+		x1 = 0;
+		y1 = 0;
+		for (i = degree; i > 0; i--) {
+		    temp = x1 + a[5 - i];
+		    x1 = temp * x2 - y1 * y2;
+		    y1 = temp * y2 + y1 * x2;
+		}
+		x2 = x1 + a[5] + b_re;
+		y2 = y1 + b_im;
+		count = count + 1;
 	    }
-	    int value = n == maxiter ? 0
-			: ((n * b2) / (maxiter - 1)) % 254 + 1;
+	    int value = count == maxiter ? 0
+			    : 1 + 254 * count / maxiter;
 	    pm->pixels[v * pm->bytesperline + h] = value;
 	    return value;
 	}
 };
 
 extern "C" Plugin *factory(void *dl) {
-    return new MandelbrotMS(dl);
+    return new Polynomial(dl);
 }

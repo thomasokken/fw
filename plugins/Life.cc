@@ -18,7 +18,6 @@
  * 31-Jul-2004: Fractal Wizard Plugin version.
  */
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
