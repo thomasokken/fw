@@ -45,6 +45,10 @@ class Viewer : private Frame {
 	void init(const char *pluginname, const Viewer *src,
 		  const char *filename);
 	bool canIDoDirectCopy();
+	void paint_direct(int top, int left, int bottom, int right);
+	void paint_unscaled(int top, int left, int bottom, int right);
+	void paint_enlarged(int top, int left, int bottom, int right);
+	void paint_reduced(int top, int left, int bottom, int right);
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();
 	static void expose(Widget w, XtPointer cd, XtPointer ud);
