@@ -13,6 +13,7 @@ class Viewer : private Frame {
 	Window drawwindow;
 	XImage *image;
 	Colormap priv_cmap;
+	bool dithering;
 	Menu *optionsmenu;
 	Menu *scalemenu;
 	static int instances;

@@ -298,6 +298,16 @@ Viewer::finish_init() {
     raise();
     drawwindow = XtWindow(draw);
 
+    // TODO: better preferences handling, including persistence and
+    // command-line option handling!
+    // For now, enable dithering when fewer than 5 bits per component are
+    // available.
+    if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
+	dithering = true;
+    else
+	dithering = g_visual->bits_per_rgb < 5;
+    optionsmenu->setToggleValue("Options.Dither", dithering, false);
+
     image = XCreateImage(g_display,
 			 g_visual,
 			 g_depth,
@@ -357,16 +367,18 @@ Viewer::deleteLater2(XtPointer ud) {
 
 /* public */ void
 Viewer::paint(int top, int left, int bottom, int right) {
-    // FIXME do something to take advantage of those cases where it is not
-    // even necessary to copy pixels to an XImage, i.e. the cases where
-    // depth = 1, or (depth = 8 and idepth = 8 and priv), or
-    // (depth = 24 and idepth =24)... May not be practical, but it's a
-    // thought... Consider stuff like Life, Kaos, or that totally cool
-    // Xlock mode (ifs?) running full blast inside FW...
+    // TODO better handling of 1-bit images (is it possible to create an
+    // XImage with XYBitmap format, and point image->data directly at 'pixels',
+    // like what I do in the private-colormap case?).
+    // TODO better handling of 24-bit images (on TrueColor visuals with 8 bits
+    // per component, no dithering is ever necessary, and it may be possible to
+    // point image->data right at 'pixels'; avoiding the dithering is a big win
+    // and avoiding the intermediate image would be a nice bonus).
     if (depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
 	// special-case code that does not do the error diffusion thing.
+	// TODO: 
 	unsigned long black = BlackPixel(g_display, g_screennumber);
 	unsigned long white = WhitePixel(g_display, g_screennumber);
 	for (int y = top; y < bottom; y++)
@@ -377,10 +389,62 @@ Viewer::paint(int top, int left, int bottom, int right) {
     } else if (priv_cmap != None) {
 	// Using private colormap: our colormap and the one on the screen
 	// contain the same values, so we have nothing to do here (except
-	// for the XPutImage at the end of this function).
-    } else if (g_grayramp == NULL) {
-	// FIXME handle special cases that do not require dithering:
-	// depth = 24, and also depth = 8 && idepth = 8 && using priv cmap
+	// for the XPutImage at the end of this function, of course).
+    } else if (g_grayramp == NULL && !dithering) {
+	for (int y = top; y < bottom; y++) {
+	    for (int x = left; x < right; x++) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		unsigned long pixel;
+		if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    pixel = g_colorcube[index].pixel;
+		} else {
+		    static bool inited = false;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
+		    if (!inited) {
+			rmax = g_visual->red_mask;
+			rmult = 0;
+			while ((rmax & 1) == 0) {
+			    rmax >>= 1;
+			    rmult++;
+			}
+			gmax = g_visual->green_mask;
+			gmult = 0;
+			while ((gmax & 1) == 0) {
+			    gmax >>= 1;
+			    gmult++;
+			}
+			bmax = g_visual->blue_mask;
+			bmult = 0;
+			while ((bmax & 1) == 0) {
+			    bmax >>= 1;
+			    bmult++;
+			}
+			inited = true;
+		    }
+
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
+		}
+		XPutPixel(image, x, y, pixel);
+	    }
+	}
+    } else if (g_grayramp == NULL && dithering) {
 	int *dr = new int[right - left];
 	int *dg = new int[right - left];
 	int *db = new int[right - left];
@@ -416,9 +480,9 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		    g = cmap[index].g;
 		    b = cmap[index].b;
 		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1] & 255;
-		    g = pixels[y * bytesperline + (x << 2) + 2] & 255;
-		    b = pixels[y * bytesperline + (x << 2) + 3] & 255;
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
 		}
 		r += (dr[x - left] + dR) >> 4;
 		if (r < 0) r = 0; else if (r > 255) r = 255;
@@ -442,33 +506,32 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		    pixel = g_colorcube[index].pixel;
 		} else {
 		    static bool inited = false;
-		    static int rmax, rmult, bmax, bmult,
-							gmax, gmult;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
 		    if (!inited) {
 			rmax = g_visual->red_mask;
-			rmult = 1;
+			rmult = 0;
 			while ((rmax & 1) == 0) {
 			    rmax >>= 1;
-			    rmult <<= 1;
+			    rmult++;
 			}
 			gmax = g_visual->green_mask;
-			gmult = 1;
+			gmult = 0;
 			while ((gmax & 1) == 0) {
 			    gmax >>= 1;
-			    gmult <<= 1;
+			    gmult++;
 			}
 			bmax = g_visual->blue_mask;
-			bmult = 1;
+			bmult = 0;
 			while ((bmax & 1) == 0) {
 			    bmax >>= 1;
-			    bmult <<= 1;
+			    bmult++;
 			}
 			inited = true;
 		    }
 
-		    pixel = (r * rmax / 255) * rmult
-			    + (g * gmax / 255) * gmult
-			    + (b * bmax / 255) * bmult;
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
 		    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
 		    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
 		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
@@ -514,9 +577,30 @@ Viewer::paint(int top, int left, int bottom, int right) {
 	delete[] nextdr;
 	delete[] nextdg;
 	delete[] nextdb;
+    } else if (!dithering) {
+	for (int y = top; y < bottom; y++) {
+	    for (int x = left; x < right; x++) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		int graylevel = 
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		unsigned long pixel = g_grayramp[graylevel].pixel;
+		XPutPixel(image, x, y, pixel);
+	    }
+	}
     } else {
-	// FIXME handle special cases that do not require dithering:
-	// depth = 8 && idepth = 8 && using priv cmap
 	int *dk = new int[right - left];
 	int *nextdk = new int[right - left];
 	for (int i = 0; i < right - left; i++)
@@ -544,9 +628,9 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		    g = cmap[index].g;
 		    b = cmap[index].b;
 		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1] & 255;
-		    g = pixels[y * bytesperline + (x << 2) + 2] & 255;
-		    b = pixels[y * bytesperline + (x << 2) + 3] & 255;
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
 		}
 		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 		k += (dk[x - left] + dK) >> 4;
@@ -936,6 +1020,16 @@ Viewer::doPrivateColormap(bool value) {
 	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
 	setColormap(priv_cmap);
 	delete image->data;
+	// NOTE: I'm relying on the fact that the layout that image->data
+	// expects matches the one Viewer uses internally for 8-bit images.
+	// As far as bytesperline, that should be no problem; when I call
+	// XCreateImage, I specify ZPixmap with 32-bit padding, which is
+	// exactly the convention followed by the plugins. The one thing I am
+	// not sure about is byte order... Does this code work on big-endian
+	// platforms? (Viewer and the plugins store bytes in increasing
+	// addresses, which, within a long, means that the leftmost pixel is
+	// the least significant byte, on an x86 box like I'm using, anyway.
+	// Is this true on bigendian machines, is what I'm asking.)
 	image->data = (char *) pixels;
 	colormapChanged();
 	paint(0, 0, height, width);
@@ -949,8 +1043,9 @@ Viewer::doPrivateColormap(bool value) {
 }
 
 /* private */ void
-Viewer::doDither(bool) {
-    doBeep();
+Viewer::doDither(bool value) {
+    dithering = value;
+    paint(0, 0, height, width);
 }
 
 /* private */ void
