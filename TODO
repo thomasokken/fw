@@ -1,0 +1,7 @@
+Find a better way for SettingsDialog to access the settings.
+The current approach is based on the assumption that structs are packed,
+i.e. if a and b are consecutive members of a struct, that (&b - &a)
+equals sizeof(a), and that is not a safe assumption.
+
+Sun-related issues: textfields are weird (repaint problem: backspaced-over
+characters do not disappear), and icons have wrong colors if display depth != 8
