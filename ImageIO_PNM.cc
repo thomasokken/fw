@@ -481,17 +481,19 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 
     int len = pm->height * pm->bytesperline;
     if (pm->depth == 1) {
-	unsigned char *ptr = pm->pixels;
-	for (int i = 0; i < len; i++) {
-	    char c = *ptr++;
-	    char d = 0;
-	    for (int j = 0; j < 8; j++) {
-		d |= (~c & 1);
-		if (j < 7)
+	int pbmbpl = pm->width + 7 >> 3;
+	for (int v = 0; v < pm->height; v++) {
+	    unsigned char *ptr = pm->pixels + v * pm->bytesperline;
+	    for (int h = 0; h < pbmbpl; h++) {
+		char c = *ptr++;
+		char d = 0;
+		for (int j = 0; j < 8; j++) {
 		    d <<= 1;
-		c >>= 1;
+		    d |= (~c & 1);
+		    c >>= 1;
+		}
+		fputc(d, pnm);
 	    }
-	    fputc(d, pnm);
 	}
     } else if (pm->depth == 8 && grayscale) {
 	fwrite(pm->pixels, len, 1, pnm);
