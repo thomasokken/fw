@@ -482,7 +482,6 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
     if (pm->depth != 1)
 	fprintf(pnm, "255\n");
 
-    int len = pm->height * pm->bytesperline;
     if (pm->depth == 1) {
 	int pbmbpl = pm->width + 7 >> 3;
 	for (int v = 0; v < pm->height; v++) {
@@ -502,15 +501,18 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 	for (int v = 0; v < pm->height; v++)
 	    fwrite(pm->pixels + v * pm->bytesperline, pm->width, 1, pnm);
     } else if (pm->depth == 8) {
-	unsigned char *ptr = pm->pixels;
-	for (int i = 0; i < len; i++) {
-	    unsigned char pix = *ptr++;
-	    fputc(pm->cmap[pix].r, pnm);
-	    fputc(pm->cmap[pix].g, pnm);
-	    fputc(pm->cmap[pix].b, pnm);
+	for (int v = 0; v < pm->height; v++) {
+	    unsigned char *ptr = pm->pixels + v * pm->bytesperline;
+	    for (int h = 0; h < pm->width; h++) {
+		unsigned char pix = *ptr++;
+		fputc(pm->cmap[pix].r, pnm);
+		fputc(pm->cmap[pix].g, pnm);
+		fputc(pm->cmap[pix].b, pnm);
+	    }
 	}
     } else {
 	unsigned char *ptr = pm->pixels;
+	int len = pm->height * pm->bytesperline;
 	for (int i = 0; i < len; i++) {
 	    if ((i & 3) != 0)
 		fputc(*ptr, pnm);
