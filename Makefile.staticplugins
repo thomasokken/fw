@@ -7,7 +7,7 @@ LOADLIBES = -lXm -lXpm -ljpeg -lpng
 # LOADLIBES = -lXm -lXp -lXt -lX11 -lXmu -lXpm -ldl -ljpeg -lpng -lz
 
 # To link a "mostly" static version (everything linked statically,
-# except libc, libm, libstdc++, and libdl):
+# except libc, libm, and libstdc++):
 # LOADLIBES = -Xlinker -Bstatic -lXmu -lXm -lXp -lXt -lX11 -lXpm -ljpeg \
 #             -lpng -lz -lSM -lICE -lXext -ldl -Xlinker -Bdynamic
 
