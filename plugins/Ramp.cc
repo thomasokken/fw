@@ -21,8 +21,7 @@ class Ramp : public Plugin {
 
     public:
 	Ramp(void *dl) : Plugin(dl) {
-	    settings_layout = my_settings_layout;
-	    settings_base = &xr;
+	    register_for_serialization(my_settings_layout, &xr);
 	}
 	virtual ~Ramp() {}
 	virtual const char *name() {

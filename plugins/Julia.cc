@@ -116,8 +116,7 @@ class Julia : public Plugin {
 	}
 
 	Julia(void *dl) : Plugin(dl) {
-	    settings_layout = my_settings_layout;
-	    settings_base = &xmin;
+	    register_for_serialization(my_settings_layout, &xmin);
 	}
 
 	virtual ~Julia() {}

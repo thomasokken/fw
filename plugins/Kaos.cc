@@ -62,8 +62,7 @@ class Kaos : public Plugin {
 	
     public:
 	Kaos(void *dl) : Plugin(dl) {
-	    settings_layout = my_settings_layout;
-	    settings_base = &Q;
+	    register_for_serialization(my_settings_layout, &Q);
 	}
 	virtual ~Kaos() {}
 	virtual const char *name() {

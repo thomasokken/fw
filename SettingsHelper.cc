@@ -318,117 +318,121 @@ SettingsHelper::SettingsHelper(Plugin *plugin) {
     dlgfields = NULL;
     ndlgfields = 0;
 
+    // REPEAT stack.
+    // 100 levels should be plenty, no?
     int repcount[100];
     int repindex[100];
     int sp = -1;
-    char *addr = (char *) plugin->settings_base;
 
-    const char **lines = plugin->settings_layout;
+    for (int i = 0; i < plugin->settings_count; i++) {
+	char *addr = (char *) plugin->settings_base[i];
+	const char **lines = plugin->settings_layout[i];
+	int lineno = 0;
 
-    int lineno = 0;
-    while (lines[lineno] != NULL) {
-	char *line = strclone(lines[lineno]);
-	int length = strlen(line);
-	
-	// The first part of a line should be a type (bool, char, short,
-	// int, long, longlong, float, double, longdouble, char[n]), or
-	// one of the special words WIDTH and HEIGHT (which are hooked
-	// to plugin->pm.width and plugin->pm.height, respectively, and
-	// which are skipped during serialization/deserialization, since
-	// the plugin->pm structure is populated by the pixmap reading
-	// process (the pm structure is owned by the viewer, not the
-	// plugin, strictly speaking)), or one of REPEAT or ENDREP.
-	
-	int pos = 0;
-	while (pos < length && !isspace(line[pos]))
-	    pos++;
-	if (pos == 0)
-	    // Empty line
-	    crash();
-	line[pos] = 0;
-	char *rest;
-	if (pos == length)
-	    rest = line + pos;
-	else {
-	    rest = line + pos + 1;
-	    while (*rest != 0 && isspace(*rest))
-		rest++;
-	}
-
-	// The remainder of the line is used as the field label (in single
-	// quotes), or in the case of the REPEAT keyword, as the repeat
-	// count (i.e. the number of times everything following the REPEAT
-	// keyword, up to the matching ENDREP keyword, should be repeated).
-	
-	if (strcmp(line, "REPEAT") == 0) {
-	    int count;
-	    if (sscanf(rest, "%d", &count) != 1)
+	while (lines[lineno] != NULL) {
+	    char *line = strclone(lines[lineno]);
+	    int length = strlen(line);
+	    
+	    // The first part of a line should be a type (bool, char, short,
+	    // int, long, longlong, float, double, longdouble, char[n]), or
+	    // one of the special words WIDTH and HEIGHT (which are hooked
+	    // to plugin->pm.width and plugin->pm.height, respectively, and
+	    // which are skipped during serialization/deserialization, since
+	    // the plugin->pm structure is populated by the pixmap reading
+	    // process (the pm structure is owned by the viewer, not the
+	    // plugin, strictly speaking)), or one of REPEAT or ENDREP.
+	    
+	    int pos = 0;
+	    while (pos < length && !isspace(line[pos]))
+		pos++;
+	    if (pos == 0)
+		// Empty line
 		crash();
-	    sp++;
-	    if (sp == 100)
-		crash();
-	    repindex[sp] = lineno;
-	    repcount[sp] = count;
-	} else if (strcmp(line, "ENDREP") == 0) {
-	    if (sp == -1)
-		crash();
-	    if (--repcount[sp] != 0)
-		lineno = repindex[sp];
-	    else
-		sp--;
-	} else {
-	    char *label = NULL;
-	    char *firstquote = strchr(rest, '\'');
-	    if (firstquote != NULL) {
-		char *lastquote = strrchr(rest, '\'');
-		if (firstquote == lastquote)
-		    crash();
-		label = firstquote + 1;
-		*lastquote = 0;
+	    line[pos] = 0;
+	    char *rest;
+	    if (pos == length)
+		rest = line + pos;
+	    else {
+		rest = line + pos + 1;
+		while (*rest != 0 && isspace(*rest))
+		    rest++;
 	    }
 
-	    Field *field;
-	    if (strcmp(line, "WIDTH") == 0)
-		field = new IntField(label, this, &plugin->pm->width);
-	    else if (strcmp(line, "HEIGHT") == 0)
-		field = new IntField(label, this, &plugin->pm->height);
-	    else if (strcmp(line, "bool") == 0)
-		field = new BoolField(label, this, &addr);
-	    else if (strcmp(line, "char") == 0)
-		field = new CharField(label, this, &addr);
-	    else if (strcmp(line, "short") == 0)
-		field = new ShortField(label, this, &addr);
-	    else if (strcmp(line, "int") == 0)
-		field = new IntField(label, this, &addr);
-	    else if (strcmp(line, "long") == 0)
-		field = new LongField(label, this, &addr);
-	    else if (strcmp(line, "longlong") == 0)
-		field = new LongLongField(label, this, &addr);
-	    else if (strcmp(line, "float") == 0)
-		field = new FloatField(label, this, &addr);
-	    else if (strcmp(line, "double") == 0)
-		field = new DoubleField(label, this, &addr);
-	    else if (strcmp(line, "longdouble") == 0)
-		field = new LongDoubleField(label, this, &addr);
-	    else if (strcmp(line, "char[") == 0) {
-		int size;
-		if (sscanf(line + 5, "%d", &size) != 1 || size <= 0)
+	    // The remainder of the line is used as the field label (in single
+	    // quotes), or in the case of the REPEAT keyword, as the repeat
+	    // count (i.e. the number of times everything following the REPEAT
+	    // keyword, up to the matching ENDREP keyword, should be repeated).
+	    
+	    if (strcmp(line, "REPEAT") == 0) {
+		int count;
+		if (sscanf(rest, "%d", &count) != 1)
 		    crash();
-		field = new StringField(label, this, &addr, size);
-	    } else
-		crash();
+		sp++;
+		if (sp == 100)
+		    crash();
+		repindex[sp] = lineno;
+		repcount[sp] = count;
+	    } else if (strcmp(line, "ENDREP") == 0) {
+		if (sp == -1)
+		    crash();
+		if (--repcount[sp] != 0)
+		    lineno = repindex[sp];
+		else
+		    sp--;
+	    } else {
+		char *label = NULL;
+		char *firstquote = strchr(rest, '\'');
+		if (firstquote != NULL) {
+		    char *lastquote = strrchr(rest, '\'');
+		    if (firstquote == lastquote)
+			crash();
+		    label = firstquote + 1;
+		    *lastquote = 0;
+		}
 
-	    fields = (Field **) realloc(fields,
-				    (nfields + 1) * sizeof(Field *));
-	    fields[nfields++] = field;
-	    if (label != NULL) {
-		dlgfields = (Field **) realloc(dlgfields,
-				    (ndlgfields + 1) * sizeof(Field *));
-		dlgfields[ndlgfields++] = field;
+		Field *field;
+		if (strcmp(line, "WIDTH") == 0)
+		    field = new IntField(label, this, &plugin->pm->width);
+		else if (strcmp(line, "HEIGHT") == 0)
+		    field = new IntField(label, this, &plugin->pm->height);
+		else if (strcmp(line, "bool") == 0)
+		    field = new BoolField(label, this, &addr);
+		else if (strcmp(line, "char") == 0)
+		    field = new CharField(label, this, &addr);
+		else if (strcmp(line, "short") == 0)
+		    field = new ShortField(label, this, &addr);
+		else if (strcmp(line, "int") == 0)
+		    field = new IntField(label, this, &addr);
+		else if (strcmp(line, "long") == 0)
+		    field = new LongField(label, this, &addr);
+		else if (strcmp(line, "longlong") == 0)
+		    field = new LongLongField(label, this, &addr);
+		else if (strcmp(line, "float") == 0)
+		    field = new FloatField(label, this, &addr);
+		else if (strcmp(line, "double") == 0)
+		    field = new DoubleField(label, this, &addr);
+		else if (strcmp(line, "longdouble") == 0)
+		    field = new LongDoubleField(label, this, &addr);
+		else if (strcmp(line, "char[") == 0) {
+		    int size;
+		    if (sscanf(line + 5, "%d", &size) != 1 || size <= 0)
+			crash();
+		    field = new StringField(label, this, &addr, size);
+		} else
+		    crash();
+
+		fields = (Field **) realloc(fields,
+					(nfields + 1) * sizeof(Field *));
+		fields[nfields++] = field;
+		if (label != NULL) {
+		    dlgfields = (Field **) realloc(dlgfields,
+					(ndlgfields + 1) * sizeof(Field *));
+		    dlgfields[ndlgfields++] = field;
+		}
 	    }
-	}
 
-	lineno++;
+	    lineno++;
+	}
     }
 }
 

@@ -77,16 +77,17 @@ class About : public Plugin {
 /* protected */
 Plugin::Plugin(void *dl) {
     this->dl = dl;
-    settingshelper = NULL;
+    settings_count = 0;
     settings_layout = NULL;
     settings_base = NULL;
+    settings_helper = NULL;
 }
 
 /* protected virtual */
 Plugin::~Plugin() {
     stop_working();
-    if (settingshelper != NULL)
-	delete settingshelper;
+    if (settings_helper != NULL)
+	delete settings_helper;
 }
 
 /* public static */ Plugin *
@@ -148,25 +149,36 @@ Plugin::list() {
     return names;
 }
 
+/* protected */ void
+Plugin::register_for_serialization(const char **layout, void *base) {
+    settings_count++;
+    settings_layout = (const char ***) realloc(settings_layout,
+					 settings_count * sizeof(char **));
+    settings_base = (void **) realloc(settings_base,
+				      settings_count * sizeof(void *));
+    settings_layout[settings_count - 1] = layout;
+    settings_base[settings_count - 1] = base;
+}
+
 /* public */ void
 Plugin::serialize(void **buf, int *nbytes) {
-    if (settings_layout == NULL || settings_base == 0) {
+    if (settings_count == 0) {
 	*buf = NULL;
 	*nbytes = 0;
 	return;
     }
-    if (settingshelper == NULL)
-	settingshelper = new SettingsHelper(this);
-    settingshelper->serialize(buf, nbytes);
+    if (settings_helper == NULL)
+	settings_helper = new SettingsHelper(this);
+    settings_helper->serialize(buf, nbytes);
 }
 
 /* public */ void
 Plugin::deserialize(void *buf, int nbytes) {
-    if (settings_layout == NULL || settings_base == 0)
+    if (settings_count == 0)
 	return;
-    if (settingshelper == NULL)
-	settingshelper = new SettingsHelper(this);
-    settingshelper->deserialize(buf, nbytes);
+    if (settings_helper == NULL)
+	settings_helper = new SettingsHelper(this);
+    settings_helper->deserialize(buf, nbytes);
 }
 
 /* public virtual */ bool
@@ -233,9 +245,9 @@ Plugin::debug_level() {
 
 /* protected */ void
 Plugin::get_settings_dialog() {
-    if (settingshelper == NULL)
-	settingshelper = new SettingsHelper(this);
-    new SettingsDialog(this, settingshelper);
+    if (settings_helper == NULL)
+	settings_helper = new SettingsHelper(this);
+    new SettingsDialog(this, settings_helper);
 }
 
 /* protected */ void

@@ -121,8 +121,7 @@ class Polynomial : public Plugin {
 	}
 
 	Polynomial(void *dl) : Plugin(dl) {
-	    settings_layout = my_settings_layout;
-	    settings_base = &xmin;
+	    register_for_serialization(my_settings_layout, &xmin);
 	}
 
 	virtual ~Polynomial() {}

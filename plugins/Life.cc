@@ -93,8 +93,7 @@ class Life : public Plugin {
 
     public:
 	Life(void *dl) : Plugin(dl) {
-	    settings_layout = my_settings_layout;
-	    settings_base = &repeats;
+	    register_for_serialization(my_settings_layout, &repeats);
 	    initialized = false;
 	    bitmap1 = NULL;
 	    bitmap2 = NULL;

@@ -24,13 +24,14 @@ class Plugin {
     private:
 	void *dl;
 	Viewer *viewer;
-	SettingsHelper *settingshelper;
+	int settings_count;
+	const char ***settings_layout;
+	void **settings_base;
+	SettingsHelper *settings_helper;
 	friend class SettingsHelper;
 
     protected:
 	FWPixmap *pm;
-	const char **settings_layout;
-	void *settings_base;
 
 	Plugin(void *dl);
 	virtual ~Plugin();
@@ -62,6 +63,7 @@ class Plugin {
 
     protected:
 	// Utility methods provided for use by plugins
+	void register_for_serialization(const char **layout, void *base);
 	static void beep();
 	static int debug_level();
 	void get_settings_dialog();
