@@ -307,7 +307,6 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 			bits_needed -= bits_copied;
 
 			if (bits_needed == 0) {
-			    printf("%d:%d:%d ", curr_code, curr_code_size, maxcode);
 			    if (curr_code == end_code) {
 				end_code_seen = true;
 			    } else if (curr_code == clear_code) {
@@ -329,10 +328,10 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 					    curr_code_size++;
 				    }
 				} else if (curr_code == maxcode) {
-				    // Once maxcode == 4096, we can't get here any
-				    // more, because we refuse to raise curr_code_size
-				    // above 12 -- so we can never read a bigger code
-				    // than 4095.
+				    // Once maxcode == 4096, we can't get here
+				    // any more, because we refuse to raise
+				    // curr_code_size above 12 -- so we can
+				    // never read a bigger code than 4095.
 				    int c = old_code;
 				    while (prefix_table[c] != -1)
 					c = prefix_table[c];
@@ -732,20 +731,20 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
     int prefix = -1;
     int currbyte = 0;
     int bits_needed = 8;
-
-    int outcode1 = clear_code;
-    int outcode2 = -1;
+    bool initial_clear = true;
+    bool really_done = false;
 
     fputc(codesize, gif);
     for (int v = 0; v <= pm->height; v++) {
 	bool done = v == pm->height;
 	for (int h = 0; h < pm->width; h++) {
-	    if (done) {
-		if (outcode1 == -1) {
-		    outcode1 = prefix;
-		    outcode2 = -1;
-		} else
-		    outcode2 = prefix;
+	    int new_code;
+
+	    if (really_done) {
+		new_code = end_code;
+		goto emit;
+	    } else if (done) {
+		new_code = prefix;
 		goto emit;
 	    }
 
@@ -759,71 +758,77 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 	    // Look for concat(prefix, pixel) in string table
 	    if (prefix == -1) {
 		prefix = pixel;
-		continue;
+		goto no_emit;
 	    }
 	    for (int i = end_code + 1; i < maxcode; i++)
 		if (prefix_table[i] == prefix
 			&& code_table[i] == pixel) {
 		    prefix = i;
-		    goto endofloop;
+		    goto no_emit;
 		}
 
 	    // Not found:
-	    if (maxcode == 4096) {
-		outcode1 = prefix;
-		outcode2 = clear_code;
-	    } else {
+	    if (maxcode < 4096) {
 		prefix_table[maxcode] = prefix;
 		code_table[maxcode] = pixel;
 		maxcode++;
-		outcode1 = prefix;
 	    }
+	    new_code = prefix;
 	    prefix = pixel;
 	    
-	    emit:
-	    while (outcode1 != -1) {
-		printf("%d:%d:%d ", outcode1, curr_code_size, maxcode);
+	    emit: {
+		int outcode = initial_clear ? clear_code
+					: really_done ? end_code : new_code;
 		int bits_available = curr_code_size;
 		while (bits_available != 0) {
 		    int bits_copied = bits_needed < bits_available ?
 				bits_needed : bits_available;
-		    int bits = outcode1 >> (curr_code_size - bits_available);
+		    int bits = outcode >> (curr_code_size - bits_available);
 		    bits &= 255 >> (8 - bits_copied);
 		    currbyte |= bits << (8 - bits_needed);
 		    bits_available -= bits_copied;
 		    bits_needed -= bits_copied;
-		    if (bits_needed == 0 || (bits_available == 0 && done)) {
+		    if (bits_needed == 0 ||
+				    (bits_available == 0 && really_done)) {
 			buf[bytecount++] = currbyte;
 			if (bytecount == 255) {
-			    fputc(255, gif);
-			    fwrite(buf, 1, 255, gif);
+			    fputc(bytecount, gif);
+			    fwrite(buf, 1, bytecount, gif);
 			    bytecount = 0;
 			}
+			if (bits_available == 0 && really_done)
+			    goto data_done;
 			currbyte = 0;
 			bits_needed = 8;
 		    }
 		}
 
-		if (maxcode > (1 << curr_code_size)) {
-		    curr_code_size++;
-		    if (curr_code_size == 13)
-			outcode2 = clear_code;
-		} else if (outcode1 == clear_code) {
-		    maxcode = (1 << codesize) + 2;
-		    curr_code_size = codesize + 1;
+		if (done) {
+		    done = false;
+		    really_done = true;
+		    goto emit;
 		}
-
-		outcode1 = outcode2;
-		outcode2 = -1;
+		if (initial_clear) {
+		    initial_clear = false;
+		    goto emit;
+		} else {
+		    if (maxcode > (1 << curr_code_size)) {
+			curr_code_size++;
+		    } else if (new_code == clear_code) {
+			maxcode = (1 << codesize) + 2;
+			curr_code_size = codesize + 1;
+		    } else if (maxcode == 4096) {
+			new_code = clear_code;
+			goto emit;
+		    }
+		}
 	    }
-	    
-	    if (done)
-		break;
-	    endofloop:;
+
+	    no_emit:;
 	}
-	if (done)
-	    break;
     }
+
+    data_done:
 
     if (bytecount > 0) {
 	fputc(bytecount, gif);
