@@ -83,7 +83,9 @@ FileDialog::okOrCancel(Widget w, XtPointer ud, XtPointer cd) {
 		char buf[1024];
 		snprintf(buf, 1024, "Replace existing \"%s\"?", filename);
 		This->ync = new YesNoCancelDialog(This, buf, This, false);
+		This->ync->setTitle("Replace?");
 		This->ync->raise();
+		beep();
 	    } else {
 		This->listener->fileSelected(filename);
 		XtFree(filename);

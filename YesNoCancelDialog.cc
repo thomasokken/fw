@@ -39,7 +39,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 	: Frame(parent, true) {
     
     this->listener = listener;
-    setTitle("Save Changes?");
+    setTitle("Yes, No, Cancel?");
     
     Widget form = getContainer();
     Widget bb = bb = XtVaCreateManagedWidget(

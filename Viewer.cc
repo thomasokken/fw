@@ -1685,6 +1685,7 @@ Viewer::doQuit2() {
 	YesNoCancelDialog *ync = new YesNoCancelDialog(viewer,
 					    buf, ynclistener);
 	ynclistener->setYNC(ync);
+	ync->setTitle("Save Changes?");
 	ync->raise();
 	beep();
 	return;
