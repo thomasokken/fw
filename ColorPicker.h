@@ -29,6 +29,7 @@ class ColorPicker : public Frame {
 	unsigned char R, G, B, oldR, oldG, oldB;
 	float H, S, L;
 	char *rs, *gs, *bs;
+	int cross_x, cross_y, slider_x;
 	bool disable_rgbChanged;
 
     public:
@@ -37,13 +38,22 @@ class ColorPicker : public Frame {
 	virtual ~ColorPicker();
 
     private:
+	void updateRGBTextFields(unsigned char r, unsigned char g, unsigned char b);
 	void rgbChanged();
 	void repaintOldNewImage();
 	void repaintWheelImage();
 	void repaintSliderImage();
+	void drawCross();
+	void removeCross();
+	void drawThumb();
+	void removeThumb();
+	void mouseInOldNew(XEvent *event);
+	void mouseInWheel(XEvent *event);
+	void mouseInSlider(XEvent *event);
 	static void ok(Widget w, XtPointer ud, XtPointer cd);
 	static void cancel(Widget w, XtPointer ud, XtPointer cd);
 	static void expose(Widget w, XtPointer ud, XtPointer cd);
+	static void input(Widget w, XtPointer ud, XtPointer cd);
 	static void modifyVerify(Widget w, XtPointer ud, XtPointer cd);
 	static void valueChanged(Widget w, XtPointer ud, XtPointer cd);
 };

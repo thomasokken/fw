@@ -19,15 +19,13 @@
 #define WHEEL_DIAMETER 150
 #define CROSS_SIZE 16
 #define SLIDER_HEIGHT 12
-#define THUMB_OUTER_HEIGHT 20
-#define THUMB_INNER_HEIGHT 16
-#define THUMB_OUTER_WIDTH 10
-#define THUMB_INNER_WIDTH 6
+#define THUMB_HEIGHT 20
+#define THUMB_WIDTH 9
 
 #define WHEEL_W (WHEEL_DIAMETER + CROSS_SIZE)
 #define WHEEL_H (WHEEL_DIAMETER + CROSS_SIZE)
 #define SLIDER_W WHEEL_W
-#define SLIDER_H THUMB_OUTER_HEIGHT
+#define SLIDER_H THUMB_HEIGHT
 #define OLDNEW_W 80
 #define OLDNEW_H 64
 
@@ -67,6 +65,10 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
     G = oldG = g;
     B = oldB = b;
     rgb2hsl(R, G, B, &H, &S, &L);
+
+    cross_x = -1;
+    cross_y = -1;
+    slider_x = -1;
 
     wheel_image = XCreateImage(g_display, g_visual, g_depth, ZPixmap,
 			       0, NULL, WHEEL_W, WHEEL_H, 32, 0);
@@ -231,27 +233,40 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
     bs = XmTextGetString(blue);
     disable_rgbChanged = false;
 
+    XtTranslations translations = XtParseTranslationTable(
+	    "<KeyDown>: DrawingAreaInput()\n"
+	    "<KeyUp>: DrawingAreaInput()\n"
+	    "<BtnDown>: DrawingAreaInput()\n"
+	    "<BtnUp>: DrawingAreaInput()\n"
+	    "<Motion>: DrawingAreaInput()\n");
+
     wheel = XtVaCreateManagedWidget(
 	    "ColorWheel",
 	    xmDrawingAreaWidgetClass,
 	    bb,
+	    XmNtranslations, translations,
 	    NULL);
 
     slider = XtVaCreateManagedWidget(
 	    "Slider",
 	    xmDrawingAreaWidgetClass,
 	    bb,
+	    XmNtranslations, translations,
 	    NULL);
 
     oldnew = XtVaCreateManagedWidget(
 	    "OldAndNew",
 	    xmDrawingAreaWidgetClass,
 	    bb,
+	    XmNtranslations, translations,
 	    NULL);
 
     XtAddCallback(wheel, XmNexposeCallback, expose, (XtPointer) this);
+    XtAddCallback(wheel, XmNinputCallback, input, (XtPointer) this);
     XtAddCallback(slider, XmNexposeCallback, expose, (XtPointer) this);
+    XtAddCallback(slider, XmNinputCallback, input, (XtPointer) this);
     XtAddCallback(oldnew, XmNexposeCallback, expose, (XtPointer) this);
+    XtAddCallback(oldnew, XmNinputCallback, input, (XtPointer) this);
 
 
     // Now, lay 'em all out...
@@ -471,12 +486,32 @@ ColorPicker::~ColorPicker() {
 }
 
 /* private */ void
+ColorPicker::updateRGBTextFields(unsigned char r, unsigned char g, unsigned char b) {
+    disable_rgbChanged = true;
+    char buf[64];
+    snprintf(buf, 64, "%d", r);
+    XmTextSetString(red, buf);
+    snprintf(buf, 64, "%d", g);
+    XmTextSetString(green, buf);
+    snprintf(buf, 64, "%d", b);
+    XmTextSetString(blue, buf);
+    disable_rgbChanged = false;
+}
+
+/* private */ void
 ColorPicker::rgbChanged() {
     if (!disable_rgbChanged) {
 	rgb2hsl(R, G, B, &H, &S, &L);
 	repaintOldNewImage();
 	repaintWheelImage();
 	repaintSliderImage();
+	float th = 2 * 3.141592654 * H;
+	int offset = (WHEEL_DIAMETER + CROSS_SIZE) / 2;
+	cross_x = (int) (S * WHEEL_DIAMETER * cos(th) / 2) + offset;
+	cross_y = (int) (-S * WHEEL_DIAMETER * sin(th) / 2) + offset;
+	drawCross();
+	slider_x = CROSS_SIZE / 2 + 1 + (int) (L * (WHEEL_DIAMETER - 2) + 0.5);
+	drawThumb();
     }
 }
 
@@ -640,7 +675,7 @@ ColorPicker::repaintSliderImage() {
 	hsl2rgb(H, S, l, &rr, &gg, &bb);
 	unsigned long pixel = (rr << 16) | (gg << 8) | bb;
 	for (int y = (SLIDER_H - SLIDER_HEIGHT) / 2 + 1;
-		 y < (SLIDER_H + SLIDER_HEIGHT) / 2; y++) {
+		 y < (SLIDER_H + SLIDER_HEIGHT) / 2 - 1; y++) {
 	    pm.put_pixel(x + CROSS_SIZE / 2, y, pixel);
 	}
     }
@@ -648,10 +683,10 @@ ColorPicker::repaintSliderImage() {
     // The slider's black outline
     for (int x = 1; x <= WHEEL_DIAMETER - 1; x++) {
 	pm.put_pixel(x + CROSS_SIZE / 2, (SLIDER_H - SLIDER_HEIGHT) / 2, 0);
-	pm.put_pixel(x + CROSS_SIZE / 2, (SLIDER_H + SLIDER_HEIGHT) / 2, 0);
+	pm.put_pixel(x + CROSS_SIZE / 2, (SLIDER_H + SLIDER_HEIGHT) / 2 - 1, 0);
     }
     for (int y = (SLIDER_H - SLIDER_HEIGHT) / 2 + 1;
-	     y < (SLIDER_H + SLIDER_HEIGHT) / 2; y++) {
+	     y < (SLIDER_H + SLIDER_HEIGHT) / 2 - 1; y++) {
 	pm.put_pixel(CROSS_SIZE / 2, y, 0);
 	pm.put_pixel(CROSS_SIZE / 2 + WHEEL_DIAMETER, y, 0);
     }
@@ -664,6 +699,134 @@ ColorPicker::repaintSliderImage() {
     if (XtIsRealized(slider))
 	XPutImage(g_display, XtWindow(slider), g_gc, slider_image,
 		  0, 0, 0, 0, SLIDER_W, SLIDER_H);
+}
+
+/* private */ void
+ColorPicker::drawCross() {
+    if (cross_x == -1 || cross_y == -1)
+	return;
+    if (!XtIsRealized(wheel))
+	return;
+    int cw = CROSS_SIZE / 2;
+    XSetForeground(g_display, g_gc, private_colormap ? 215 : g_white);
+    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x + 1, cross_y - cw,
+	      cross_x + 1, cross_y + cw);
+    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x - cw, cross_y + 1,
+	      cross_x + cw, cross_y + 1);
+    XSetForeground(g_display, g_gc, private_colormap ? 0 : g_black);
+    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x, cross_y - cw,
+	      cross_x, cross_y + cw);
+    XDrawLine(g_display, XtWindow(wheel), g_gc, cross_x - cw, cross_y,
+	      cross_x + cw, cross_y);
+}
+
+/* private */ void
+ColorPicker::removeCross() {
+    if (cross_x == -1 || cross_y == -1)
+	return;
+    if (!XtIsRealized(wheel))
+	return;
+    int cw = CROSS_SIZE / 2;
+    XPutImage(g_display, XtWindow(wheel), g_gc, wheel_image,
+	      cross_x - cw, cross_y - cw,
+	      cross_x - cw, cross_y - cw,
+	      cross_x + cw, cross_y + cw);
+}
+
+/* private */ void
+ColorPicker::drawThumb() {
+    if (slider_x == -1)
+	return;
+    if (!XtIsRealized(slider))
+	return;
+    XSetForeground(g_display, g_gc, private_colormap ? 215 : g_white);
+    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+		   slider_x - THUMB_WIDTH / 2 + 1,
+		   (SLIDER_H - THUMB_HEIGHT) / 2 + 1,
+		   THUMB_WIDTH - 3, THUMB_HEIGHT - 3);
+    XSetForeground(g_display, g_gc, private_colormap ? 0 : g_black);
+    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+		   slider_x - THUMB_WIDTH / 2,
+		   (SLIDER_H - THUMB_HEIGHT) / 2,
+		   THUMB_WIDTH - 1, THUMB_HEIGHT - 1);
+    XDrawRectangle(g_display, XtWindow(slider), g_gc,
+		   slider_x - THUMB_WIDTH / 2 + 2,
+		   (SLIDER_H - THUMB_HEIGHT) / 2 + 2,
+		   THUMB_WIDTH - 5, THUMB_HEIGHT - 5);
+}
+
+/* private */ void
+ColorPicker::removeThumb() {
+    if (slider_x == -1)
+	return;
+    if (!XtIsRealized(slider))
+	return;
+    XPutImage(g_display, XtWindow(slider), g_gc, slider_image,
+	      slider_x - THUMB_WIDTH / 2, (SLIDER_H - THUMB_HEIGHT) / 2,
+	      slider_x - THUMB_WIDTH / 2, (SLIDER_H - THUMB_HEIGHT) / 2,
+	      THUMB_WIDTH, THUMB_HEIGHT);
+}
+
+/* private */ void
+ColorPicker::mouseInOldNew(XEvent *event) {
+    if (event->type == ButtonPress && event->xbutton.y < OLDNEW_H) {
+	updateRGBTextFields(oldR, oldG, oldB);
+	rgbChanged();
+    }
+}
+
+/* private */ void
+ColorPicker::mouseInWheel(XEvent *event) {
+    // TODO: where are these flags defined? It looks like 0x100 is
+    // button1, 0x200 is button2, and 0x300 is button3, but where is
+    // that documented?
+    if (event->type != ButtonPress &&
+	(event->type != MotionNotify || (event->xbutton.state & 0x700) == 0))
+	return;
+    float x = ((float) event->xbutton.x - (CROSS_SIZE + WHEEL_DIAMETER) / 2)
+		    / (WHEEL_DIAMETER / 2);
+    float y = ((float) event->xbutton.y - (CROSS_SIZE + WHEEL_DIAMETER) / 2)
+		    / (WHEEL_DIAMETER / 2);
+    float s = sqrt(x * x + y * y);
+    if (s > 1)
+	return;
+    if (cross_x == event->xbutton.x && cross_y == event->xbutton.y)
+	return;
+    removeCross();
+    cross_x = event->xbutton.x;
+    cross_y = event->xbutton.y;
+    S = s;
+    H = atan2(y, -x) / (2 * 3.141592654) + 0.5;
+    hsl2rgb(H, S, L, &R, &G, &B);
+    updateRGBTextFields(R, G, B);
+    drawCross();
+    repaintOldNewImage();
+    repaintSliderImage();
+    drawThumb();
+}
+
+/* private */ void
+ColorPicker::mouseInSlider(XEvent *event) {
+    // TODO: where are these flags defined? It looks like 0x100 is
+    // button1, 0x200 is button2, and 0x300 is button3, but where is
+    // that documented?
+    if (event->type != ButtonPress &&
+	(event->type != MotionNotify || (event->xbutton.state & 0x700) == 0))
+	return;
+    float l = ((float) event->xbutton.x - CROSS_SIZE / 2) / WHEEL_DIAMETER;
+    if (l < 0 || l > 1)
+	return;
+    if (slider_x == event->xbutton.x)
+	return;
+    removeThumb();
+    slider_x = event->xbutton.x;
+    L = l;
+    hsl2rgb(H, S, L, &R, &G, &B);
+    updateRGBTextFields(R, G, B);
+    drawThumb();
+    repaintOldNewImage();
+    repaintWheelImage();
+    drawCross();
 }
 
 /* private static */ void
@@ -709,6 +872,25 @@ ColorPicker::expose(Widget w, XtPointer ud, XtPointer cd) {
 	return;
     XPutImage(g_display, XtWindow(w), g_gc, image,
 	      ev.x, ev.y, ev.x, ev.y, ev.width, ev.height);
+    if (w == This->wheel)
+	This->drawCross();
+    if (w == This->slider)
+	This->drawThumb();
+}
+
+/* private static */ void
+ColorPicker::input(Widget w, XtPointer ud, XtPointer cd) {
+    ColorPicker *This = (ColorPicker *) ud;
+    XmDrawingAreaCallbackStruct *cbs = (XmDrawingAreaCallbackStruct *) cd;
+    XEvent *event = cbs->event;
+    if (event->type == KeyPress && event->type == KeyRelease)
+	return;
+    if (w == This->oldnew)
+	This->mouseInOldNew(event);
+    else if (w == This->wheel)
+	This->mouseInWheel(event);
+    else if (w == This->slider)
+	This->mouseInSlider(event);
 }
 
 /* private static */ void

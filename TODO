@@ -23,6 +23,10 @@ to not do that? Also, in the colormap editor, the tabbing sequence is wrong.
 lay out its children left-to-right first. It should be able to do that, no? Is
 this an Open Motif bug? See above.)
 
+The code that draws the color wheel in ColorPicker uses unhealthy amouts of
+transcendental functions, and it is pathetically slow. Can't we fudge this with
+some fast, limited-precision approximations for sqrt() and atan2()?
+
 The SettingsDialog code should receive focus notifications, and invoke
 PluginSettings::fieldChanged() immediately (if the field has, in fact,
 changed!), rather than putting it all off until the ok() callback.
