@@ -1092,6 +1092,7 @@ Viewer::close() {
     ynclistener->setYNC(ync);
     ync->setTitle("Save Changes?");
     ync->raise();
+    beep();
 }
 
 /* private */ bool
@@ -1450,6 +1451,7 @@ class OpenListener : public FileDialog::Listener {
 	    this->dialog = dialog;
 	}
 	virtual void fileSelected(const char *filename) {
+	    dialog->hide();
 	    char *type = NULL;
 	    char *plugin_name = NULL;
 	    void *plugin_data = NULL;
@@ -1681,6 +1683,7 @@ Viewer::doQuit2() {
 					    buf, ynclistener);
 	ynclistener->setYNC(ync);
 	ync->raise();
+	beep();
 	return;
     }
 }
@@ -1727,6 +1730,7 @@ class LoadColorsListener : public FileDialog::Listener {
 	    this->dialog = dialog;
 	}
 	void fileSelected(const char *filename) {
+	    dialog->hide();
 	    FILE *file = fopen(filename, "r");
 	    if (file == NULL) {
 		char buf[1024];
@@ -1804,6 +1808,7 @@ class SaveColorsListener : public FileDialog::Listener {
 	    this->dialog = dialog;
 	}
 	virtual void fileSelected(const char *filename) {
+	    dialog->hide();
 	    FILE *file = fopen(filename, "w");
 	    if (file == NULL) {
 		char buf[1024];
