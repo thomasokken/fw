@@ -24,6 +24,14 @@ int cubesize, rampsize;
 
 
 int main(int argc, char **argv) {
+    XtSetLanguageProc(NULL, NULL, NULL);
+    appshell = XtVaAppInitialize(&appcontext,	/* application context */
+				 "FW",		/* class name */
+				 NULL, 0,	/* cmd line option descr. */
+				 &argc, argv,	/* cmd line args */
+				 NULL,		/* fallback resources */
+				 NULL);		/* end of varargs list */
+
     // TODO: handle all command line options thru XtAppInitialize
     bool gray = false;
     if (argc > 1 && strcmp(argv[1], "-gray") == 0) {
@@ -35,13 +43,6 @@ int main(int argc, char **argv) {
 	argv[argc] = NULL;
     }
     
-    XtSetLanguageProc(NULL, NULL, NULL);
-    appshell = XtVaAppInitialize(&appcontext,	/* application context */
-				 "FW",		/* class name */
-				 NULL, 0,	/* cmd line option descr. */
-				 &argc, argv,	/* cmd line args */
-				 NULL,		/* fallback resources */
-				 NULL);		/* end of varargs list */
     display = XtDisplay(appshell);
     screen = XtScreen(appshell);
     screennumber = 0;
@@ -179,7 +180,13 @@ int main(int argc, char **argv) {
 			    &iconmask,
 			    NULL);
 
-    new Viewer("AboutViewer");
+    bool nothingOpened = true;
+    for (int i = 1; i < argc; i++) {
+	if (Viewer::openFile(argv[i]))
+	    nothingOpened = false;
+    }
+    if (nothingOpened)
+	new Viewer("AboutViewer");
 
     XtAppMainLoop(appcontext);
 

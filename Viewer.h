@@ -27,6 +27,7 @@ class Viewer : private Frame {
 		   int height, int bytesperline,
 		   int top, int left,
 		   int bottom, int right);
+	static bool openFile(const char *filename);
 
     private:
 	void init(const char *pluginname, const Viewer *src,

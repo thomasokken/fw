@@ -639,59 +639,64 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 	Arg arg;
 	XtSetArg(arg, XmNdirectory, &curr_path_name);
 	XtGetValues(w, &arg, 1);
-
 	char *filename;
 	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
-	    fprintf(stderr, "Opening \"%s\"...\n", filename);
-	    char **names = Plugin::list();
-	    if (names != NULL) {
-		int suitability = 0;
-		char *pluginname;
-		Plugin *plugin;
-		for (char **n = names; *n != NULL; n++) {
-		    Plugin *p= Plugin::get(*n);
-		    if (p == NULL) {
-			free(*n);
-			continue;
-		    }
-		    int s = p->can_open(filename);
-		    if (s > suitability) {
-			if (suitability > 0) {
-			    free(pluginname);
-			    Plugin::release(plugin);
-			}
-			pluginname = *n;
-			plugin = p;
-			suitability = s;
-		    } else {
-			free(*n);
-			Plugin::release(p);
-		    }
-		}
-		free(names);
-		if (suitability > 0) {
-		    // TODO: shouldn't use a constructor here!
-		    // What if opening the file fails?!?
-		    new Viewer(pluginname, filename);
-		    free(pluginname);
-		    Plugin::release(plugin);
-		    // NOTE: we only release the plugin *after* instantiating
-		    // a Viewer, because we want to avoid loading the .so more
-		    // often than necessary. If the instance openend for the
-		    // can_open() call was the only one, and we'd close it
-		    // between the can_open() call and the Viewer::Viewer()
-		    // call, we'd be loading the shared library twice.
-		} else
-		    // No matching plugin found
-		    XBell(display, 100);
-	    } else
-		// No plugins found at all
+	    if (!Viewer::openFile(filename))
 		XBell(display, 100);
-
 	    XtFree(filename);
 	}
     }
     XtUnmanageChild(w);
+}
+
+/* public static */ bool
+Viewer::openFile(const char *filename) {
+    fprintf(stderr, "Opening \"%s\"...\n", filename);
+    char **names = Plugin::list();
+    if (names != NULL) {
+	int suitability = 0;
+	char *pluginname;
+	Plugin *plugin;
+	for (char **n = names; *n != NULL; n++) {
+	    Plugin *p= Plugin::get(*n);
+	    if (p == NULL) {
+		free(*n);
+		continue;
+	    }
+	    int s = p->can_open(filename);
+	    if (s > suitability) {
+		if (suitability > 0) {
+		    free(pluginname);
+		    Plugin::release(plugin);
+		}
+		pluginname = *n;
+		plugin = p;
+		suitability = s;
+	    } else {
+		free(*n);
+		Plugin::release(p);
+	    }
+	}
+	free(names);
+	if (suitability > 0) {
+	    // TODO: shouldn't use a constructor here!
+	    // What if opening the file fails?!?
+	    new Viewer(pluginname, filename);
+	    free(pluginname);
+	    Plugin::release(plugin);
+	    // NOTE: we only release the plugin *after* instantiating
+	    // a Viewer, because we want to avoid loading the .so more
+	    // often than necessary. If the instance openend for the
+	    // can_open() call was the only one, and we'd close it
+	    // between the can_open() call and the Viewer::Viewer()
+	    // call, we'd be loading the shared library twice.
+	    return true;
+	} else
+	    // No matching plugin found
+	    return false;
+    } else
+	// No plugins found at all
+	return false;
 }
 
 /* private */ void

@@ -5,7 +5,7 @@ SRCS := $(wildcard *.cc)
 OBJS := $(SRCS:.cc=.o)
 TARGETS := $(SRCS:.cc=.so)
 
-all: $(TARGETS)
+all: $(OBJS) $(TARGETS)
 
 JPEGViewer.so: JPEGViewer.o
 	$(CXX) $(LDFLAGS) -Llibjpeg -o JPEGViewer.so JPEGViewer.o -ljpeg
