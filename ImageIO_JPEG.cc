@@ -15,6 +15,7 @@
 
 #define MSGLEN 1024
 static const char *FW_ID_STR = "Fractal Wizard 2.0";
+static const int FW_ID_LEN = strlen(FW_ID_STR) + 1;
 
 typedef struct {
     struct jpeg_error_mgr pub;
@@ -26,8 +27,6 @@ static void my_error_exit(j_common_ptr p) {
     my_error_mgr *err = (my_error_mgr *) jcs->err;
     longjmp(err->env, 1);
 }
-
-static bool is_grayscale(const FWColor *cmap);
 
 
 /* public virtual */ bool
@@ -99,33 +98,33 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
     int plbufsize = 0;
     int pllength;
     unsigned int crc;
-    unsigned int idlen = strlen(FW_ID_STR) + 1;
     while (marker != NULL) {
 	if (marker->marker == JPEG_APP0 + 13
-		&& marker->data_length > (plbuf == NULL ? idlen + 8 : idlen)
-		&& strncmp((char *) marker->data, FW_ID_STR, idlen) == 0) {
+		&& (int) marker->data_length >
+				(plbuf == NULL ? FW_ID_LEN + 8 : FW_ID_LEN)
+		&& strncmp((char *) marker->data, FW_ID_STR, FW_ID_LEN) == 0) {
 	    // Looks like one of ours
 	    if (plbuf == NULL) {
 		// first 8 bytes are length & crc
-		pllength = (marker->data[idlen] << 24)
-			| (marker->data[idlen + 1] << 16)
-			| (marker->data[idlen + 2] << 8)
-			| (marker->data[idlen + 3]);
-		crc = (marker->data[idlen + 4] << 24)
-			| (marker->data[idlen + 5] << 16)
-			| (marker->data[idlen + 6] << 8)
-			| (marker->data[idlen + 7]);
+		pllength = (marker->data[FW_ID_LEN] << 24)
+			| (marker->data[FW_ID_LEN + 1] << 16)
+			| (marker->data[FW_ID_LEN + 2] << 8)
+			| (marker->data[FW_ID_LEN + 3]);
+		crc = (marker->data[FW_ID_LEN + 4] << 24)
+			| (marker->data[FW_ID_LEN + 5] << 16)
+			| (marker->data[FW_ID_LEN + 6] << 8)
+			| (marker->data[FW_ID_LEN + 7]);
 		int plbufpos = plbufsize;
-		plbufsize += marker->data_length - idlen - 8;
+		plbufsize += marker->data_length - FW_ID_LEN - 8;
 		plbuf = (unsigned char *) malloc(plbufsize);
-		memcpy(plbuf + plbufpos, marker->data + idlen + 8,
-			marker->data_length - idlen - 8);
+		memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN + 8,
+			marker->data_length - FW_ID_LEN - 8);
 	    } else {
 		int plbufpos = plbufsize;
-		plbufsize += marker->data_length - idlen;
+		plbufsize += marker->data_length - FW_ID_LEN;
 		plbuf = (unsigned char *) realloc(plbuf, plbufsize);
-		memcpy(plbuf + plbufpos, marker->data + idlen,
-			marker->data_length - idlen);
+		memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN,
+			marker->data_length - FW_ID_LEN);
 	    }
 	}
 	marker = marker->next;
@@ -267,8 +266,8 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
     if (plugin_data != NULL && plugin_data_length > 0) {
 	char marker[65533];
 	strcpy(marker, FW_ID_STR);
-	char *datastart = marker + strlen(FW_ID_STR) + 1;
-	int maxdata = 65533 - strlen(FW_ID_STR) - 1;
+	char *datastart = marker + FW_ID_LEN;
+	int maxdata = 65533 - FW_ID_LEN;
 
 	int crc = crc32(plugin_data, plugin_data_length);
 	char *remaining = (char *) plugin_data;
@@ -358,12 +357,5 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
     jpeg_finish_compress(&jcs);
     jpeg_destroy_compress(&jcs);
     fclose(jpg);
-    return true;
-}
-
-static bool is_grayscale(const FWColor *cmap) {
-    for (int i = 0; i < 256; i++)
-	if (cmap[i].r != i || cmap[i].g != i || cmap[i].b != i)
-	    return false;
     return true;
 }
