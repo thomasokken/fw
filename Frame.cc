@@ -442,6 +442,7 @@ Frame::findTaskBarSize() {
 	break;
     }
 
+    XFree(children);
     taskbar_known = true;
 }
 
