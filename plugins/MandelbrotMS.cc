@@ -17,7 +17,7 @@ struct rect {
 	top = left = bottom = right = -1;
     }
     void merge(const rect &r) {
-	if (top == -1 && left == -1 && right == -1) {
+	if (top == -1 && left == -1 && bottom == -1 && right == -1) {
 	    top = r.top;
 	    left = r.left;
 	    bottom = r.bottom;
