@@ -226,28 +226,70 @@ Viewer::finish_init() {
     XtSetArg(args[6], XmNshadowThickness, &shadowThickness);
     XtGetValues(scroll, args, 7);
 
-    Dimension hsbheight;
+    Dimension hsbheight, hsbborder;
     XtSetArg(args[0], XmNheight, &hsbheight);
-    XtGetValues(hsb, args, 1);
+    XtSetArg(args[1], XmNborderWidth, &hsbborder);
+    XtGetValues(hsb, args, 2);
 
-    Dimension vsbwidth;
+    Dimension vsbwidth, vsbborder;
     XtSetArg(args[0], XmNwidth, &vsbwidth);
-    XtGetValues(vsb, args, 1);
+    XtSetArg(args[1], XmNborderWidth, &vsbborder);
+    XtGetValues(vsb, args, 2);
 
-    // FIXME Under Solaris + CDE, this code makes the window 2 pixels
-    // too tall and too wide. (The original Motif XML GUI code that this
-    // is based on, which has one less factor of 2 on shadowThickness
-    // and adds a hard-coded 2 pixels to the total width and height, does
-    // yield the right size on Solaris, but makes the window 4 pixels
-    // too small on Linux + Lesstif.
-    // Am I using the right shadowThickness? Or, consider this: isn't
-    // it possible to avoid this ugliness of second-guessing the
-    // XmScrolledWindow altogether, and set the size on the viewport
-    // widget instead?
-    Dimension sw = 2 * (marginwidth + borderWidth + 2 * shadowThickness)
-         + vsbwidth + spacing + width;
-    Dimension sh = 2 * (marginheight + borderWidth + 2 * shadowThickness)
-         + hsbheight + spacing + height;
+    // I'm trying to make the initial window size such that the image fits
+    // the clip window exactly, so you can see it all without having to scroll
+    // and yet there's no screen area wasted.
+    // What I would LIKE to be able to do is to somehow just tell the scrolled-
+    // window to size itself to fit the drawingarea, or maybe size the clip
+    // window (viewport, whatever, the thing that's scrolled by the scrolled-
+    // window and which serves as the container for my drawingarea), and then
+    // hope that the scrolledwindow will take the hint.
+    // Wishful thinking, I fear, and so I solve the problem by doing the math
+    // about how big the scrolledwindow has to be, myself.
+    // The scrolledwindow is laid out as follows: it is surrounded by a border
+    // of width 'borderWidth' (the usual X window border, usually 0); inside
+    // that there's a margin of width 'scrolledWindowMarginWidth' and height
+    // 'scrolledWindowMarginHeight' (both usually 0); inside the margin the
+    // remaining area is divided in four areas: at the top left there's the
+    // image area, at the top right there's the vertical scroll bar, at the
+    // bottom left there's the horizontal scroll bar, and at the bottom right
+    // there's nothing.
+    // The areas for the scroll bars are sized to fit the dimensions returned
+    // by the scroll bars themselves; my code assumes the usual X situation
+    // where the total width is 'width' + 2 * 'borderWidth', and likewise for
+    // the height (although it seems that 'borderWidth' is always 0 and can't
+    // be changed on scroll bars, but that could be a quirk of Open Motif 2.2.2
+    // for all I know).
+    // The image area has a margin along its right and bottom edges, separating
+    // it from the scroll bar; its width is 'spacing' (usually 4). Then there
+    // is an additional margin around all four edges, which looks to be a
+    // hard-coded 2 pixels wide; inside that margin there's a shadow of width
+    // 'shadowThickness' (usually 2), and inside the shadow, there's an
+    // XmClipWindow instance which serves as the container for whatever needs
+    // to be scrolled around.
+    // The margin right around the shadow around the ClipWindow, with its
+    // hard-coded 2 pixel width, is a bit of a mystery to me. It looks like the
+    // only part of the XmScrolledWindow for which there is no resource to
+    // control it. In fact, it may not even exist in other Motif
+    // implementations (the one I'm using as I write this is Open Motif 2.2.2,
+    // from the Red Hat Linux 7.3 distribution). I suspect it is a hack to
+    // account for the way the scroll bars lie about their geometry (they also
+    // leave a 2 pixel margin around themselves) so that the shadow around the
+    // clipwindow lines up nicely with the shadows around the scroll bars.
+    // The value mysteryBorder = 2 works with Open Motif 2.2.2, as I just said;
+    // it also works with Lesstif (unfortunately I don't remember which version
+    // of Lesstif I was using when I came to that conclusion; haven't tried it
+    // in a while). On Solaris 7 and 8 with the CDE libXm, mysteryBorder needs
+    // to be set to 0 for the layout to come out right (I guess the Solaris
+    // scroll bars don't leave a margin around themselves so the Solaris
+    // scrolledwindow doesn't need a kludge to make things look nice).
+
+    Dimension mysteryBorder = 2; // see above...
+
+    Dimension sw = 2 * (borderWidth + marginwidth + mysteryBorder
+	    + shadowThickness + vsbborder) + vsbwidth + spacing + width;
+    Dimension sh = 2 * (borderWidth + marginheight + mysteryBorder
+	    + shadowThickness + hsbborder) + hsbheight + spacing + height;
     XtSetArg(args[0], XmNwidth, sw);
     XtSetArg(args[1], XmNheight, sh);
     XtSetValues(scroll, args, 2);
