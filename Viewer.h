@@ -14,6 +14,7 @@ class Viewer : private Frame {
 	XImage *image;
 	Dimension width, height;
 	static int instances;
+	Menu *optionsmenu;
 
     public:
 	Viewer(const char *pluginname);
@@ -39,6 +40,8 @@ class Viewer : private Frame {
 	virtual void close();
 	static void menucallback(void *closure, const char *id);
 	void menucallback2(const char *id);
+	static void togglecallback(void *closure, const char *id, bool value);
+	void togglecallback2(const char *id, bool value);
 
 	static Boolean deleteLater2(XtPointer ud);
 	static void doOpen2(Widget w, XtPointer cd, XtPointer ud);

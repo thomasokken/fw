@@ -77,108 +77,111 @@ Viewer::finish_init() {
     Menu *pluginmenu = new Menu;
     char **plugins = Plugin::list();
     if (plugins == NULL)
-	pluginmenu->addItem("No Plugins", NULL, NULL, "File.Beep");
+	pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
     else {
 	for (char **p = plugins; *p != NULL; p++) {
 	    int len = strlen(*p);
 	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
 		char id[100];
 		snprintf(id, 100, "File.New.%s", *p);
-		pluginmenu->addItem(*p, NULL, NULL, id);
+		pluginmenu->addCommand(*p, NULL, NULL, id);
 	    }
 	}
     }
 	
     Menu *filemenu = new Menu;
-    filemenu->addItem("New", NULL, NULL, "File.New", pluginmenu);
-    filemenu->addItem("Open...", NULL, NULL, "File.Open");
-    filemenu->addItem();
-    filemenu->addItem("Close", NULL, NULL, "File.Close");
-    filemenu->addItem("Save", NULL, NULL, "File.Save");
-    filemenu->addItem("Save As...", NULL, NULL, "File.SaveAs");
-    filemenu->addItem("Get Info...", NULL, NULL, "File.GetInfo");
-    filemenu->addItem();
-    filemenu->addItem("Print...", NULL, NULL, "File.Print");
-    filemenu->addItem();
-    filemenu->addItem("Quit", "Q", "Ctrl+Q", "File.Quit");
-    topmenu->addItem("File", "F", NULL, "File", filemenu);
+    filemenu->addMenu("New", NULL, NULL, "File.New", pluginmenu);
+    filemenu->addCommand("Open...", NULL, NULL, "File.Open");
+    filemenu->addSeparator();
+    filemenu->addCommand("Close", NULL, NULL, "File.Close");
+    filemenu->addCommand("Save", NULL, NULL, "File.Save");
+    filemenu->addCommand("Save As...", NULL, NULL, "File.SaveAs");
+    filemenu->addCommand("Get Info...", NULL, NULL, "File.GetInfo");
+    filemenu->addSeparator();
+    filemenu->addCommand("Print...", NULL, NULL, "File.Print");
+    filemenu->addSeparator();
+    filemenu->addCommand("Quit", "Q", "Ctrl+Q", "File.Quit");
+    topmenu->addMenu("File", "F", NULL, "File", filemenu);
 
     Menu *editmenu = new Menu;
-    editmenu->addItem("Undo", NULL, NULL, "Edit.Undo");
-    editmenu->addItem();
-    editmenu->addItem("Cut", NULL, NULL, "Edit.Cut");
-    editmenu->addItem("Copy", NULL, NULL, "Edit.Copy");
-    editmenu->addItem("Paste", NULL, NULL, "Edit.Paste");
-    editmenu->addItem("Clear", NULL, NULL, "Edit.Clear");
-    topmenu->addItem("Edit", NULL, NULL, "Edit", editmenu);
+    editmenu->addCommand("Undo", NULL, NULL, "Edit.Undo");
+    editmenu->addSeparator();
+    editmenu->addCommand("Cut", NULL, NULL, "Edit.Cut");
+    editmenu->addCommand("Copy", NULL, NULL, "Edit.Copy");
+    editmenu->addCommand("Paste", NULL, NULL, "Edit.Paste");
+    editmenu->addCommand("Clear", NULL, NULL, "Edit.Clear");
+    topmenu->addMenu("Edit", NULL, NULL, "Edit", editmenu);
 
     Menu *colormenu = new Menu;
-    colormenu->addItem("Load Colors...", NULL, NULL, "Color.LoadColors");
-    colormenu->addItem("Save Colors...", NULL, NULL, "Color.SaveColors");
-    colormenu->addItem();
-    colormenu->addItem("Edit Colors...", NULL, NULL, "Color.EditColors");
-    topmenu->addItem("Color", NULL, NULL, "Color", colormenu);
+    colormenu->addCommand("Load Colors...", NULL, NULL, "Color.LoadColors");
+    colormenu->addCommand("Save Colors...", NULL, NULL, "Color.SaveColors");
+    colormenu->addSeparator();
+    colormenu->addCommand("Edit Colors...", NULL, NULL, "Color.EditColors");
+    topmenu->addMenu("Color", NULL, NULL, "Color", colormenu);
 
     Menu *drawmenu = new Menu;
-    drawmenu->addItem("Stop Others", NULL, NULL, "Draw.StopOthers");
-    drawmenu->addItem("Stop", NULL, NULL, "Draw.Stop");
-    drawmenu->addItem("Stop All", NULL, NULL, "Draw.StopAll");
-    drawmenu->addItem("Continue", NULL, NULL, "Draw.Continue");
-    drawmenu->addItem("Continue All", NULL, NULL, "Draw.ContinueAll");
-    drawmenu->addItem();
-    drawmenu->addItem("Update Now", NULL, NULL, "Draw.UpdateNow");
-    topmenu->addItem("Draw", NULL, NULL, "Draw", drawmenu);
+    drawmenu->addCommand("Stop Others", NULL, NULL, "Draw.StopOthers");
+    drawmenu->addCommand("Stop", NULL, NULL, "Draw.Stop");
+    drawmenu->addCommand("Stop All", NULL, NULL, "Draw.StopAll");
+    drawmenu->addCommand("Continue", NULL, NULL, "Draw.Continue");
+    drawmenu->addCommand("Continue All", NULL, NULL, "Draw.ContinueAll");
+    drawmenu->addSeparator();
+    drawmenu->addCommand("Update Now", NULL, NULL, "Draw.UpdateNow");
+    topmenu->addMenu("Draw", NULL, NULL, "Draw", drawmenu);
 
-    Menu *optionsmenu = new Menu;
-    optionsmenu->addItem("Private Colormap", NULL, NULL, "Options.PrivateColormap");
-    optionsmenu->addItem("Dither", NULL, NULL, "Options.Dither");
-    optionsmenu->addItem();
-    optionsmenu->addItem("Notify When Ready", NULL, NULL, "Options.Notfy");
-    topmenu->addItem("Options", NULL, NULL, "Options", optionsmenu);
+    //Options menu is a member var -- we need it to read the toggles
+    //Menu *optionsmenu = new Menu;
+    optionsmenu = new Menu;
+    optionsmenu->addToggle("Private Colormap", NULL, NULL, "Options.PrivateColormap");
+    optionsmenu->addToggle("Dither", NULL, NULL, "Options.Dither");
+    optionsmenu->addSeparator();
+    optionsmenu->addToggle("Notify When Ready", NULL, NULL, "Options.Notify");
+    topmenu->addMenu("Options", NULL, NULL, "Options", optionsmenu);
     
     Menu *scalemenu = new Menu;
-    scalemenu->addItem(" 12%", NULL, NULL, "Windows.Scale.-8");
-    scalemenu->addItem(" 14%", NULL, NULL, "Windows.Scale.-7");
-    scalemenu->addItem(" 16%", NULL, NULL, "Windows.Scale.-6");
-    scalemenu->addItem(" 20%", NULL, NULL, "Windows.Scale.-5");
-    scalemenu->addItem(" 25%", NULL, NULL, "Windows.Scale.-4");
-    scalemenu->addItem(" 33%", NULL, NULL, "Windows.Scale.-3");
-    scalemenu->addItem(" 50%", NULL, NULL, "Windows.Scale.-2");
-    scalemenu->addItem("100%", NULL, NULL, "Windows.Scale.1");
-    scalemenu->addItem("200%", NULL, NULL, "Windows.Scale.2");
-    scalemenu->addItem("300%", NULL, NULL, "Windows.Scale.3");
-    scalemenu->addItem("400%", NULL, NULL, "Windows.Scale.4");
-    scalemenu->addItem("500%", NULL, NULL, "Windows.Scale.5");
-    scalemenu->addItem("600%", NULL, NULL, "Windows.Scale.6");
-    scalemenu->addItem("700%", NULL, NULL, "Windows.Scale.7");
-    scalemenu->addItem("800%", NULL, NULL, "Windows.Scale.8");
+    scalemenu->addCommand(" 12%", NULL, NULL, "Windows.Scale.-8");
+    scalemenu->addCommand(" 14%", NULL, NULL, "Windows.Scale.-7");
+    scalemenu->addCommand(" 16%", NULL, NULL, "Windows.Scale.-6");
+    scalemenu->addCommand(" 20%", NULL, NULL, "Windows.Scale.-5");
+    scalemenu->addCommand(" 25%", NULL, NULL, "Windows.Scale.-4");
+    scalemenu->addCommand(" 33%", NULL, NULL, "Windows.Scale.-3");
+    scalemenu->addCommand(" 50%", NULL, NULL, "Windows.Scale.-2");
+    scalemenu->addCommand("100%", NULL, NULL, "Windows.Scale.1");
+    scalemenu->addCommand("200%", NULL, NULL, "Windows.Scale.2");
+    scalemenu->addCommand("300%", NULL, NULL, "Windows.Scale.3");
+    scalemenu->addCommand("400%", NULL, NULL, "Windows.Scale.4");
+    scalemenu->addCommand("500%", NULL, NULL, "Windows.Scale.5");
+    scalemenu->addCommand("600%", NULL, NULL, "Windows.Scale.6");
+    scalemenu->addCommand("700%", NULL, NULL, "Windows.Scale.7");
+    scalemenu->addCommand("800%", NULL, NULL, "Windows.Scale.8");
 
     Menu *windowsmenu = new Menu;
-    windowsmenu->addItem("Enlarge", NULL, NULL, "Windows.Enlarge");
-    windowsmenu->addItem("Reduce", NULL, NULL, "Windows.Reduce");
-    windowsmenu->addItem("Scale", NULL, NULL, "Scale", scalemenu);
-    windowsmenu->addItem();
-    topmenu->addItem("Windows", NULL, NULL, "Windows", windowsmenu);
+    windowsmenu->addCommand("Enlarge", NULL, NULL, "Windows.Enlarge");
+    windowsmenu->addCommand("Reduce", NULL, NULL, "Windows.Reduce");
+    windowsmenu->addMenu("Scale", NULL, NULL, "Scale", scalemenu);
+    windowsmenu->addSeparator();
+    topmenu->addMenu("Windows", NULL, NULL, "Windows", windowsmenu);
 
     Menu *helpmenu = new Menu;
-    helpmenu->addItem("About Fractal Wizard", NULL, NULL, "File.New.AboutViewer");
-    helpmenu->addItem("General", NULL, NULL, "Help.General");
+    helpmenu->addCommand("About Fractal Wizard", NULL, NULL, "File.New.AboutViewer");
+    helpmenu->addCommand("General", NULL, NULL, "Help.General");
     if (plugins != NULL) {
-	helpmenu->addItem();
+	helpmenu->addSeparator();
 	for (char **p = plugins; *p != NULL; p++) {
 	    int len = strlen(*p);
 	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
 		char id[100];
 		snprintf(id, 100, "Help.X.%s", *p);
-		helpmenu->addItem(*p, NULL, NULL, id);
+		helpmenu->addCommand(*p, NULL, NULL, id);
 	    }
 	    free(*p);
 	}
 	free(plugins);
     }
-    topmenu->addItem("Help", NULL, NULL, "Help", helpmenu);
+    topmenu->addMenu("Help", NULL, NULL, "Help", helpmenu);
 
     topmenu->setCommandListener(menucallback, this);
+    topmenu->setToggleListener(togglecallback, this);
     setMenu(topmenu);
 
     unsigned int W, H;
@@ -596,7 +599,7 @@ Viewer::menucallback2(const char *id) {
 	doPrivateColormap();
     else if (strcmp(id, "Options.Dither") == 0)
 	doDither();
-    else if (strcmp(id, "Options.Notfy") == 0)
+    else if (strcmp(id, "Options.Notify") == 0)
 	doNotify();
     else if (strcmp(id, "Windows.Enlarge") == 0)
 	doEnlarge();
@@ -608,6 +611,16 @@ Viewer::menucallback2(const char *id) {
 	doGeneral();
     else if (strncmp(id, "Help.X.", 7) == 0)
 	doHelp(id + 7);
+}
+
+/* private static */ void
+Viewer::togglecallback(void *closure, const char *id, bool value) {
+    ((Viewer *) closure)->togglecallback2(id, value);
+}
+
+/* private */ void
+Viewer::togglecallback2(const char *id, bool value) {
+    fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
 }
 
 /* private */ void

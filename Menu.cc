@@ -3,6 +3,7 @@
 #include <Xm/PushB.h>
 #include <Xm/RowColumn.h>
 #include <Xm/Separator.h>
+#include <Xm/ToggleB.h>
 
 #include "Menu.h"
 #include "util.h"
@@ -13,6 +14,7 @@ Menu::Menu() {
     commandCallback = NULL;
     toggleCallback = NULL;
     radioCallback = NULL;
+    toggleMap = new Map;
 }
 
 /* public */
@@ -22,10 +24,11 @@ Menu::~Menu() {
 	delete firstitem;
 	firstitem = next;
     }
+    delete toggleMap;
 }
 
 /* public */ void
-Menu::addItem(const char *name, const char *mnemonic,
+Menu::addCommand(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,
 					    id, ITEM_COMMAND, this);
@@ -39,7 +42,21 @@ Menu::addItem(const char *name, const char *mnemonic,
 }
 
 /* public */ void
-Menu::addItem(const char *name, const char *mnemonic,
+Menu::addToggle(const char *name, const char *mnemonic,
+	      const char *accelerator, const char *id) {
+    ItemNode *item = new ItemNode(name, mnemonic, accelerator,
+					    id, ITEM_TOGGLE, this);
+    if (firstitem == NULL)
+	firstitem = lastitem = item;
+    else {
+	lastitem->next = item;
+	lastitem = item;
+    }
+    item->next = NULL;
+}
+
+/* public */ void
+Menu::addMenu(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id, Menu *menu) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator, id, menu, this);
     if (firstitem == NULL)
@@ -52,7 +69,7 @@ Menu::addItem(const char *name, const char *mnemonic,
 }
 
 /* public */ void
-Menu::addItem() {
+Menu::addSeparator() {
     ItemNode *item = new ItemNode;
     if (firstitem == NULL)
 	firstitem = lastitem = item;
@@ -91,12 +108,12 @@ Menu::makeWidgets(Widget parent) {
 	    acc = XmStringCreateLocalized((char *) item->accelerator);
 	    XtSetArg(args[nargs], XmNacceleratorText, acc); nargs++;
 	}
-	if (item->id == NULL) {
+	if (item->type == ITEM_SEPARATOR) {
 	    XtCreateManagedWidget("Separator",
 				  xmSeparatorWidgetClass,
 				  parent,
 				  NULL, 0);
-	} else if (item->menu == NULL) {
+	} else if (item->type == ITEM_COMMAND) {
 	    // Regular menu item
 	    Widget w = XtCreateManagedWidget("Button",
 					     xmPushButtonWidgetClass,
@@ -104,6 +121,15 @@ Menu::makeWidgets(Widget parent) {
 					     args, nargs);
 	    XtAddCallback(w, XmNactivateCallback,
 			  commandCB, (XtPointer) item);
+	} else if (item->type == ITEM_TOGGLE) {
+	    // Regular menu item
+	    Widget w = XtCreateManagedWidget("Button",
+					     xmToggleButtonWidgetClass,
+					     parent,
+					     args, nargs);
+	    XtAddCallback(w, XmNvalueChangedCallback,
+			  toggleCB, (XtPointer) item);
+	    toggleMap->put(item->id, w);
 	} else {
 	    // Submenu
 	    Widget submenu = XmCreatePulldownMenu(parent, "Menu", NULL, 0);
@@ -139,11 +165,43 @@ Menu::setCommandListener(void (*callback)(void *closure, const char *id),
 /* public */ void
 Menu::setToggleListener(void (*callback)(void *closure, const char *id,
 		    bool value), void *closure) {
+    this->toggleCallback = callback;
+    this->toggleClosure = closure;
+    ItemNode *item = firstitem;
+    while (item != NULL) {
+	if (item->menu != NULL)
+	    item->menu->setToggleListener(callback, closure);
+	item = item->next;
+    }
 }
 
 /* public */ void
 Menu::setRadioListener(void (*callback)(void *closure, const char *id,
 		    int value), void *closure) {
+    this->radioCallback = callback;
+    this->radioClosure = closure;
+    ItemNode *item = firstitem;
+    while (item != NULL) {
+	if (item->menu != NULL)
+	    item->menu->setRadioListener(callback, closure);
+	item = item->next;
+    }
+}
+
+/* public */ bool
+Menu::getToggleValue(const char *id) {
+    Widget w = (Widget) toggleMap->get(id);
+    if (w == NULL)
+	return false;
+    return XmToggleButtonGetState(w) == True;
+}
+
+/* public */ void
+Menu::setToggleValue(const char *id, bool value) {
+    Widget w = (Widget) toggleMap->get(id);
+    if (w != NULL)
+	// arg 3 being False means no callbacks are invoked.
+	XmToggleButtonSetState(w, value, False);
 }
 
 /* private static */ void
@@ -152,6 +210,15 @@ Menu::commandCB(Widget w, XtPointer ud, XtPointer cd) {
     Menu *menu = item->owner;
     if (menu->commandCallback != NULL)
 	menu->commandCallback(menu->commandClosure, item->id);
+}
+
+/* private static */ void
+Menu::toggleCB(Widget w, XtPointer ud, XtPointer cd) {
+    ItemNode *item = (ItemNode *) ud;
+    Menu *menu = item->owner;
+    bool value = XmToggleButtonGetState(w) == True;
+    if (menu->toggleCallback != NULL)
+	menu->toggleCallback(menu->toggleClosure, item->id, value);
 }
 
 /* private::public */
@@ -186,6 +253,7 @@ Menu::ItemNode::ItemNode() {
     this->mnemonic = NULL;
     this->accelerator = NULL;
     this->id = NULL;
+    this->type = ITEM_SEPARATOR;
     this->menu = NULL;
     this->owner = NULL;
 }

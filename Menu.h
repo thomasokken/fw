@@ -3,6 +3,8 @@
 
 #include <X11/Intrinsic.h>
 
+class Map;
+
 class Menu {
     private:
 	void (*commandCallback)(void *closure, const char *id);
@@ -12,7 +14,14 @@ class Menu {
 	void (*radioCallback)(void *closure, const char *id, int value);
 	void *radioClosure;
 
-	enum { ITEM_MENU, ITEM_COMMAND, ITEM_TOGGLE, ITEM_RADIO };
+	// Menu item types
+	enum {
+	    ITEM_SEPARATOR,
+	    ITEM_MENU,
+	    ITEM_COMMAND,
+	    ITEM_TOGGLE,
+	    ITEM_RADIO
+	};
 
 	struct ItemNode {
 	    ItemNode(const char *name, const char *mnemonic, const char
@@ -31,16 +40,19 @@ class Menu {
 	    ItemNode *next;
 	};
 	ItemNode *firstitem, *lastitem;
+	Map *toggleMap;
 
     public:
 	Menu();
 	~Menu();
 	void makeWidgets(Widget parent);
-	void addItem(const char *name, const char *mnemonic,
+	void addCommand(const char *name, const char *mnemonic,
 		     const char *accelerator, const char *id);
-	void addItem(const char *name, const char *mnemonic,
+	void addToggle(const char *name, const char *mnemonic,
+		     const char *accelerator, const char *id);
+	void addMenu(const char *name, const char *mnemonic,
 		     const char *accelerator, const char *id, Menu *menu);
-	void addItem();
+	void addSeparator();
 	void setCommandListener(void (*callback)(void *closure, const char *id),
 			void *closure);
 	void setToggleListener(void (*callback)(void *closure, const char *id,
@@ -54,6 +66,7 @@ class Menu {
 
     private:
 	static void commandCB(Widget w, XtPointer ud, XtPointer cd);
+	static void toggleCB(Widget w, XtPointer ud, XtPointer cd);
 };
 
 #endif
