@@ -8,7 +8,7 @@
 #include <string.h>
 
 #include "Viewer.h"
-#include "CloseConfirmDialog.h"
+#include "YesNoCancelDialog.h"
 #include "ColormapEditor.h"
 #include "CopyBits.h"
 #include "FileDialog.h"
@@ -1017,17 +1017,17 @@ Viewer::colormapChanged() {
     }
 }
 
-class CCDListener : public CloseConfirmDialog::Listener {
+class YNCListener : public YesNoCancelDialog::Listener {
     private:
 	Viewer *viewer;
     public:
-	CCDListener(Viewer *viewer) {
+	YNCListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	virtual void yes() {
 	    // viewer->doSave() or something along those lines
 	    // keep in mind that while this method is executing,
-	    // the CloseConfirmDialog is still mapped and still
+	    // the YesNoCancelDialog is still mapped and still
 	    // modaling out all events to the Viewer (maybe it
 	    // should hide() as soon as the user clicks a button
 	    // or closes it)
@@ -1047,8 +1047,8 @@ Viewer::close() {
 	delete this;
 	return;
     }
-    CCDListener *ccdlistener = new CCDListener(this);
-    CloseConfirmDialog *ccd = new CloseConfirmDialog(this,
+    YNCListener *ccdlistener = new YNCListener(this);
+    YesNoCancelDialog *ccd = new YesNoCancelDialog(this,
 	    "Save changes before closing?", ccdlistener);
     ccd->raise();
     doBeep();

@@ -3,15 +3,15 @@
 #include <Xm/Label.h>
 #include <Xm/PushB.h>
 
-#include "CloseConfirmDialog.h"
+#include "YesNoCancelDialog.h"
 
 /* public::public */
-CloseConfirmDialog::Listener::Listener() {
+YesNoCancelDialog::Listener::Listener() {
     //
 }
 
 /* public::public virtual */
-CloseConfirmDialog::Listener::~Listener() {
+YesNoCancelDialog::Listener::~Listener() {
     //
 }
 
@@ -34,7 +34,7 @@ static void set_geom(Widget w, int x, int y, int width, int height) {
 
 
 /* public */
-CloseConfirmDialog::CloseConfirmDialog(Frame *parent, const char *message,
+YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 				       Listener *listener) 
 	: Frame(parent, true) {
     
@@ -143,33 +143,33 @@ CloseConfirmDialog::CloseConfirmDialog(Frame *parent, const char *message,
 }
 
 /* public virtual */
-CloseConfirmDialog::~CloseConfirmDialog() {
+YesNoCancelDialog::~YesNoCancelDialog() {
     delete listener;
 }
 
 /* public virtual */ void
-CloseConfirmDialog::close() {
+YesNoCancelDialog::close() {
     listener->cancel();
     delete this;
 }
 
 /* private static */ void
-CloseConfirmDialog::yesCB(Widget w, XtPointer ud, XtPointer cd) {
-    CloseConfirmDialog *This = (CloseConfirmDialog *) ud;
+YesNoCancelDialog::yesCB(Widget w, XtPointer ud, XtPointer cd) {
+    YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
     This->listener->yes();
     delete This;
 }
 
 /* private static */ void
-CloseConfirmDialog::noCB(Widget w, XtPointer ud, XtPointer cd) {
-    CloseConfirmDialog *This = (CloseConfirmDialog *) ud;
+YesNoCancelDialog::noCB(Widget w, XtPointer ud, XtPointer cd) {
+    YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
     This->listener->no();
     delete This;
 }
 
 /* private static */ void
-CloseConfirmDialog::cancelCB(Widget w, XtPointer ud, XtPointer cd) {
-    CloseConfirmDialog *This = (CloseConfirmDialog *) ud;
+YesNoCancelDialog::cancelCB(Widget w, XtPointer ud, XtPointer cd) {
+    YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
     This->listener->cancel();
     delete This;
 }

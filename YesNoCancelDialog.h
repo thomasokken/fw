@@ -3,7 +3,7 @@
 
 #include "Frame.h"
 
-class CloseConfirmDialog : public Frame {
+class YesNoCancelDialog : public Frame {
     public:
 	class Listener {
 	    public:
@@ -18,9 +18,9 @@ class CloseConfirmDialog : public Frame {
 	Listener *listener;
 
     public:
-	CloseConfirmDialog(Frame *parent, const char *message,
+	YesNoCancelDialog(Frame *parent, const char *message,
 			   Listener *listener);
-	virtual ~CloseConfirmDialog();
+	virtual ~YesNoCancelDialog();
 	virtual void close();
 
     private:
