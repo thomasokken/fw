@@ -1,6 +1,8 @@
 #include <Xm/Xm.h>
 #include <Xm/DrawingA.h>
 #include <X11/xpm.h>
+#include <stdlib.h>
+#include <time.h>
 
 #include "main.h"
 #include "Viewer.h"
@@ -33,20 +35,12 @@ int main(int argc, char **argv) {
 				 NULL,		/* fallback resources */
 				 NULL);		/* end of varargs list */
 
-    bool gray = false;
     for (int i = 1; i < argc; i++) {
 	int remove = 0;
-	if (strcmp(argv[i], "-gray") == 0
-		|| strcmp(argv[i], "-grey") == 0) {
-	    if (verbosity >= 1)
-		fprintf(stderr, "Forcing grayscale operation.\n");
-	    gray = true;
-	    remove = 1;
-	} else if (strncmp(argv[i], "-v", 2) == 0) {
+	if (strncmp(argv[i], "-v", 2) == 0) {
 	    char *p = argv[i] + 1;
 	    while (*p++ == 'v')
 		verbosity++;
-	    fprintf(stderr, "Verbosity level set to %d.\n", verbosity);
 	    remove = 1;
 	}
 
@@ -58,6 +52,17 @@ int main(int argc, char **argv) {
 	    i--;
 	}
     }
+
+    if (verbosity >= 1) {
+	fprintf(stderr, "Verbosity level set to %d.\n", verbosity);
+    }
+
+
+    // Seed random number generator so things like Kaos don't give you
+    // the same pictures every time...
+
+    srand(time(NULL));
+
     
     display = XtDisplay(appshell);
     screen = XtScreen(appshell);
@@ -69,8 +74,8 @@ int main(int argc, char **argv) {
     visual = DefaultVisual(display, screennumber);
     colormap = DefaultColormap(display, screennumber);
     depth = DefaultDepth(display, screennumber);
-    if (!gray && (visual->c_class == StaticColor
-		|| visual->c_class == PseudoColor)) {
+    if (visual->c_class == StaticColor
+		|| visual->c_class == PseudoColor) {
 	// Try to allocate as large as possible a color cube
 	cubesize = 1;
 	while (cubesize * cubesize * cubesize <= (1 << depth))
@@ -107,8 +112,7 @@ int main(int argc, char **argv) {
 	}
     }
 
-    if (gray
-	|| (visual->c_class == StaticGray || visual->c_class == GrayScale)
+    if ((visual->c_class == StaticGray || visual->c_class == GrayScale)
 	|| (visual->c_class == StaticColor || visual->c_class == PseudoColor)
 	    && colorcube == NULL) {
 	int realdepth = depth;
