@@ -1,6 +1,10 @@
 CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include
 LDFLAGS = -L/usr/X11R6/lib -Xlinker --export-dynamic
+
+# This works on Red Hat 7.3
 LOADLIBES = -lXm -lXpm -ljpeg -lpng
+# If that doesn't do it for you, try this:
+# LOADLIBES = -lXm -lXp -lXt -lX11 -lXmu -lXpm -ldl -ljpeg -lpng -lz
 
 # To link a "mostly" static version (everything linked statically,
 # except libc, libm, libstdc++, and libdl):
