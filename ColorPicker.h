@@ -14,12 +14,21 @@ class ColorPicker : public Frame {
     private:
 	Listener *listener;
 	Widget red, green, blue;
-	XImage *colorwheel_image;
-	XImage *colorslider_image;
-	XImage *oldandnew_image;
-	Widget colorwheel;
-	Widget colorslider;
-	Widget oldandnew;
+	XImage *wheel_image;
+	XImage *slider_image;
+	XImage *oldnew_image;
+	Widget wheel;
+	Widget slider;
+	Widget oldnew;
+	bool private_colormap;
+	bool private_colorcells;
+	Colormap private_6x6x6_cube;
+	unsigned long old_pixel;
+	unsigned long new_pixel;
+	unsigned char R, G, B, oldR, oldG, oldB;
+	float H, S, L;
+	char *rs, *gs, *bs;
+	bool disable_rgbChanged;
 
     public:
 	ColorPicker(Listener *listener, unsigned char r, unsigned char g,
@@ -27,6 +36,10 @@ class ColorPicker : public Frame {
 	virtual ~ColorPicker();
 
     private:
+	void rgbChanged();
 	static void ok(Widget w, XtPointer ud, XtPointer cd);
 	static void cancel(Widget w, XtPointer ud, XtPointer cd);
+	static void expose(Widget w, XtPointer ud, XtPointer cd);
+	static void modifyVerify(Widget w, XtPointer ud, XtPointer cd);
+	static void valueChanged(Widget w, XtPointer ud, XtPointer cd);
 };

@@ -188,7 +188,7 @@ class MixAction : public ChangeRangeAction {
 ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm)
 				    : Frame(false, true, false) {
     setTitle("Colormap Editor");
-    setIconTitle("CME");
+    setIconTitle("Colormap Editor");
 
     this->owner = owner;
     this->pm = pm;

@@ -25,6 +25,25 @@ struct FWPixmap {
 	pixels = NULL;
 	cmap = NULL;
     }
+
+    void put_pixel(int x, int y, unsigned long p) {
+	if (depth == 1) {
+	    unsigned char m = 1 << (x & 7);
+	    unsigned char *b = pixels + y * bytesperline + (x >> 3);
+	    if (p == 0)
+		*b &= ~m;
+	    else
+		*b |= m;
+	} else if (depth == 8) {
+	    pixels[y * bytesperline + x] = p;
+	} else if (depth == 24) {
+	    unsigned char *ptr = pixels + y * bytesperline + 4 * x;
+	    *ptr++ = 0;
+	    *ptr++ = p >> 16;
+	    *ptr++ = p >> 8;
+	    *ptr = p;
+	}
+    }
 };
 
 #endif
