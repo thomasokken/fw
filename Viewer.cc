@@ -979,12 +979,12 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    temp = nextdb; nextdb = db; db = temp;
 	    dR = dG = dB = 0;
 
-	    int X = dir == 1 ? LEFT : RIGHT - 1;
+	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
 	    for (int x = start; x != end; x += dir) {
 		if (depth == 1) {
-		    int p = ((pixels[y * bytesperline + (x >> 3)] >> (x & 7)) & 1)
-				* 255;
+		    int p = ((pixels[y * bytesperline + (x >> 3)]
+				>> (x & 7)) & 1) * 255;
 		    R[X] += p;
 		    G[X] += p;
 		    B[X] += p;
@@ -1013,7 +1013,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		}
 	    }
 
-	    if (YY == s - 1 || Y == BOTTOM - 1) {
+	    if (YY == s - 1 || y == bottom - 1) {
 		for (X = START; X != END; X += dir) {
 		    int w = W[X];
 		    int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
@@ -1188,12 +1188,12 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    temp = nextdk; nextdk = dk; dk = temp;
 	    dK = 0;
 
-	    int X = dir == 1 ? LEFT : RIGHT - 1;
+	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
 	    for (int x = start; x != end; x += dir) {
 		if (depth == 1) {
-		    int p = ((pixels[y * bytesperline + (x >> 3)] >> (x & 7)) & 1)
-				* 255;
+		    int p = ((pixels[y * bytesperline + (x >> 3)]
+				>> (x & 7)) & 1) * 255;
 		    R[X] += p;
 		} else if (depth == 8) {
 		    int p = pixels[y * bytesperline + x];
@@ -1220,7 +1220,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		}
 	    }
 
-	    if (YY == s - 1 || Y == BOTTOM - 1) {
+	    if (YY == s - 1 || y == bottom - 1) {
 		for (X = START; X != END; X += dir) {
 		    int w = W[X];
 		    int k;
