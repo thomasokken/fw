@@ -66,6 +66,7 @@ class Plugin {
 	void colormapChanged();
 	void start_prodding();
 	void stop_prodding();
+	static int debug_level();
 
     private:
 	static Boolean workproc(XtPointer ud);

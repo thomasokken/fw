@@ -237,6 +237,11 @@ Plugin::stop_prodding() {
     }
 }
 
+/* protected static */ int
+Plugin::debug_level() {
+    return g_verbosity;
+}
+
 /* private static */ Boolean
 Plugin::workproc(XtPointer ud) {
     static int n = 0;
