@@ -1,0 +1,6 @@
+The greyed-out image drawn by MarianiSilver::init_clone() is often not
+positioned correctly (usually (always?) too high, sometimes by quite a lot).
+
+ImageIO_PNG seems to screw up jdbcnav/web/snapshot[34].png. Those just happen
+to be 4-bit pictures. Coincidence? I think not. (Looks like it reads the pixel
+data without expanding the nybbles into bytes.)
