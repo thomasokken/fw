@@ -142,6 +142,7 @@ class Viewer : private Frame {
 	friend class UMListener;
 	friend class YNCListener;
 	friend class SIDListener;
+	friend class SIDListener2;
 };
 
 #endif

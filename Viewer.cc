@@ -1017,6 +1017,24 @@ Viewer::colormapChanged() {
     }
 }
 
+// SIDListener for use after "Close" or closing the window thru the WM.
+class SIDListener2 : public SaveImageDialog::Listener {
+    private:
+	Viewer *viewer;
+    public:
+	SIDListener2(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual void save(const char *filename, const char *filetype) {
+	    viewer->savedialog = NULL;
+	    if (viewer->save(filename, filetype))
+		delete viewer;
+	}
+	virtual void cancel() {
+	    viewer->savedialog = NULL;
+	}
+};
+		
 class YNCListener : public YesNoCancelDialog::Listener {
     private:
 	Viewer *viewer;
@@ -1026,10 +1044,19 @@ class YNCListener : public YesNoCancelDialog::Listener {
 	}
 	virtual void yes() {
 	    if (viewer->filename == NULL) {
-		// TODO -- SaveImageDialog needs to be different
-		// it should be modal, and support a nicer callback
-		// mechanism (Listener)
-		viewer->doBeep();
+		if (viewer->savedialog != NULL) {
+		    viewer->savedialog->raise();
+		    return;
+		}
+		viewer->savedialog = new SaveImageDialog(
+			viewer,
+			viewer->filename,
+			viewer->filetype,
+			new SIDListener2(viewer));
+		viewer->savedialog->setTitle("Save File");
+		viewer->savedialog->setIconTitle("Save File");
+		viewer->savedialog->setDirectory(&viewer->file_directory);
+		viewer->savedialog->raise();
 	    } else {
 		if (viewer->save(viewer->filename, viewer->filetype))
 		    delete viewer;
@@ -1464,6 +1491,7 @@ Viewer::doSave() {
 	save(filename, filetype);
 }
 
+// SIDListener for use after "Save As" (or "Save" when filename == NULL)
 class SIDListener : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
@@ -1479,6 +1507,7 @@ class SIDListener : public SaveImageDialog::Listener {
 	    viewer->savedialog = NULL;
 	}
 };
+
 
 /* private */ void
 Viewer::doSaveAs() {
