@@ -63,8 +63,20 @@ static const char *my_settings_layout[] = {
     "int",		// state
     "int",		// value
     "int",		// sp
-    "REPEAT 200",	// stack (50 levels of 4 ints each)
+    "REPEAT 4",		// tos
     "int",
+    "ENDREP",
+    "REPEAT 4",		// dirty
+    "int",
+    "ENDREP",
+    "int",		// hm
+    "int",		// vm
+    "int",		// hc
+    "int",		// vc
+    "REPEAT 50",	// stack (50 levels of 4 ints each)
+    "REPEAT 4",
+    "int",
+    "ENDREP",
     "ENDREP",
     "bool",		// finished
     NULL

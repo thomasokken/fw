@@ -346,9 +346,14 @@ SettingsHelper::SettingsHelper(Plugin *plugin) {
 	    // Empty line
 	    crash();
 	line[pos] = 0;
-	char *rest = line + pos + 1;
-	while (*rest != 0 && isspace(*rest))
-	    rest++;
+	char *rest;
+	if (pos == length)
+	    rest = line + pos;
+	else {
+	    rest = line + pos + 1;
+	    while (*rest != 0 && isspace(*rest))
+		rest++;
+	}
 
 	// The remainder of the line is used as the field label (in single
 	// quotes), or in the case of the REPEAT keyword, as the repeat
@@ -593,7 +598,7 @@ SettingsHelper::appendstring(const char *s) {
 
 /* private */ bool
 SettingsHelper::readbool() {
-    return readchar() != 'T';
+    return readchar() == 'T';
 }
 
 /* private */ int
