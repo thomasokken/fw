@@ -15,7 +15,6 @@
 #include "FWPixmap.h"
 #include "main.h"
 #include "util.h"
-#include "kludges.h"
 
 #define WHEEL_DIAMETER 150
 #define CROSS_SIZE 10

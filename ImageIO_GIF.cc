@@ -9,7 +9,6 @@
 #include "FWPixmap.h"
 #include "main.h"
 #include "util.h"
-#include "kludges.h"
 
 /* TODO:
  * GIF87a support is complete, as far as I have been able to determine.

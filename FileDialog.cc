@@ -1,12 +1,12 @@
 #include <Xm/Xm.h>
 #include <Xm/FileSB.h>
 #include <Xm/Text.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "FileDialog.h"
 #include "main.h"
 #include "util.h"
-#include "kludges.h"
 
 
 /* public::public */

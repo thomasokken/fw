@@ -12,7 +12,6 @@
 #include "Viewer.h"
 #include "main.h"
 #include "util.h"
-#include "kludges.h"
 
 #include "About.xbm"
 

@@ -21,7 +21,6 @@
 #include "UndoManager.h"
 #include "main.h"
 #include "util.h"
-#include "kludges.h"
 
 #include "FW.help"
 

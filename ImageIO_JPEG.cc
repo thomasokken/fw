@@ -12,7 +12,6 @@
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "util.h"
-#include "kludges.h"
 
 
 #define MSGLEN 1024

@@ -6,7 +6,6 @@
 #include "SettingsHelper.h"
 #include "Plugin.h"
 #include "util.h"
-#include "kludges.h"
 
 
 class Field {
