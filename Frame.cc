@@ -1,5 +1,6 @@
 #include <Xm/Xm.h>
 #include <Xm/AtomMgr.h>
+#include <Xm/DialogS.h>
 #include <Xm/Form.h>
 #include <Xm/MwmUtil.h>
 #include <Xm/Protocols.h>
@@ -34,6 +35,7 @@ Frame::taskbar_height = 0;
 Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
     this->centered = centered;
     this->menu = NULL;
+    is_dialog = false;
 
     Arg args[11];
     int nargs = 0;
@@ -105,6 +107,37 @@ Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
 				      args, nargs);
 }
 
+/* public */
+Frame::Frame(Frame *parent, bool modal) {
+    this->centered = false;
+    this->menu = NULL;
+    is_dialog = true;
+
+    Arg args[11];
+    int nargs = 0;
+    XtSetArg(args[nargs], XmNtitle, "Frame"); nargs++;
+    if (modal) {
+	XtSetArg(args[nargs], XmNdialogStyle,
+		 XmDIALOG_PRIMARY_APPLICATION_MODAL);
+	nargs++;
+    }
+    XtSetArg(args[nargs], XmNdeleteResponse, XmDO_NOTHING); nargs++;
+
+    container = XmCreateFormDialog(parent->toplevel, "Dialog", args, nargs);
+    toplevel = XtParent(container);
+
+    XmAddWMProtocolCallback(toplevel,
+			    XmInternAtom(g_display, "WM_DELETE_WINDOW", False),
+			    deleteWindow,
+			    (XtPointer) this);
+
+    XtAddEventHandler(toplevel, 0, True,
+		      (XtEventHandler) _XEditResCheckMessages,
+		      NULL);
+
+    menubar = NULL;
+}
+
 /* public virtual */
 Frame::~Frame() {
     if (menu != NULL)
@@ -114,6 +147,11 @@ Frame::~Frame() {
 
 /* public */ void
 Frame::raise() {
+    if (is_dialog) {
+	XtManageChild(container);
+	return;
+    }
+
     if (!XtIsRealized(toplevel)) {
 	if (menu != NULL)
 	    menu->makeWidgets(menubar);
@@ -182,7 +220,10 @@ Frame::raise() {
 
 /* public */ void
 Frame::hide() {
-    XWithdrawWindow(g_display, XtWindow(toplevel), g_screennumber);
+    if (is_dialog)
+	XtUnmanageChild(container);
+    else
+	XWithdrawWindow(g_display, XtWindow(toplevel), g_screennumber);
 }
 
 /* public */ void

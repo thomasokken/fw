@@ -12,6 +12,7 @@ class Frame {
 	Widget container;
 	Menu *menu;
 	bool centered;
+	bool is_dialog;
 	static bool decor_known;
 	static int decor_width, decor_height;
 	static bool taskbar_known;
@@ -19,6 +20,7 @@ class Frame {
 
     public:
 	Frame(bool resizable, bool centered, bool hasMenuBar);
+	Frame(Frame *parent, bool modal);
 	virtual ~Frame();
 	void raise();
 	void hide();

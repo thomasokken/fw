@@ -8,6 +8,7 @@
 #include <string.h>
 
 #include "Viewer.h"
+#include "CloseConfirmDialog.h"
 #include "ColormapEditor.h"
 #include "CopyBits.h"
 #include "FileDialog.h"
@@ -46,6 +47,9 @@ Viewer::inner_decor_width = 0;
 
 /* private static */ int
 Viewer::inner_decor_height = 0;
+
+/* private static */ bool
+Viewer::disable_new_and_open = false;
 
 
 /* public */
@@ -1013,9 +1017,41 @@ Viewer::colormapChanged() {
     }
 }
 
+class CCDListener : public CloseConfirmDialog::Listener {
+    private:
+	Viewer *viewer;
+    public:
+	CCDListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual void yes() {
+	    // viewer->doSave() or something along those lines
+	    // keep in mind that while this method is executing,
+	    // the CloseConfirmDialog is still mapped and still
+	    // modaling out all events to the Viewer (maybe it
+	    // should hide() as soon as the user clicks a button
+	    // or closes it)
+	    viewer->doBeep();
+	}
+	virtual void no() {
+	    delete viewer;
+	}
+	virtual void cancel() {
+	    // do nothing
+	}
+};
+
 /* private virtual */ void
 Viewer::close() {
-    delete this;
+    if (!dirty && undomanager->getCurrentId() == saved_undo_id) {
+	delete this;
+	return;
+    }
+    CCDListener *ccdlistener = new CCDListener(this);
+    CloseConfirmDialog *ccd = new CloseConfirmDialog(this,
+	    "Save changes before closing?", ccdlistener);
+    ccd->raise();
+    doBeep();
 }
 
 /* private */ bool
@@ -1378,16 +1414,28 @@ Viewer::doBeep() {
 
 /* private */ void
 Viewer::doNew(const char *pluginname) {
+    if (disable_new_and_open) {
+	doBeep();
+	return;
+    }
     new Viewer(pluginname);
 }
 
 /* private */ void
 Viewer::doClone() {
+    if (disable_new_and_open) {
+	doBeep();
+	return;
+    }
     new Viewer(plugin);
 }
 
 /* private */ void
 Viewer::doOpen() {
+    if (disable_new_and_open) {
+	doBeep();
+	return;
+    }
     FileDialog *opendialog = new FileDialog();
     opendialog->setTitle("Open File");
     opendialog->setIconTitle("Open File");

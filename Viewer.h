@@ -50,6 +50,7 @@ class Viewer : private Frame {
 	static char *colormap_directory;
 	static bool inner_decor_known;
 	static int inner_decor_width, inner_decor_height;
+	static bool disable_new_and_open;
 
     public:
 	Viewer(const char *pluginname);
@@ -140,6 +141,7 @@ class Viewer : private Frame {
 
 	friend class CMEOwner;
 	friend class UMListener;
+	friend class CCDListener;
 };
 
 #endif

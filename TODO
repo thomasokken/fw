@@ -64,3 +64,19 @@ container? May not be possible to change the order in which the widgets are
 added to the container, because of the XmForm constraints... But the tabbing
 order can be overridden using some resource. Check xmlgui if unsure; I seem to
 remember doing just that right there.
+
+Isn't it possible to get rid of the Viewer::deleteLater() ugliness by using a
+factory method instead of constructors, and returning error status etc.?
+
+Implement multithreading support. This should probably be a compile-time option
+(because it may be hard to make it portable, and because there may be a speed
+penalty which makes it unattractive on single-CPU systems -- depends how highly
+you value overall speed vs. UI responsiveness).
+Implementing multithreading seems like it should be a simple matter of changing
+Plugin::start_working() and Plugin::stop_working(), and make Plugin::paint() go
+through an XtWorkProc to invoke Viewer::paint() (a la
+SwingUtilities.invokeLater() in Java -- keep all Xt processing on the main
+event loop's thread). Of course if XtAppAddWorkProc() isn't thread-safe, we
+have a problem, but that would just be sick, now wouldn't it? And there should
+be ways around that too (there's always the truly desperate hack using
+XtAppAddInput() -- yuck, but it will do the job and *without* any polling).
