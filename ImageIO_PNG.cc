@@ -233,11 +233,13 @@ ImageIO_PNG::read(const char *filename, char **plugin_name,
 	}
     }
 
-    if (color_type == PNG_COLOR_TYPE_GRAY
-	    && (bit_depth == 2 || bit_depth == 4))
-	png_set_gray_1_2_4_to_8(png_ptr);
-    if (color_type == PNG_COLOR_TYPE_GRAY && bit_depth == 1)
-	png_set_packswap(png_ptr);
+    if (color_type == PNG_COLOR_TYPE_GRAY) {
+	if (bit_depth == 1)
+	    png_set_packswap(png_ptr);
+	else if (bit_depth == 2 || bit_depth == 4)
+	    png_set_gray_1_2_4_to_8(png_ptr);
+    } else if (bit_depth < 8)
+	png_set_packing(png_ptr);
     if (bit_depth == 16)
 	png_set_strip_16(png_ptr);
     if (color_type & PNG_COLOR_MASK_ALPHA)

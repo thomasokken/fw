@@ -11,7 +11,7 @@
 
 
 static bool inited = false;
-static int rmax, rmult, bmax, bmult, gmax, gmult;
+static unsigned int rmax, rmult, bmax, bmult, gmax, gmult;
 
 static void calc_rgb_masks() {
     if (inited)
@@ -659,7 +659,7 @@ CopyBits::copy_reduced(int factor,
 		       FWPixmap *pm, XImage *image,
 		       bool priv_cmap, bool no_grays, bool dither,
 		       int top, int left, int bottom, int right,
-		       InverseCMap *invcmap = NULL) {
+		       InverseCMap *invcmap /* = NULL */) {
     calc_rgb_masks();
 
     int TOP = top / factor;
