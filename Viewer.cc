@@ -16,6 +16,9 @@
 /* private static */ int
 Viewer::instances = 0;
 
+/* private static */ GC
+Viewer::gc = None;
+
 /* public */
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
@@ -94,9 +97,9 @@ Viewer::finish_init() {
 	
     Menu *filemenu = new Menu;
     filemenu->addMenu("New", NULL, NULL, "File.New", pluginmenu);
-    filemenu->addCommand("Open...", NULL, NULL, "File.Open");
+    filemenu->addCommand("Open...", NULL, "Ctrl+O", "File.Open");
     filemenu->addSeparator();
-    filemenu->addCommand("Close", NULL, NULL, "File.Close");
+    filemenu->addCommand("Close", NULL, "Ctrl+W", "File.Close");
     filemenu->addCommand("Save", NULL, NULL, "File.Save");
     filemenu->addCommand("Save As...", NULL, NULL, "File.SaveAs");
     filemenu->addCommand("Get Info...", NULL, NULL, "File.GetInfo");
@@ -333,7 +336,12 @@ Viewer::finish_init() {
     sprintf(buf, "%d", scale);
     scalemenu->setRadioValue("Windows.Scale", buf, false);
 
-    selection_active = false;
+    selection_in_progress = false;
+    selection_visible = true;
+    sel_x1 = 10;
+    sel_y1 = 50;
+    sel_x2 = 200;
+    sel_y2 = 100;
 
     bool bitmap_ok = depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
@@ -424,6 +432,26 @@ Viewer::paint(int top, int left, int bottom, int right) {
 	paint_enlarged(top, left, bottom, right);
     else
 	paint_reduced(top, left, bottom, right);
+    if (selection_visible) {
+	int s_top, s_left, s_bottom, s_right;
+	if (sel_x1 > sel_x2) {
+	    s_left = sel_x2;
+	    s_right = sel_x1;
+	} else {
+	    s_left = sel_x1;
+	    s_right = sel_x2;
+	}
+	if (sel_y1 > sel_y2) {
+	    s_top = sel_y2;
+	    s_bottom = sel_y1;
+	} else {
+	    s_top = sel_y1;
+	    s_bottom = sel_y2;
+	}
+	if (top <= s_bottom && s_top <= bottom
+		&& left <= s_right && s_left <= right)
+	    draw_selection();
+    }
 }
 
 /* private */ void
@@ -1651,6 +1679,118 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	      RIGHT - LEFT, BOTTOM - TOP);
 }
 
+/* private */ void
+Viewer::draw_selection() {
+    if (gc == None)
+	gc = XCreateGC(g_display, g_rootwindow, 0, NULL);
+    int s_top, s_left, s_bottom, s_right;
+    if (sel_x1 > sel_x2) {
+	s_left = sel_x2;
+	s_right = sel_x1;
+    } else {
+	s_left = sel_x1;
+	s_right = sel_x2;
+    }
+    if (sel_y1 > sel_y2) {
+	s_top = sel_y2;
+	s_bottom = sel_y1;
+    } else {
+	s_top = sel_y1;
+	s_bottom = sel_y2;
+    }
+    int x, y, w, h;
+    if (scale <= 1) {
+	if (scale == 1) {
+	    x = s_left;
+	    y = s_top;
+	    w = s_right - s_left - 1;
+	    h = s_bottom - s_top - 1;
+	} else {
+	    int s = -scale;
+	    x = s_left / s;
+	    y = s_top / s;
+	    w = (s_right / s) - x - 1;
+	    h = (s_bottom / s) - x - 1;
+	}
+	XSetLineAttributes(g_display, gc, 1, LineOnOffDash, CapButt, JoinMiter);
+	XSetDashes(g_display, gc, 0, "\004\004", 2);
+	XSetForeground(g_display, gc, g_white);
+	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+	XSetDashes(g_display, gc, 4, "\004\004", 2);
+	XSetForeground(g_display, gc, g_black);
+	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+    } else {
+	x = s_left * scale + scale / 2;
+	y = s_top * scale + scale / 2;
+	w = (s_right - s_left - 1) * scale;
+	h = (s_bottom - s_top - 1) * scale;
+	XSetLineAttributes(g_display, gc, scale, LineOnOffDash, CapButt, JoinMiter);
+	char dashes[2];
+	dashes[0] = dashes[1] = 4 * scale;
+	XSetDashes(g_display, gc, 0, dashes, 2);
+	XSetForeground(g_display, gc, g_white);
+	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+	XSetDashes(g_display, gc, 4 * scale, dashes, 2);
+	XSetForeground(g_display, gc, g_black);
+	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+    }
+}
+
+/* private */ void
+Viewer::erase_selection() {
+    int s_top, s_left, s_bottom, s_right;
+    if (sel_x1 > sel_x2) {
+	s_left = sel_x2;
+	s_right = sel_x1;
+    } else {
+	s_left = sel_x1;
+	s_right = sel_x2;
+    }
+    if (sel_y1 > sel_y2) {
+	s_top = sel_y2;
+	s_bottom = sel_y1;
+    } else {
+	s_top = sel_y1;
+	s_bottom = sel_y2;
+    }
+    int x, y, w, h;
+    if (scale <= 1) {
+	if (scale == 1) {
+	    x = s_left;
+	    y = s_top;
+	    w = s_right - s_left;
+	    h = s_bottom - s_top;
+	} else {
+	    int s = -scale;
+	    x = s_left / s;
+	    y = s_top / s;
+	    w = (s_right / s) - x;
+	    h = (s_bottom / s) - x;
+	}
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x, y, x, y, w, 1);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x + w - 1, y + 1, x + w - 1, y + 1, 1, h - 1);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x, y + 1, x, y + 1, 1, h - 1);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x + 1, y + h - 1, x + 1, y + h - 1, w - 2, 1);
+    } else {
+	x = s_left * scale;
+	y = s_top * scale;
+	w = (s_right - s_left) * scale;
+	h = (s_bottom - s_top) * scale;
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x, y, x, y, w, scale);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x + w - scale, y + scale, x + w - scale, y + scale, scale, h - scale);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x, y + scale, x, y + scale, scale, h - scale);
+	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+		  x + scale, y + h - scale, x + scale, y + h - scale, w - 2, scale);
+    }
+}
+
 /* public */ void
 Viewer::colormapChanged() {
     if (priv_cmap == None) {
@@ -1756,6 +1896,8 @@ Viewer::expose(Widget w, XtPointer ud, XtPointer cd) {
 /* private */ void
 Viewer::expose2(int x, int y, int w, int h) {
     XPutImage(g_display, XtWindow(drawingarea), g_gc, image, x, y, x, y, w, h);
+    if (selection_visible)
+	draw_selection();
 }
 
 /* private static */ void
@@ -1766,40 +1908,27 @@ Viewer::input(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 Viewer::input2(XEvent *event) {
-    /*
     switch (event->type) {
-	case 2:
-	    printf("KeyPress: state=%d keycode=%d\n", event->xkey.state,
-						      event->xkey.keycode);
+	case KeyPress:
+	    // event->xkey.state, event->xkey.keycode
+	    erase_selection();
 	    break;
-	case 3:
-	    printf("KeyRelease: state=%d keycode=%d\n", event->xkey.state,
-							event->xkey.keycode);
+	case KeyRelease:
+	    // event->xkey.state, event->xkey.keycode
+	    draw_selection();
 	    break;
-	case 4:
-	    printf("ButtonPress: pos=(%d, %d) state=%d button=%d\n",
-						    event->xbutton.x,
-						    event->xbutton.y,
-						    event->xbutton.state,
-						    event->xbutton.button);
+	case ButtonPress:
+	    // event->xbutton.x, event->xbutton.y,
+	    // event->xbutton.state, event->xbutton.button
 	    break;
-	case 5:
-	    printf("ButtonPress: pos=(%d, %d) state=%d button=%d\n",
-						    event->xbutton.x,
-						    event->xbutton.y,
-						    event->xbutton.state,
-						    event->xbutton.button);
+	case ButtonRelease:
+	    // event->xbutton.x, event->xbutton.y,
+	    // event->xbutton.state, event->xbutton.button);
 	    break;
-	case 6:
-	    printf("MotionNotify: pos=(%d, %d)\n", event->xmotion.x,
-						   event->xmotion.y);
+	case MotionNotify:
+	    // event->xmotion.x, event->xmotion.y
 	    break;
-	case 7:
-	    printf("Unexpected event!\n");
-	    fflush(stdout);
-	    core();
     }
-    */
 }
 
 /* private static */ void

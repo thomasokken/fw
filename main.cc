@@ -24,6 +24,7 @@ Visual *g_visual;
 Colormap g_colormap;
 int g_depth;
 GC g_gc;
+unsigned long g_black, g_white;
 Pixmap g_icon, g_iconmask;
 XColor *g_colorcube = NULL, *g_grayramp = NULL;
 int g_cubesize, g_rampsize;
@@ -276,6 +277,8 @@ int main(int argc, char **argv) {
     g_visual = DefaultVisual(g_display, g_screennumber);
     g_colormap = DefaultColormap(g_display, g_screennumber);
     g_depth = DefaultDepth(g_display, g_screennumber);
+    g_black = BlackPixel(g_display, g_screennumber);
+    g_white = WhitePixel(g_display, g_screennumber);
 
     if (g_visual->c_class == StaticColor
 		|| g_visual->c_class == PseudoColor) {
@@ -354,9 +357,9 @@ int main(int argc, char **argv) {
 	while (g_grayramp == NULL) {
 	    g_grayramp = new XColor[g_rampsize];
 	    if (g_rampsize == 2) {
-		g_grayramp[0].pixel = BlackPixel(g_display, g_screennumber);
+		g_grayramp[0].pixel = g_black;
 		g_grayramp[0].red = g_grayramp[0].green = g_grayramp[0].blue = 0;
-		g_grayramp[1].pixel = WhitePixel(g_display, g_screennumber);
+		g_grayramp[1].pixel = g_white;
 		g_grayramp[1].red = g_grayramp[1].green = g_grayramp[1].blue = 65535;
 		break;
 	    }
@@ -391,8 +394,8 @@ int main(int argc, char **argv) {
     }
 
     XGCValues values;
-    values.foreground = WhitePixel(g_display, g_screennumber);
-    values.background = BlackPixel(g_display, g_screennumber);
+    values.foreground = g_white;
+    values.background = g_black;
     g_gc = XCreateGC(g_display,
 		   g_rootwindow,
 		   GCForeground | GCBackground,

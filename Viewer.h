@@ -15,13 +15,15 @@ class Viewer : private Frame {
 	Colormap priv_cmap;
 	int scale;
 	bool dithering;
-	bool selection_active;
 	bool direct_copy;
-	int sel_top, sel_left, sel_bottom, sel_right;
+	bool selection_visible;
+	bool selection_in_progress;
+	int sel_x1, sel_y1, sel_x2, sel_y2;
 	Menu *optionsmenu;
 	Menu *scalemenu;
 	Widget clipwindow;
 	static int instances;
+	static GC gc;
 
     public:
 	// These are public so Viewer can access them
@@ -50,6 +52,8 @@ class Viewer : private Frame {
 	void paint_unscaled(int top, int left, int bottom, int right);
 	void paint_enlarged(int top, int left, int bottom, int right);
 	void paint_reduced(int top, int left, int bottom, int right);
+	void draw_selection();
+	void erase_selection();
 
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();
