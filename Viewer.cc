@@ -126,7 +126,7 @@ Viewer::finish_init() {
     Menu *topmenu = new Menu;
 
     Menu *pluginmenu = new Menu;
-    pluginmenu->addCommand("Clone", NULL, "Ctrl+R", "File.Clone");
+    pluginmenu->addCommand("Clone", NULL, "Ctrl+N", "File.Clone");
     pluginmenu->addSeparator();
     char **plugins = Plugin::list();
     if (plugins == NULL)
@@ -154,11 +154,11 @@ Viewer::finish_init() {
     topmenu->addMenu("File", "F", NULL, "File", filemenu);
 
     Menu *editmenu = new Menu;
-    editmenu->addCommand("Undo", NULL, NULL, "Edit.Undo");
+    editmenu->addCommand("Undo", NULL, "Ctrl+Z", "Edit.Undo");
     editmenu->addSeparator();
-    editmenu->addCommand("Cut", NULL, NULL, "Edit.Cut");
-    editmenu->addCommand("Copy", NULL, NULL, "Edit.Copy");
-    editmenu->addCommand("Paste", NULL, NULL, "Edit.Paste");
+    editmenu->addCommand("Cut", NULL, "Ctrl+X", "Edit.Cut");
+    editmenu->addCommand("Copy", NULL, "Ctrl+C", "Edit.Copy");
+    editmenu->addCommand("Paste", NULL, "Ctrl+V", "Edit.Paste");
     editmenu->addCommand("Clear", NULL, NULL, "Edit.Clear");
     topmenu->addMenu("Edit", NULL, NULL, "Edit", editmenu);
 
@@ -181,7 +181,7 @@ Viewer::finish_init() {
 
     optionsmenu = new Menu;
     optionsmenu->addToggle("Private Colormap", NULL, "Ctrl+M", "Options.PrivateColormap");
-    optionsmenu->addToggle("Dither", NULL, NULL, "Options.Dither");
+    optionsmenu->addToggle("Dither", NULL, "Ctrl+D", "Options.Dither");
     optionsmenu->addSeparator();
     optionsmenu->addToggle("Notify When Ready", NULL, NULL, "Options.Notify");
     topmenu->addMenu("Options", NULL, NULL, "Options", optionsmenu);
