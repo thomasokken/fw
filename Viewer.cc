@@ -48,9 +48,6 @@ Viewer::inner_decor_width = 0;
 /* private static */ int
 Viewer::inner_decor_height = 0;
 
-/* private static */ bool
-Viewer::disable_new_and_open = false;
-
 
 /* public */
 Viewer::Viewer(const char *pluginname)
@@ -131,7 +128,6 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     id = idcount++;
     image = NULL;
     colormap = g_colormap;
-    savedialog = NULL;
     cme = NULL;
     finished = false;
     untitled = true;
@@ -597,10 +593,6 @@ Viewer::finish_init() {
 
 /* public */
 Viewer::~Viewer() {
-    if (savedialog != NULL) {
-	savedialog->close();
-	savedialog = NULL;
-    }
     if (cme != NULL) {
 	cme->close();
 	cme = NULL;
@@ -1021,52 +1013,65 @@ Viewer::colormapChanged() {
 class SIDListener2 : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
+	SaveImageDialog *sid;
     public:
 	SIDListener2(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
+	void setSID(SaveImageDialog *sid) {
+	    this->sid = sid;
+	}
 	virtual void save(const char *filename, const char *filetype) {
-	    viewer->savedialog = NULL;
-	    if (viewer->save(filename, filetype))
+	    delete sid;
+	    if (viewer->save(filename, filetype)) {
 		delete viewer;
+	    }
+	    delete this;
 	}
 	virtual void cancel() {
-	    viewer->savedialog = NULL;
+	    delete sid;
+	    delete this;
 	}
 };
 		
 class YNCListener : public YesNoCancelDialog::Listener {
     private:
 	Viewer *viewer;
+	YesNoCancelDialog *ync;
     public:
 	YNCListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
+	void setYNC(YesNoCancelDialog *ync) {
+	    this->ync = ync;
+	}
 	virtual void yes() {
+	    delete ync;
 	    if (viewer->filename == NULL) {
-		if (viewer->savedialog != NULL) {
-		    viewer->savedialog->raise();
-		    return;
-		}
-		viewer->savedialog = new SaveImageDialog(
+		SIDListener2 *sidlistener = new SIDListener2(viewer);
+		SaveImageDialog *sid = new SaveImageDialog(
 			viewer,
 			viewer->filename,
 			viewer->filetype,
-			new SIDListener2(viewer));
-		viewer->savedialog->setTitle("Save File");
-		viewer->savedialog->setIconTitle("Save File");
-		viewer->savedialog->setDirectory(&viewer->file_directory);
-		viewer->savedialog->raise();
+			sidlistener);
+		sidlistener->setSID(sid);
+		sid->setTitle("Save File");
+		sid->setDirectory(&viewer->file_directory);
+		sid->raise();
 	    } else {
 		if (viewer->save(viewer->filename, viewer->filetype))
 		    delete viewer;
 	    }
+	    delete this;
 	}
 	virtual void no() {
+	    delete ync;
 	    delete viewer;
+	    delete this;
 	}
 	virtual void cancel() {
-	    // do nothing
+	    delete ync;
+	    delete this;
 	}
 };
 
@@ -1076,11 +1081,14 @@ Viewer::close() {
 	delete this;
 	return;
     }
-    YNCListener *ccdlistener = new YNCListener(this);
-    YesNoCancelDialog *ccd = new YesNoCancelDialog(this,
-	    "Save changes before closing?", ccdlistener);
-    ccd->raise();
-    doBeep();
+    YNCListener *ynclistener = new YNCListener(this);
+    YesNoCancelDialog *ync = new YesNoCancelDialog(
+	    this,
+	    "Save changes before closing?",
+	    ynclistener);
+    ynclistener->setYNC(ync);
+    ync->setTitle("Save Changes?");
+    ync->raise();
 }
 
 /* private */ bool
@@ -1448,28 +1456,16 @@ Viewer::doBeep() {
 
 /* private */ void
 Viewer::doNew(const char *pluginname) {
-    if (disable_new_and_open) {
-	doBeep();
-	return;
-    }
     new Viewer(pluginname);
 }
 
 /* private */ void
 Viewer::doClone() {
-    if (disable_new_and_open) {
-	doBeep();
-	return;
-    }
     new Viewer(plugin);
 }
 
 /* private */ void
 Viewer::doOpen() {
-    if (disable_new_and_open) {
-	doBeep();
-	return;
-    }
     FileDialog *opendialog = new FileDialog(NULL);
     opendialog->setTitle("Open File");
     opendialog->setIconTitle("Open File");
@@ -1495,32 +1491,35 @@ Viewer::doSave() {
 class SIDListener : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
+	SaveImageDialog *sid;
     public:
 	SIDListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
+	void setSID(SaveImageDialog *sid) {
+	    this->sid = sid;
+	}
 	virtual void save(const char *filename, const char *filetype) {
+	    delete sid;
 	    viewer->save(filename, filetype);
-	    viewer->savedialog = NULL;
+	    delete this;
 	}
 	virtual void cancel() {
-	    viewer->savedialog = NULL;
+	    delete sid;
+	    delete this;
 	}
 };
 
 
 /* private */ void
 Viewer::doSaveAs() {
-    if (savedialog != NULL) {
-	savedialog->raise();
-	return;
-    }
-    savedialog = new SaveImageDialog(this, filename, filetype,
-				     new SIDListener(this));
-    savedialog->setTitle("Save File");
-    savedialog->setIconTitle("Save File");
-    savedialog->setDirectory(&file_directory);
-    savedialog->raise();
+    SIDListener *sidlistener = new SIDListener(this);
+    SaveImageDialog *sid = new SaveImageDialog(this, filename,
+					       filetype, sidlistener);
+    sidlistener->setSID(sid);
+    sid->setTitle("Save File");
+    sid->setDirectory(&file_directory);
+    sid->raise();
 }
 
 /* private */ void
@@ -1546,8 +1545,110 @@ Viewer::doPrint() {
 
 /* private */ void
 Viewer::doQuit() {
-    // FIXME
-    exit(0);
+    doQuit2();
+}
+
+// SIDListener for use after "Quit"
+class SIDListener3 : public SaveImageDialog::Listener {
+    private:
+	Viewer *viewer;
+	SaveImageDialog *sid;
+    public:
+	SIDListener3(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	void setSID(SaveImageDialog *sid) {
+	    this->sid = sid;
+	}
+	virtual void save(const char *filename, const char *filetype) {
+	    delete sid;
+	    if (viewer->save(filename, filetype)) {
+		delete viewer;
+		Viewer::doQuit2();
+	    }
+	    delete this;
+	}
+	virtual void cancel() {
+	    delete sid;
+	    delete this;
+	}
+};
+
+		
+class YNCListener2 : public YesNoCancelDialog::Listener {
+    private:
+	Viewer *viewer;
+	YesNoCancelDialog *ync;
+    public:
+	YNCListener2(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	void setYNC(YesNoCancelDialog *ync) {
+	    this->ync = ync;
+	}
+	virtual void yes() {
+	    delete ync;
+	    if (viewer->filename == NULL) {
+		SIDListener3 *sidlistener = new SIDListener3(viewer);
+		SaveImageDialog *sid = new SaveImageDialog(
+			viewer,
+			viewer->filename,
+			viewer->filetype,
+			sidlistener);
+		sidlistener->setSID(sid);
+		sid->setTitle("Save File");
+		sid->setDirectory(&viewer->file_directory);
+		viewer->raise();
+		sid->raise();
+		return;
+	    } else {
+		if (viewer->save(viewer->filename, viewer->filetype)) {
+		    delete viewer;
+		    Viewer::doQuit2();
+		}
+	    }
+	    delete this;
+	}
+	virtual void no() {
+	    delete ync;
+	    delete viewer;
+	    Viewer::doQuit2();
+	    delete this;
+	}
+	virtual void cancel() {
+	    delete ync;
+	    delete this;
+	}
+};
+
+/* private static */ void
+Viewer::doQuit2() {
+    while (true) {
+	int sz = instances->size();
+	if (sz == 0)
+	    exit(0);
+
+	// TODO -- it would be nicer to start with the one that's closest
+	// to the top of the window stacking order, but that's too much of
+	// a pain for me to code right now.
+
+	Viewer *viewer = (Viewer *) instances->get(sz - 1);
+	if (!viewer->dirty && viewer->undomanager->getCurrentId()
+				== viewer->saved_undo_id) {
+	    delete viewer;
+	    continue;
+	}
+
+	char buf[1024];
+	snprintf(buf, 1024, "Save changes to \"%s\" before quitting?",
+		 viewer->filename == NULL ? "Untitled" : viewer->filename);
+	YNCListener2 *ynclistener = new YNCListener2(viewer);
+	YesNoCancelDialog *ync = new YesNoCancelDialog(viewer,
+					    buf, ynclistener);
+	ynclistener->setYNC(ync);
+	ync->raise();
+	return;
+    }
 }
 
 /* private */ void

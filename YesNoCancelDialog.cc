@@ -157,36 +157,28 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 
 /* public virtual */
 YesNoCancelDialog::~YesNoCancelDialog() {
-    delete listener;
+    //
 }
 
 /* public virtual */ void
 YesNoCancelDialog::close() {
-    hide();
     listener->cancel();
-    delete this;
 }
 
 /* private static */ void
 YesNoCancelDialog::yesCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
-    This->hide();
     This->listener->yes();
-    delete This;
 }
 
 /* private static */ void
 YesNoCancelDialog::noCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
-    This->hide();
     This->listener->no();
-    delete This;
 }
 
 /* private static */ void
 YesNoCancelDialog::cancelCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
-    This->hide();
     This->listener->cancel();
-    delete This;
 }

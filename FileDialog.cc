@@ -29,6 +29,12 @@ FileDialog::~FileDialog() {
     //
 }
 
+/* public virtual */ void
+FileDialog::close() {
+    if (cancelledCB != NULL)
+	cancelledCB(cancelledClosure);
+}
+
 /* public */ void
 FileDialog::setDirectory(char **directory) {
     this->directory = directory;
@@ -84,5 +90,4 @@ FileDialog::okOrCancel(Widget w, XtPointer ud, XtPointer cd) {
 	if (This->cancelledCB != NULL)
 	    This->cancelledCB(This->cancelledClosure);
     }
-    This->close();
 }

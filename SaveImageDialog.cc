@@ -93,6 +93,11 @@ SaveImageDialog::~SaveImageDialog() {
     delete typeMenu;
 }
 
+/* public virtual */ void
+SaveImageDialog::close() {
+    listener->cancel();
+}
+
 /* private static */ void
 SaveImageDialog::typeMenuCB(void *closure, const char *id) {
     SaveImageDialog *This = (SaveImageDialog *) closure;

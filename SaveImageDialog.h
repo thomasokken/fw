@@ -24,6 +24,7 @@ class SaveImageDialog : public FileDialog {
 	SaveImageDialog(Frame *parent, const char *file, const char *type,
 			Listener *listener);
 	virtual ~SaveImageDialog();
+	virtual void close();
 
     private:
 	static void typeMenuCB(void *closure, const char *id);

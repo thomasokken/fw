@@ -1,14 +1,28 @@
-ColorPicker: when constraining HSL coordinates (the MotionNotify case), make
-sure the actual screen coordinates (cross_[xy], slider_x) are also constrained!
+The Mariani-Silver code in Mandelbrot, Newton, Julia, and Polynomial, should be
+moved to a base class, like EDPLib in FW 1.x.
+The new Newton and Polynomial plugins don't use the 'bands' setting yet.
+Newton, Polynomial, Julia, Ramp: implement init_clone().
+
+YesNoCancelDialog and SaveImageDialog should not be application-modal.
+How to reduce modality to one window only, and still make sure that the user
+can't throw the application into an inconsistent state by mucking about in
+the other windows? Maybe what's needed is some global entity that's in charge
+of the closing/saving/quitting event flows (instead of the current chains of
+dialogs and listeners that basically float freely) and that allows such flows
+to be interrupted when they no longer make sense. (This applies mostly to the
+"quit" flow, but there is also the issue of a window being modaled out with a
+YesNoCancelDialog or a SaveFileDialog and and meanwhile a "quit" chain being
+initiated on some other window.)
+Besides, while modal dialogs are a nice feature, a robust app should protect
+itself agains WMs that don't enforce modality. And application-modality is
+kinda evil if it does not prevent the modal dialog from being hidden behind
+other windows. I mean, really.
 
 Take another careful look at the colormap editor. It needs a tidy API for
 the *Actions to control it by: changing the selection, changing color cell
 values; CME should repaint as necessary (which it may not be; if using a
 private colormap, repainting is only needed when the selection changes)
 and select_cell() etc. should not appear in the Actions.
-
-The new Newton and Polynomial plugins don't use the 'bands' setting yet.
-Newton, Polynomial, Julia, Ramp: implement init_clone().
 
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
@@ -20,19 +34,12 @@ does now, but still, stuff like the gif2tiff problem just makes me wonder what
 other surprises are still lurking in that code.
 I know, I know, don't use GIF, use PNG. :-)
 
-In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
-can't set focus on a text field any more). Am I doing something wrong there, or
-is this an OpenMotif 2.2.2 bug? Take a look at...
-
-	http://www.motifdeveloper.com/tips/tip22.html
-        http://www.motifdeveloper.com/tips/Motif22Review.pdf
-
 In the Color Picker and Colormap Editor, the focus disappears at one point in
 the tabbing sequence. Where does it go? And more importantly, how do we get it
 to not do that? Also, in the colormap editor, the tabbing sequence is wrong.
 (Which, BTW, would be fixed if only I could convince the rowcolumn widget to
-lay out its children left-to-right first. It should be able to do that, no? Is
-this an Open Motif bug? See above.)
+lay out its children left-to-right first. I really should read the book again
+sometime.)
 
 The code that draws the color wheel in ColorPicker uses unhealthy amouts of
 transcendental functions (rectangular -> polar coordinate transformation), and

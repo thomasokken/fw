@@ -764,7 +764,7 @@ ColorPicker::removeCross() {
     XPutImage(g_display, XtWindow(wheel), gc, wheel_image,
 	      cross_x - cw, cross_y - cw,
 	      cross_x - cw, cross_y - cw,
-	      cross_x + cw, cross_y + cw);
+	      cross_x + cw + 2, cross_y + cw + 2);
 }
 
 /* private */ void
@@ -822,21 +822,32 @@ ColorPicker::mouseInWheel(XEvent *event) {
     float y = ((float) event->xbutton.y - (CROSS_SIZE + WHEEL_DIAMETER) / 2)
 		    / (WHEEL_DIAMETER / 2);
     float s = sqrt(x * x + y * y);
-    if (s > 1)
-	if (event->type != MotionNotify)
-	    return;
-	else
-	    s = 1;
-    if (cross_x == event->xbutton.x && cross_y == event->xbutton.y)
+    if (s > 1 && event->type != MotionNotify)
 	return;
+
+    int newcx, newcy;
+    float th = atan2(y, -x);
+    H = th / (2 * 3.141592654) + 0.5;
+    if (s <= 1) {
+	newcx = event->xbutton.x;
+	newcy = event->xbutton.y;
+    } else {
+	s = 1;
+	newcx = (int) (((1 - cos(th)) * WHEEL_DIAMETER + CROSS_SIZE + 1) / 2);
+	newcy = (int) (((1 + sin(th)) * WHEEL_DIAMETER + CROSS_SIZE + 1) / 2);
+    }
+
+    if (cross_x == newcx && cross_y == newcy)
+	return;
+
     removeCross();
-    cross_x = event->xbutton.x;
-    cross_y = event->xbutton.y;
+    cross_x = newcx;
+    cross_y = newcy;
     S = s;
-    H = atan2(y, -x) / (2 * 3.141592654) + 0.5;
     hsl2rgb(H, S, L, &R, &G, &B);
     updateRGBTextFields(R, G, B);
     drawCross();
+
     repaintOldNewImage();
     repaintSliderImage();
     drawThumb();
@@ -851,21 +862,29 @@ ColorPicker::mouseInSlider(XEvent *event) {
 	(event->type != MotionNotify || (event->xbutton.state & 0x700) == 0))
 	return;
     float l = ((float) event->xbutton.x - CROSS_SIZE / 2) / WHEEL_DIAMETER;
-    if (l < 0 || l > 1)
-	if (event->type != MotionNotify)
-	    return;
-	else if (l < 0)
-	    l = 0;
-	else
-	    l = 1;
-    if (slider_x == event->xbutton.x)
+    if ((l < 0 || l > 1) && event->type != MotionNotify)
 	return;
+
+    int newsx;
+    if (l < 0) {
+	l = 0;
+	newsx = CROSS_SIZE / 2;
+    } else if (l > 1) {
+	l = 1;
+	newsx = WHEEL_DIAMETER + CROSS_SIZE / 2;
+    } else
+	newsx = event->xbutton.x;
+
+    if (slider_x == newsx)
+	return;
+
     removeThumb();
-    slider_x = event->xbutton.x;
+    slider_x = newsx;
     L = l;
     hsl2rgb(H, S, L, &R, &G, &B);
     updateRGBTextFields(R, G, B);
     drawThumb();
+
     repaintOldNewImage();
     repaintWheelImage();
     drawCross();

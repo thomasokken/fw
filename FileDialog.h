@@ -17,6 +17,7 @@ class FileDialog : public Frame {
     public:
 	FileDialog(Frame *parent);
 	virtual ~FileDialog();
+	virtual void close();
 	void setDirectory(char **dir);
 	void setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),
 			       void *fileSelectedClosure);

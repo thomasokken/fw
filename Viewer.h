@@ -10,7 +10,6 @@ class CMEOwner;
 class ColormapEditor;
 class List;
 class Plugin;
-class SaveImageDialog;
 class UndoManager;
 
 class Viewer : private Frame {
@@ -24,7 +23,6 @@ class Viewer : private Frame {
 	bool dirty;
 	UndoManager *undomanager;
 	int saved_undo_id;
-	SaveImageDialog *savedialog;
 	ColormapEditor *cme;
 	CMEOwner *cmeproxy;
 	Plugin *plugin;
@@ -102,6 +100,7 @@ class Viewer : private Frame {
 	void doLoadColors3(const char *fn);
 	static void doSaveColors2(const char *fn, void *cl);
 	void doSaveColors3(const char *fn);
+	static void doQuit2();
 
 	static void doBeep();
 	void doNew(const char *plugin);
@@ -141,8 +140,10 @@ class Viewer : private Frame {
 	friend class CMEOwner;
 	friend class UMListener;
 	friend class YNCListener;
+	friend class YNCListener2;
 	friend class SIDListener;
 	friend class SIDListener2;
+	friend class SIDListener3;
 };
 
 #endif

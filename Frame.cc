@@ -138,7 +138,7 @@ Frame::init(Frame *parent, bool modal) {
     XtSetArg(args[nargs], XmNtitle, "Frame"); nargs++;
     if (modal) {
 	XtSetArg(args[nargs], XmNdialogStyle,
-		 XmDIALOG_PRIMARY_APPLICATION_MODAL);
+		 XmDIALOG_FULL_APPLICATION_MODAL);
 	nargs++;
     }
     XtSetArg(args[nargs], XmNdeleteResponse, XmDO_NOTHING); nargs++;
@@ -270,7 +270,10 @@ Frame::getTitle() {
 
 /* public virtual */ void
 Frame::close() {
-    delete this;
+    if (is_dialog)
+	hide();
+    else
+	delete this;
 }
 
 /* protected */ Widget

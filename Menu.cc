@@ -4,6 +4,7 @@
 #include <Xm/RowColumn.h>
 #include <Xm/Separator.h>
 #include <Xm/ToggleB.h>
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "Menu.h"
