@@ -969,7 +969,7 @@ do_enlarged:
 
 do_reduced:
 
-    if (true /*!dithering*/) {
+    if (!dithering) {
 	int s = -scale;
 
 	int TOP = top / s;
@@ -1046,19 +1046,12 @@ do_reduced:
 			} else {
 			    // TODO -- this is pathetic, of course
 			    int best_pixel;
-			    int best_error = 1000;
+			    int best_error = 1000000;
 			    for (int i = 0; i < 256; i++) {
-				int dr = r - (char) cmap[i].r;
-				int dg = g - (char) cmap[i].g;
-				int db = b - (char) cmap[i].b;
-				if (dr < 0) dr = -dr;
-				if (dg < 0) dg = -dg;
-				if (db < 0) db = -db;
-				int err = dr;
-				if (err < dg)
-				    err = dg;
-				if (err < db)
-				    err = db;
+				int dr = r - cmap[i].r;
+				int dg = g - cmap[i].g;
+				int db = b - cmap[i].b;
+				int err = dr * dr + dg * dg + db * db;
 				if (err < best_error) {
 				    best_pixel = i;
 				    best_error = err;
@@ -1123,7 +1116,151 @@ do_reduced:
 	    }
 	}
     } else {
-	// Dithering not yet implemented.
+	int s = -scale;
+
+	int TOP = top / s;
+	int BOTTOM = (bottom + s - 1) / s;
+	if (BOTTOM > image->height)
+	    BOTTOM = image->height;
+	int LEFT = left / s;
+	int RIGHT = (right + s - 1) / s;
+	if (RIGHT > image->width)
+	    RIGHT = image->width;
+
+	// Normalize source coordinates
+	top = TOP * s;
+	bottom = BOTTOM * s;
+	if (bottom > height)
+	    bottom = height;
+	left = LEFT * s;
+	right = RIGHT * s;
+	if (right > width)
+	    right = width;
+
+	int R[RIGHT - LEFT];
+	int G[RIGHT - LEFT];
+	int B[RIGHT - LEFT];
+	int W[RIGHT - LEFT];
+	for (int i = 0; i < RIGHT - LEFT; i++)
+	    R[i] = G[i] = B[i] = W[i] = 0;
+
+	int Y = TOP;
+	int YY = 0;
+	for (int y = top; y < bottom; y++) {
+	    int X = 0;
+	    int XX = 0;
+	    for (int x = left; x < right; x++) {
+		if (depth == 1) {
+		    int p = ((pixels[y * bytesperline + (x >> 3)] >> (x & 7)) & 1)
+				* 255;
+		    R[X] += p;
+		    G[X] += p;
+		    B[X] += p;
+		} else if (depth == 8) {
+		    int p = pixels[y * bytesperline + x];
+		    R[X] += cmap[p].r;
+		    G[X] += cmap[p].g;
+		    B[X] += cmap[p].b;
+		} else {
+		    unsigned char *p = pixels + (y * bytesperline + x * 4 + 1);
+		    R[X] += *p++;
+		    G[X] += *p++;
+		    B[X] += *p;
+		}
+		W[X]++;
+		if (++XX == s) {
+		    XX = 0;
+		    X++;
+		}
+	    }
+
+	    if (YY == s - 1 || Y == BOTTOM - 1) {
+		for (X = 0; X < RIGHT - LEFT; X++) {
+		    int w = W[X];
+		    int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
+		    int g = (G[X] + w / 2) / w; if (g > 255) g = 255;
+		    int b = (B[X] + w / 2) / w; if (b > 255) b = 255;
+		    R[X] = G[X] = B[X] = W[X] = 0;
+
+		    if (priv_cmap) {
+			// Find the closest match to (R, G, B) in the colormap...
+			if (depth == 1) {
+			    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			    if (k > 255)
+				k = 255;
+			    XPutPixel(image, X, Y, k);
+			} else {
+			    // TODO -- this is pathetic, of course
+			    int best_pixel;
+			    int best_error = 1000000;
+			    for (int i = 0; i < 256; i++) {
+				int dr = r - cmap[i].r;
+				int dg = g - cmap[i].g;
+				int db = b - cmap[i].b;
+				int err = dr * dr + dg * dg + db * db;
+				if (err < best_error) {
+				    best_pixel = i;
+				    best_error = err;
+				}
+			    }
+			    XPutPixel(image, X, Y, best_pixel);
+			}
+		    } else if (g_grayramp == NULL) {
+			unsigned long pixel;
+			if (g_colorcube != NULL) {
+			    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+				    * g_cubesize
+				    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+				    * g_cubesize
+				    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    pixel = g_colorcube[index].pixel;
+			} else {
+			    static bool inited = false;
+			    static int rmax, rmult, bmax, bmult, gmax, gmult;
+			    if (!inited) {
+				rmax = g_visual->red_mask;
+				rmult = 0;
+				while ((rmax & 1) == 0) {
+				    rmax >>= 1;
+				    rmult++;
+				}
+				gmax = g_visual->green_mask;
+				gmult = 0;
+				while ((gmax & 1) == 0) {
+				    gmax >>= 1;
+				    gmult++;
+				}
+				bmax = g_visual->blue_mask;
+				bmult = 0;
+				while ((bmax & 1) == 0) {
+				    bmax >>= 1;
+				    bmult++;
+				}
+				inited = true;
+			    }
+
+			    pixel = ((r * rmax / 255) << rmult)
+				    + ((g * gmax / 255) << gmult)
+				    + ((b * bmax / 255) << bmult);
+			}
+			XPutPixel(image, X, Y, pixel);
+		    } else {
+			int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			int graylevel = 
+			    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+			if (graylevel >= g_rampsize)
+			    graylevel = g_rampsize - 1;
+			unsigned long pixel = g_grayramp[graylevel].pixel;
+			XPutPixel(image, X, Y, pixel);
+		    }
+		}
+	    }
+
+	    if (++YY == s) {
+		YY = 0;
+		Y++;
+	    }
+	}
     }
 
 
