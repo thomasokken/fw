@@ -8,8 +8,8 @@
 #include "main.h"
 
 /* public */
-ColorPicker::ColorPicker(Listener *listener, unsigned short r,
-	unsigned short g, unsigned short b) : Frame(false, true, false) {
+ColorPicker::ColorPicker(Listener *listener, unsigned char r,
+	unsigned char g, unsigned char b) : Frame(false, true, false) {
     this->listener = listener;
 
     Widget form = getContainer();
@@ -172,11 +172,11 @@ ColorPicker::ColorPicker(Listener *listener, unsigned short r,
     XmStringFree(s);
 
     char buf[64];
-    snprintf(buf, 64, "%d", r / 257);
+    snprintf(buf, 64, "%d", r);
     XmTextSetString(red, buf);
-    snprintf(buf, 64, "%d", g / 257);
+    snprintf(buf, 64, "%d", g);
     XmTextSetString(green, buf);
-    snprintf(buf, 64, "%d", b / 257);
+    snprintf(buf, 64, "%d", b);
     XmTextSetString(blue, buf);
 }
 
@@ -200,7 +200,7 @@ ColorPicker::ok(Widget w, XtPointer ud, XtPointer cd) {
     XtFree(blueS);
     if (n == 3 && r >= 0 && r <= 255 && g >= 0
 	       && g <= 255 && b >= 0 && b <= 255)
-	This->listener->colorPicked(r * 257, g * 257, b * 257);
+	This->listener->colorPicked(r, g, b);
     else
 	XBell(g_display, 100);
     This->close();

@@ -6,9 +6,9 @@ class ColorPicker : public Frame {
 	    public:
 		Listener() {}
 		virtual ~Listener() {}
-		virtual void colorPicked(unsigned short r,
-					 unsigned short g,
-					 unsigned short b) = 0;
+		virtual void colorPicked(unsigned char r,
+					 unsigned char g,
+					 unsigned char b) = 0;
 	};
 
     private:
@@ -16,8 +16,8 @@ class ColorPicker : public Frame {
 	Widget red, green, blue;
 
     public:
-	ColorPicker(Listener *listener, unsigned short r, unsigned short g,
-		    unsigned short b);
+	ColorPicker(Listener *listener, unsigned char r, unsigned char g,
+		    unsigned char b);
 	virtual ~ColorPicker();
 
     private:

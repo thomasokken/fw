@@ -8,7 +8,11 @@ unsigned int crc32(const void *buf, int size);
 bool isDirectory(const char *name);
 bool isFile(const char *name);
 bool is_grayscale(const FWColor *cmap);
-unsigned long rgb2pixel(unsigned int r, unsigned int g, unsigned int b);
+unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b);
+void hsl2rgb(float h, float s, float l,
+	     unsigned char *r, unsigned char *g, unsigned char *b);
+void rgb2hsl(unsigned char r, unsigned char g, unsigned char b,
+	     float *h, float *s, float *l);
 
 int bool_alignment();
 int char_alignment();

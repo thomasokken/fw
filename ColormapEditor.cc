@@ -306,11 +306,10 @@ class CPListener : public ColorPicker::Listener {
 	    this->cme = cme;
 	    this->index = index;
 	}
-	virtual void colorPicked(unsigned short r,
-				 unsigned short g,
-				 unsigned short b) {
-	    PickAction *action = new PickAction(cme, index, r / 257,
-						g / 257, b / 257);
+	virtual void colorPicked(unsigned char r,
+				 unsigned char g,
+				 unsigned char b) {
+	    PickAction *action = new PickAction(cme, index, r, g, b);
 	    cme->undomgr->addAction(action);
 	    action->redo();
 	}
@@ -323,9 +322,9 @@ ColormapEditor::doPick() {
     else {
 	ColorPicker *picker = new ColorPicker(
 		    new CPListener(this, sel_start),
-		    pm->cmap[sel_start].r * 257,
-		    pm->cmap[sel_start].g * 257,
-		    pm->cmap[sel_start].b * 257);
+		    pm->cmap[sel_start].r,
+		    pm->cmap[sel_start].g,
+		    pm->cmap[sel_start].b);
 	picker->raise();
     }
 }

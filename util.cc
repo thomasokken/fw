@@ -81,7 +81,7 @@ bool is_grayscale(const FWColor *cmap) {
     return true;
 }
 
-unsigned long rgb2pixel(unsigned int r, unsigned int g, unsigned int b) {
+unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b) {
     if (g_grayramp != NULL) {
 	int p = ((306 * r + 601 * g + 117 * b)
 		    * (g_rampsize - 1) + 130560) / 261120;
@@ -120,6 +120,77 @@ unsigned long rgb2pixel(unsigned int r, unsigned int g, unsigned int b) {
 	return  (((r * rmax + 127) / 255) << rmult)
 	      + (((g * gmax + 127) / 255) << gmult)
 	      + (((b * bmax + 127) / 255) << bmult);
+    }
+}
+
+void rgb2hsl(unsigned char R, unsigned char G, unsigned char B,
+	     float *H, float *S, float *L) {
+    float var_R = R / 255.0;
+    float var_G = G / 255.0;
+    float var_B = B / 255.0;
+
+    float var_Min = var_R < var_G ? var_R : var_G;
+    if (var_B < var_Min)
+	var_Min = var_B;
+    float var_Max = var_R > var_G ? var_R : var_G;
+    if (var_B > var_Max)
+	var_Max = var_B;
+    float del_Max = var_Max - var_Min;
+
+    *L = (var_Max + var_Min) / 2;
+
+    if (del_Max == 0) {
+	*H = 0;
+	*S = 0;
+    } else {
+	if (*L < 0.5)
+	    *S = del_Max / (var_Max + var_Min);
+	else
+	    *S = del_Max / (2 - var_Max - var_Min);
+
+	float del_R = ((var_Max - var_R) / 6 + del_Max / 2) / del_Max;
+	float del_G = ((var_Max - var_G) / 6 + del_Max / 2) / del_Max;
+	float del_B = ((var_Max - var_B) / 6 + del_Max / 2) / del_Max;
+
+	if (var_R == var_Max)
+	    *H = del_B - del_G;
+	else if (var_G == var_Max)
+	    *H = 1.0 / 3 + del_R - del_B;
+	else if (var_B == var_Max)
+	    *H = 2.0 / 3 + del_G - del_R;
+
+	if (*H < 0) *H += 1;
+	if (*H > 1) *H -= 1;
+    }
+}
+
+static float hue2rgb(float v1, float v2, float vH) {
+   if (vH < 0) vH += 1;
+   if (vH > 1) vH -= 1;
+   if (6 * vH < 1) return v1 + (v2 - v1) * 6 * vH;
+   if (2 * vH < 1) return v2;
+   if (3 * vH < 2) return v1 + (v2 - v1) * (2.0 / 3 - vH) * 6;
+   return v1;
+}
+
+void hsl2rgb(float H, float S, float L,
+	     unsigned char *R, unsigned char *G, unsigned char *B) {
+    if (S == 0) {
+	*R = (unsigned char) L * 255;
+	*G = (unsigned char) L * 255;
+	*B = (unsigned char) L * 255;
+    } else {
+	float var_2;
+	if (L < 0.5)
+	    var_2 = L * (1 + S);
+	else
+	    var_2 = (L + S) - (S * L);
+
+	float var_1 = 2 * L - var_2;
+
+	*R = (unsigned char) (255 * hue2rgb(var_1, var_2, H + 1.0 / 3));
+	*G = (unsigned char) (255 * hue2rgb(var_1, var_2, H));
+	*B = (unsigned char) (255 * hue2rgb(var_1, var_2, H - 1.0 / 3));
     }
 }
 

@@ -52,10 +52,6 @@ class Viewer : private Frame {
 		  int plugin_data_length, FWPixmap *pm);
 	virtual void close();
 	bool canIDoDirectCopy();
-	void paint_direct(int top, int left, int bottom, int right);
-	void paint_unscaled(int top, int left, int bottom, int right);
-	void paint_enlarged(int top, int left, int bottom, int right);
-	void paint_reduced(int top, int left, int bottom, int right);
 	void draw_selection();
 	void erase_selection();
 	void screen2pixmap(int *x, int *y);
