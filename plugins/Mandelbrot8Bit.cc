@@ -9,7 +9,7 @@ class Mandelbrot8Bit : public Plugin {
     public:
 	Mandelbrot8Bit(void *dl) : Plugin(dl) {}
 	virtual ~Mandelbrot8Bit() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "Mandelbrot8Bit";
 	}
 	virtual void init_new() {

@@ -25,7 +25,7 @@ static double my_rand() {
     return ((double) (rand() - RAND_MAX / 2)) / RAND_MAX * 2;
 }
 
-static char *my_settings_layout[] = {
+static const char *my_settings_layout[] = {
     "WIDTH 'Width'",
     "HEIGHT 'Height'",
     "REPEAT 60", // Q array
@@ -43,7 +43,8 @@ static char *my_settings_layout[] = {
     "int",       // jop
     "long",      // jopmax
     "long",      // jOud1
-    "bool"       // finished
+    "bool",      // finished
+    NULL
 };
 
 class Kaos : public Plugin {
@@ -64,7 +65,7 @@ class Kaos : public Plugin {
 	    settings_base = &Q;
 	}
 	virtual ~Kaos() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "Kaos";
 	}
 	virtual bool does_depth(int depth) {

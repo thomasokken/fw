@@ -4,7 +4,7 @@
 
 #include "Plugin.h"
 
-static char *my_settings_layout[] = {
+static const char *my_settings_layout[] = {
     "WIDTH 'Width'",
     "HEIGHT 'Height'",
     "int 'X contribution to Red'",
@@ -12,7 +12,8 @@ static char *my_settings_layout[] = {
     "int 'X contribution to Green'",
     "int 'Y contribution to Green'",
     "int 'X contribution to Blue'",
-    "int 'Y contribution to Blue'"
+    "int 'Y contribution to Blue'",
+    NULL
 };
 
 class Ramp : public Plugin {
@@ -25,7 +26,7 @@ class Ramp : public Plugin {
 	    settings_base = &xr;
 	}
 	virtual ~Ramp() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "Ramp";
 	}
 	virtual bool does_depth(int depth) {

@@ -36,7 +36,7 @@ class Null : public Plugin {
     public:
 	Null() : Plugin(NULL) {}
 	virtual ~Null() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "Null";
 	}
 	virtual void start() {
@@ -49,7 +49,7 @@ class About : public Plugin {
     public:
 	About() : Plugin(NULL) {}
 	virtual ~About() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "About";
 	}
 	virtual void init_new() {
@@ -158,7 +158,7 @@ Plugin::deserialize(void *buf, int nbytes) {
 }
 
 /* public virtual */ bool
-Plugin::does_depth(int depth) const {
+Plugin::does_depth(int depth) {
     return false;
 }
 
@@ -200,7 +200,7 @@ Plugin::work() {
 }
 
 /* public virtual */ const char *
-Plugin::help() const {
+Plugin::help() {
     return NULL;
 }
 

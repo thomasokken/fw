@@ -3,6 +3,7 @@
 
 class FWPixmap;
 class Plugin;
+class Field;
 
 class SettingsHelper {
     private:
@@ -11,6 +12,10 @@ class SettingsHelper {
 	int bufsize;
 	int bufpos;
 	bool failed;
+	Field **fields;
+	int nfields;
+	Field **dlgfields;
+	int ndlgfields;
 
     public:
 	SettingsHelper(Plugin *plugin);
@@ -32,18 +37,32 @@ class SettingsHelper {
     private:
 	// Serialization/deserialization
 	void append(const char *b, int n);
+	void appendbool(bool b);
 	void appendchar(int c);
 	void appendlonglong(long long i);
 	void appendfloat(float f);
 	void appenddouble(double d);
 	void appendlongdouble(long double ld);
 	void appendstring(const char *s);
+	bool readbool();
 	int readchar();
 	long long readlonglong();
 	float readfloat();
 	double readdouble();
 	long double readlongdouble();
 	char *readstring();
+
+	friend class Field;
+	friend class BoolField;
+	friend class CharField;
+	friend class ShortField;
+	friend class IntField;
+	friend class LongField;
+	friend class LongLongField;
+	friend class FloatField;
+	friend class DoubleField;
+	friend class LongDoubleField;
+	friend class StringField;
 };
 
 #endif

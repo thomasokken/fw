@@ -1,40 +1,466 @@
+#include <ctype.h>
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
 #include "SettingsHelper.h"
 #include "Plugin.h"
+#include "util.h"
+
+
+class Field {
+    private:
+	const char *label;
+    protected:
+	SettingsHelper *helper;
+    public:
+	const char *getLabel() {
+	    return label;
+	}
+	virtual void setValue(const char *s) = 0;
+	virtual char *getValue() = 0;
+	virtual void serialize() = 0;
+	virtual void deserialize() = 0;
+	virtual ~Field() {}
+    protected:
+	Field(const char *label, SettingsHelper *helper) {
+	    this->label = label;
+	    this->helper = helper;
+	}
+	char *align(char *addr, int n) {
+	    unsigned int a = (unsigned int) addr;
+	    unsigned int r = a % (unsigned int) n;
+	    if (r == 0)
+		return addr;
+	    else
+		return addr + (n - r);
+	}
+};
+
+class BoolField : public Field {
+    private:
+	bool *addr;
+    public:
+	BoolField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, bool_alignment());
+	    this->addr = (bool *) *addr;
+	    *addr += sizeof(bool);
+	}
+	virtual void setValue(const char *s) {
+	    *addr = strcmp(s, "yes") == 0;
+	}
+	virtual char *getValue() {
+	    return *addr ? strclone("yes") : strclone("no");
+	}
+	virtual void serialize() {
+	    helper->appendbool(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readbool();
+	}
+};
+
+class CharField : public Field {
+    private:
+	char *addr;
+    public:
+	CharField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, char_alignment());
+	    this->addr = *addr;
+	    *addr += sizeof(char);
+	}
+	virtual void setValue(const char *s) {
+	    *addr = s[0];
+	}
+	virtual char *getValue() {
+	    char ret[2];
+	    ret[0] = *addr;
+	    ret[1] = 0;
+	    return strclone(ret);
+	}
+	virtual void serialize() {
+	    helper->appendchar(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readchar();
+	}
+};
+
+class ShortField : public Field {
+    private:
+	short *addr;
+    public:
+	ShortField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, short_alignment());
+	    this->addr = (short *) *addr;
+	    *addr += sizeof(short);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%hd", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%d", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appendlonglong(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readlonglong();
+	}
+};
+
+class IntField : public Field {
+    private:
+	int *addr;
+	bool dont_serialize;
+    public:
+	IntField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, int_alignment());
+	    this->addr = (int *) *addr;
+	    *addr += sizeof(int);
+	    dont_serialize = false;
+	}
+	IntField(const char *label, SettingsHelper *helper, int *addr)
+		: Field(label, helper) {
+	    this->addr = addr;
+	    this->dont_serialize = true;
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%d", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%d", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    if (!dont_serialize)
+		helper->appendlonglong(*addr);
+	}
+	virtual void deserialize() {
+	    if (!dont_serialize)
+		*addr = helper->readlonglong();
+	}
+};
+
+class LongField : public Field {
+    private:
+	long *addr;
+    public:
+	LongField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, long_alignment());
+	    this->addr = (long *) *addr;
+	    *addr += sizeof(long);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%ld", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%ld", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appendlonglong(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readlonglong();
+	}
+};
+
+class LongLongField : public Field {
+    private:
+	long long *addr;
+    public:
+	LongLongField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, long_long_alignment());
+	    this->addr = (long long *) *addr;
+	    *addr += sizeof(long long);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%lld", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%lld", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appendlonglong(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readlonglong();
+	}
+};
+
+class FloatField : public Field {
+    private:
+	float *addr;
+    public:
+	FloatField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, float_alignment());
+	    this->addr = (float *) *addr;
+	    *addr += sizeof(float);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%f", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%.8g", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appendfloat(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readfloat();
+	}
+};
+
+class DoubleField : public Field {
+    private:
+	double *addr;
+    public:
+	DoubleField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, double_alignment());
+	    this->addr = (double *) *addr;
+	    *addr += sizeof(double);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%lf", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%.16g", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appenddouble(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readdouble();
+	}
+};
+
+class LongDoubleField : public Field {
+    private:
+	long double *addr;
+    public:
+	LongDoubleField(const char *label, SettingsHelper *helper, char **addr)
+		: Field(label, helper) {
+	    *addr = align(*addr, long_double_alignment());
+	    this->addr = (long double *) *addr;
+	    *addr += sizeof(long double);
+	}
+	virtual void setValue(const char *s) {
+	    sscanf(s, "%Lf", addr);
+	}
+	virtual char *getValue() {
+	    char buf[64];
+	    sprintf(buf, "%.20Lg", *addr);
+	    return strclone(buf);
+	}
+	virtual void serialize() {
+	    helper->appendlongdouble(*addr);
+	}
+	virtual void deserialize() {
+	    *addr = helper->readlongdouble();
+	}
+};
+
+class StringField : public Field {
+    private:
+	char *addr;
+	int size;
+    public:
+	StringField(const char *label, SettingsHelper *helper, char **addr, int size)
+		: Field(label, helper) {
+	    *addr = align(*addr, string_alignment());
+	    this->addr = *addr;
+	    *addr += size;
+	    this->size = size;
+	}
+	virtual void setValue(const char *s) {
+	    strncpy(addr, s, size);
+	    addr[size - 1] = 0;
+	}
+	virtual char *getValue() {
+	    return strclone(addr);
+	}
+	virtual void serialize() {
+	    helper->appendstring(addr);
+	}
+	virtual void deserialize() {
+	    char *s = helper->readstring();
+	    strncpy(addr, s, size);
+	    addr[size - 1] = 0;
+	    free(s);
+	}
+};
+
 
 /* public */
 SettingsHelper::SettingsHelper(Plugin *plugin) {
     this->plugin = plugin;
+    fields = NULL;
+    nfields = 0;
+    dlgfields = NULL;
+    ndlgfields = 0;
+
+    int repcount[100];
+    int repindex[100];
+    int sp = -1;
+    char *addr = (char *) plugin->settings_base;
+
+    const char **lines = plugin->settings_layout;
+
+    int lineno = 0;
+    while (lines[lineno] != NULL) {
+	char *line = strclone(lines[lineno]);
+	int length = strlen(line);
+	
+	// The first part of a line should be a type (bool, char, short,
+	// int, long, longlong, float, double, longdouble, char[n]), or
+	// one of the special words WIDTH and HEIGHT (which are hooked
+	// to plugin->pm.width and plugin->pm.height, respectively, and
+	// which are skipped during serialization/deserialization, since
+	// the plugin->pm structure is populated by the pixmap reading
+	// process (the pm structure is owned by the viewer, not the
+	// plugin, strictly speaking)), or one of REPEAT or ENDREP.
+	
+	int pos = 0;
+	while (pos < length && !isspace(line[pos]))
+	    pos++;
+	if (pos == 0)
+	    // Empty line
+	    crash();
+	line[pos] = 0;
+	char *rest = line + pos + 1;
+	while (*rest != 0 && isspace(*rest))
+	    rest++;
+
+	// The remainder of the line is used as the field label (in single
+	// quotes), or in the case of the REPEAT keyword, as the repeat
+	// count (i.e. the number of times everything following the REPEAT
+	// keyword, up to the matching ENDREP keyword, should be repeated).
+	
+	if (strcmp(line, "REPEAT") == 0) {
+	    int count;
+	    if (sscanf(rest, "%d", &count) != 1)
+		crash();
+	    sp++;
+	    if (sp == 100)
+		crash();
+	    repindex[sp] = lineno;
+	    repcount[sp] = count;
+	} else if (strcmp(line, "ENDREP") == 0) {
+	    if (sp == -1)
+		crash();
+	    if (--repcount[sp] != 0)
+		lineno = repindex[sp];
+	    else
+		sp--;
+	} else {
+	    char *label = NULL;
+	    char *firstquote = strchr(rest, '\'');
+	    if (firstquote != NULL) {
+		char *lastquote = strrchr(rest, '\'');
+		if (firstquote == lastquote)
+		    crash();
+		label = firstquote + 1;
+		*lastquote = 0;
+	    }
+
+	    Field *field;
+	    if (strcmp(line, "WIDTH") == 0)
+		field = new IntField(label, this, &plugin->pm->width);
+	    else if (strcmp(line, "HEIGHT") == 0)
+		field = new IntField(label, this, &plugin->pm->height);
+	    else if (strcmp(line, "bool") == 0)
+		field = new BoolField(label, this, &addr);
+	    else if (strcmp(line, "char") == 0)
+		field = new CharField(label, this, &addr);
+	    else if (strcmp(line, "short") == 0)
+		field = new ShortField(label, this, &addr);
+	    else if (strcmp(line, "int") == 0)
+		field = new IntField(label, this, &addr);
+	    else if (strcmp(line, "long") == 0)
+		field = new LongField(label, this, &addr);
+	    else if (strcmp(line, "longlong") == 0)
+		field = new LongLongField(label, this, &addr);
+	    else if (strcmp(line, "float") == 0)
+		field = new FloatField(label, this, &addr);
+	    else if (strcmp(line, "double") == 0)
+		field = new DoubleField(label, this, &addr);
+	    else if (strcmp(line, "longdouble") == 0)
+		field = new LongDoubleField(label, this, &addr);
+	    else if (strcmp(line, "char[") == 0) {
+		int size;
+		if (sscanf(line + 5, "%d", &size) != 1 || size <= 0)
+		    crash();
+		field = new StringField(label, this, &addr, size);
+	    } else
+		crash();
+
+	    fields = (Field **) realloc(fields,
+				    (nfields + 1) * sizeof(Field *));
+	    fields[nfields++] = field;
+	    if (label != NULL) {
+		dlgfields = (Field **) realloc(dlgfields,
+				    (ndlgfields + 1) * sizeof(Field *));
+		dlgfields[ndlgfields++] = field;
+	    }
+	}
+
+	lineno++;
+    }
 }
 
 /* public */
 SettingsHelper::~SettingsHelper() {
+    for (int i = 0; i < nfields; i++)
+	delete fields[i];
+    if (fields != NULL)
+	free(fields);
+    if (dlgfields != NULL)
+	free(dlgfields);
 }
 
 /* public */ int
 SettingsHelper::getFieldCount() {
-    //
-    return 0;
+    return ndlgfields;
 }
 
 /* public */ const char *
 SettingsHelper::getFieldLabel(int index) {
-    //
-    return NULL;
+    if (index < 0 || index >= ndlgfields)
+	crash();
+    return dlgfields[index]->getLabel();
 }
 
 /* public */ char *
 SettingsHelper::getFieldValue(int index) {
-    //
-    return NULL;
+    if (index < 0 || index >= ndlgfields)
+	crash();
+    return dlgfields[index]->getValue();
 }
 
 /* public */ void
 SettingsHelper::setFieldValue(int index, const char *value) {
-    //
+    if (index < 0 || index >= ndlgfields)
+	crash();
+    dlgfields[index]->setValue(value);
 }
 
 /* public */ bool
@@ -60,7 +486,8 @@ SettingsHelper::serialize(void **buf_out, int *nbytes_out) {
     const char *pluginname = plugin->name();
     appendstring(pluginname == NULL ? "Null" : pluginname);
 
-    // Yada yada yada
+    for (int i = 0; i < nfields; i++)
+	fields[i]->serialize();
 
     *buf_out = buf;
     *nbytes_out = bufpos;
@@ -72,6 +499,9 @@ SettingsHelper::deserialize(const void *buf_in, int nbytes_in) {
     bufsize = nbytes_in;
     bufpos = 0;
     failed = false;
+
+    for (int i = 0; i < nfields; i++)
+	fields[i]->deserialize();
 }
 
 /* private */ void
@@ -88,6 +518,11 @@ SettingsHelper::append(const char *b, int n) {
     }
     memcpy(buf + bufpos, b, n);
     bufpos += n;
+}
+
+/* private */ void
+SettingsHelper::appendbool(bool b) {
+    appendchar(b ? 'T' : 'F');
 }
 
 /* private */ void
@@ -154,6 +589,11 @@ SettingsHelper::appendlongdouble(long double ld) {
 /* private */ void
 SettingsHelper::appendstring(const char *s) {
     append(s, strlen(s) + 1);
+}
+
+/* private */ bool
+SettingsHelper::readbool() {
+    return readchar() != 'T';
 }
 
 /* private */ int

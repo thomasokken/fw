@@ -29,7 +29,7 @@ class Plugin {
 
     protected:
 	FWPixmap *pm;
-	char **settings_layout;
+	const char **settings_layout;
 	void *settings_base;
 
 	Plugin(void *dl);
@@ -48,7 +48,7 @@ class Plugin {
 	// Methods implemented by Plugins
 	// (Reasonable default implementations are provided for all of
 	// these, except for name().)
-	virtual bool does_depth(int depth) const;
+	virtual bool does_depth(int depth);
 	virtual void init_new();
 	virtual void get_settings_ok();
 	virtual void get_settings_cancel();
@@ -56,8 +56,8 @@ class Plugin {
 	virtual void stop();
 	virtual void restart();
 	virtual bool work();
-	virtual const char *name() const = 0;
-	virtual const char *help() const;
+	virtual const char *name() = 0;
+	virtual const char *help();
 
     protected:
 	// Utility methods provided for use by plugins

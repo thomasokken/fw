@@ -8,7 +8,7 @@ class MandelbrotMono : public Plugin {
     public:
 	MandelbrotMono(void *dl) : Plugin(dl) {}
 	virtual ~MandelbrotMono() {}
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "MandelbrotMono";
 	}
 	virtual void init_new() {

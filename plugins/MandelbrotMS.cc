@@ -40,7 +40,7 @@ struct rect {
     }
 };
 
-static char *my_settings_layout[] = {
+static const char *my_settings_layout[] = {
     "WIDTH 'Width'",			// pm->width
     "HEIGHT 'Height'",			// pm->height
     "double 'Lower Real Bound'",	// xmin
@@ -66,7 +66,8 @@ static char *my_settings_layout[] = {
     "REPEAT 200",	// stack (50 levels of 4 ints each)
     "int",
     "ENDREP",
-    "bool"		// finished
+    "bool",		// finished
+    NULL
 };
 
 class MandelbrotMS : public Plugin {
@@ -107,7 +108,7 @@ class MandelbrotMS : public Plugin {
 
 	virtual ~MandelbrotMS() {}
 
-	virtual const char *name() const {
+	virtual const char *name() {
 	    return "MandelbrotMS";
 	}
 
@@ -122,7 +123,7 @@ class MandelbrotMS : public Plugin {
 	    xmax = 0.55 * pm->width / pm->height;
 	    ymin = -1.075;
 	    ymax = 1.075;
-	    maxiter = 1000;
+	    maxiter = 100;
 	    limit = 2.0;
 	    bands = 1;
 	    get_settings_dialog();
