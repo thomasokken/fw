@@ -1068,9 +1068,9 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	}
     } else {
 	// Grayscale display, dithered
-	int *dk = new int[right - left];
-	int *nextdk = new int[right - left];
-	for (int i = 0; i < right - left; i++)
+	int *dk = new int[RIGHT - LEFT];
+	int *nextdk = new int[RIGHT - LEFT];
+	for (int i = 0; i < RIGHT - LEFT; i++)
 	    dk[i] = nextdk[i] = 0;
 	int dK = 0;
 	for (int Y = TOP; Y < BOTTOM; Y++) {
