@@ -392,8 +392,50 @@ Viewer::finish_init() {
 
     if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
 	dithering = true;
-    else
-	dithering = g_visual->bits_per_rgb < 5;
+    else if (g_visual->c_class == GrayScale || g_visual->c_class == StaticGray){
+	int realdepth = g_depth;
+	if (realdepth > g_visual->bits_per_rgb)
+	    realdepth = g_visual->bits_per_rgb;
+	dithering = realdepth < 5;
+    } else {
+	// Don't rely on g_visual->bits_per_rgb alone. Using XFree86 4.2.0
+	// in TrueColor mode at 8 bits per pixel, I got bits_per_rgb = 8,
+	// while in actual fact I had 3 bits each for red and green, and
+	// two bits for blue. On that visual, dithering should be on by
+	// default.
+	// So, I do the same kind of math that I do in main.cc (when I try to
+	// figure out how many shades of gray it makes sense to allocate) to
+	// get a really accurate number of bits per component.
+	// I turn dithering on automagically if there are fewer than 5 bits per
+	// component. At 5 or more, e.g. at 16 bpp with 5 bits each for red and
+	// blue, and 6 bits for green, I can't tell the difference between
+	// dithering and no dithering. Maybe someone with better eyesight
+	// could, but it's such a close call that I feel it's safe to opt for
+	// speed in that case.
+	int realdepth = g_depth;
+	if (realdepth > g_visual->bits_per_rgb)
+	    realdepth = g_visual->bits_per_rgb;
+	unsigned long redmask = g_visual->red_mask;
+	unsigned long greenmask = g_visual->green_mask;
+	unsigned long bluemask = g_visual->blue_mask;
+	int redbits = 0, greenbits = 0, bluebits = 0;
+	while (redmask != 0 || greenmask != 0 || bluemask != 0) {
+	    redbits += redmask & 1;
+	    redmask >>= 1;
+	    greenbits += greenmask & 1;
+	    greenmask >>= 1;
+	    bluebits += bluemask & 1;
+	    bluemask >>= 1;
+	}
+	if (realdepth > redbits)
+	    realdepth = redbits;
+	if (realdepth > greenbits)
+	    realdepth = greenbits;
+	if (realdepth > bluebits)
+	    realdepth = bluebits;
+	dithering = realdepth < 5;
+    }
+
     optionsmenu->setToggleValue("Options.Dither", dithering, false);
     char buf[3];
     sprintf(buf, "%d", scale);

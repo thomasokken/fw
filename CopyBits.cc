@@ -10,6 +10,10 @@ static int rmax, rmult, bmax, bmult, gmax, gmult;
 static void calc_rgb_masks() {
     if (inited)
 	return;
+    if (g_visual->c_class != TrueColor && g_visual->c_class != DirectColor) {
+	inited = true;
+	return;
+    }
     rmax = g_visual->red_mask;
     rmult = 0;
     while ((rmax & 1) == 0) {
@@ -36,6 +40,8 @@ static void calc_rgb_masks() {
 CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			bool priv_cmap, bool no_grays, bool dither,
 			int top, int left, int bottom, int right) {
+    calc_rgb_masks();
+
     if (pm->depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
@@ -105,7 +111,6 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    calc_rgb_masks();
 		    pixel = (((r * rmax + 127) / 255) << rmult)
 			    + (((g * gmax + 127) / 255) << gmult)
 			    + (((b * bmax + 127) / 255) << bmult);
@@ -206,7 +211,6 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    dB = b - (g_colorcube[index].blue >> 8);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    calc_rgb_masks();
 		    int ri = (r * rmax + 127) / 255;
 		    int gi = (g * gmax + 127) / 255;
 		    int bi = (b * bmax + 127) / 255;
@@ -327,6 +331,8 @@ CopyBits::copy_enlarged(int factor,
 			FWPixmap *pm, XImage *image,
 			bool priv_cmap, bool no_grays, bool dither,
 			int top, int left, int bottom, int right) {
+    calc_rgb_masks();
+
     int TOP = top * factor;
     int BOTTOM = bottom * factor;
     int LEFT = left * factor;
@@ -417,7 +423,6 @@ CopyBits::copy_enlarged(int factor,
 			    + ((b * (g_cubesize - 1) + 127) / 255);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    calc_rgb_masks();
 		    pixel = (((r * rmax + 127) / 255) << rmult)
 			    + (((g * gmax + 127) / 255) << gmult)
 			    + (((b * bmax + 127) / 255) << bmult);
@@ -522,7 +527,6 @@ CopyBits::copy_enlarged(int factor,
 		    dB = b - (g_colorcube[index].blue >> 8);
 		    pixel = g_colorcube[index].pixel;
 		} else {
-		    calc_rgb_masks();
 		    int ri = (r * rmax + 127) / 255;
 		    int gi = (g * gmax + 127) / 255;
 		    int bi = (b * bmax + 127) / 255;
@@ -649,6 +653,8 @@ CopyBits::copy_reduced(int factor,
 		       FWPixmap *pm, XImage *image,
 		       bool priv_cmap, bool no_grays, bool dither,
 		       int top, int left, int bottom, int right) {
+    calc_rgb_masks();
+
     int TOP = top / factor;
     int BOTTOM = (bottom + factor - 1) / factor;
     if (BOTTOM > image->height)
@@ -780,7 +786,6 @@ CopyBits::copy_reduced(int factor,
 				    + ((b * (g_cubesize - 1) + 127) / 255);
 			    pixel = g_colorcube[index].pixel;
 			} else {
-			    calc_rgb_masks();
 			    pixel = (((r * rmax + 127) / 255) << rmult)
 				    + (((g * gmax + 127) / 255) << gmult)
 				    + (((b * bmax + 127) / 255) << bmult);
@@ -958,7 +963,6 @@ CopyBits::copy_reduced(int factor,
 			    dG = g - (g_colorcube[index].green >> 8);
 			    dB = b - (g_colorcube[index].blue >> 8);
 			} else {
-			    calc_rgb_masks();
 			    int ri = (r * rmax + 127) / 255;
 			    int gi = (g * gmax + 127) / 255;
 			    int bi = (b * bmax + 127) / 255;
