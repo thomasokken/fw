@@ -59,19 +59,20 @@ class Viewer : private Frame {
 	void expose2(int x, int y, int w, int h);
 	static void input(Widget w, XtPointer cd, XtPointer ud);
 	void input2(XEvent *event);
-	static void menucallback(void *closure, const char *id);
+	static void menucallback(void *cl, const char *id);
 	void menucallback2(const char *id);
-	static void togglecallback(void *closure, const char *id, bool value);
+	static void togglecallback(void *cl, const char *id, bool value);
 	void togglecallback2(const char *id, bool value);
-	static void radiocallback(void *closure, const char *id, const char *value);
+	static void radiocallback(void *cl, const char *id, const char *value);
 	void radiocallback2(const char *id, const char *value);
 
 	static Boolean deleteLater2(XtPointer ud);
-	static void doOpen2(const char *filename, void *closure);
-	static void doLoadColors2(const char *filename, void *closure);
-	void doLoadColors3(const char *filename);
-	static void doSaveColors2(const char *filename, void *closure);
-	void doSaveColors3(const char *filename);
+	static void doOpen2(const char *fn, void *cl);
+	static void doSaveAs2(const char *fn, const char *type, void *cl);
+	static void doLoadColors2(const char *fn, void *cl);
+	void doLoadColors3(const char *fn);
+	static void doSaveColors2(const char *fn, void *cl);
+	void doSaveColors3(const char *fn);
 
 	static void doBeep();
 	void doNew(const char *plugin);

@@ -12,6 +12,7 @@
 #include "FileDialog.h"
 #include "ImageIO.h"
 #include "Plugin.h"
+#include "SaveImageDialog.h"
 #include "main.h"
 #include "util.h"
 
@@ -2136,6 +2137,12 @@ Viewer::doOpen2(const char *filename, void *closure) {
 }
 
 /* private static */ void
+Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
+    Viewer *This = (Viewer *) closure;
+    fprintf(stderr, "Saving image as \"%s\", type %s.\n", filename, type);
+}
+
+/* private static */ void
 Viewer::doLoadColors2(const char *filename, void *closure) {
     ((Viewer *) closure)->doLoadColors3(filename);
 }
@@ -2224,7 +2231,12 @@ Viewer::doSave() {
 
 /* private */ void
 Viewer::doSaveAs() {
-    doBeep();
+    SaveImageDialog *savedialog = new SaveImageDialog();
+    savedialog->setTitle("Save File");
+    savedialog->setIconTitle("Save File");
+    savedialog->setDirectory(&file_directory);
+    savedialog->setImageSelectedCB(doSaveAs2, this);
+    savedialog->raise();
 }
 
 /* private */ void

@@ -5,10 +5,12 @@
 
 class FileDialog : public Frame {
     private:
-	Widget fsb;
 	char **directory;
 	void (*fileSelectedCB)(const char *filename, void *closure);
 	void *fileSelectedClosure;
+
+    protected:
+	Widget fsb;
 
     public:
 	FileDialog();

@@ -1,3 +1,10 @@
+In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
+can't set focus on a text field any more). Am I doing something wrong there, or
+is this an OpenMotif 2.2.2 bug? Take a look at...
+
+	http://www.motifdeveloper.com/tips/tip22.html
+        http://www.motifdeveloper.com/tips/Motif22Review.pdf
+
 The SettingsDialog code should receive focus notifications, and invoke
 PluginSettings::fieldChanged() immediately (if the field has, in fact,
 changed!), rather than putting it all off until the ok() callback.
