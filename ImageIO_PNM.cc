@@ -247,10 +247,12 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	}
 	case '5':
 	    if (maxval < 256) {
-		fread(pm->pixels, 1, size, pnm);
-		unsigned char *p = pm->pixels;
-		for (int i = 0; i < size; i++)
-		    *p++ = (((int) *p) * 255) / maxval;
+		for (int v = 0; v < pm->height; v++) {
+		    unsigned char *p = pm->pixels + v * pm->bytesperline;
+		    fread(p, 1, pm->width, pnm);
+		    for (int h = 0; h < pm->width; h++)
+			*p++ = (((int) *p) * 255) / maxval;
+		}
 	    } else {
 		unsigned char *p = pm->pixels;
 		for (int i = 0; i < size; i++) {
@@ -496,7 +498,8 @@ ImageIO_PNM::write(const char *filename, const char *plugin_name,
 	    }
 	}
     } else if (pm->depth == 8 && grayscale) {
-	fwrite(pm->pixels, len, 1, pnm);
+	for (int v = 0; v < pm->height; v++)
+	    fwrite(pm->pixels + v * pm->bytesperline, pm->width, 1, pnm);
     } else if (pm->depth == 8) {
 	unsigned char *ptr = pm->pixels;
 	for (int i = 0; i < len; i++) {

@@ -698,7 +698,7 @@ Viewer::pluginFinished(bool notify) {
     // attention unless they have requested we do so.
     if (notify && optionsmenu->getToggleValue("Options.Notify")) {
 	char buf[1024];
-	snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), filename == NULL ? "(null)" : filename);
+	snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), filename == NULL ? "Untitled" : filename);
 	TextViewer *tv = new TextViewer(buf);
 	tv->raise();
 	beep();
@@ -1370,6 +1370,8 @@ Viewer::save(const char *name, const char *type) {
 
 	    setTitle(labelbuf);
 	    setIconTitle(labelbuf);
+	    saved_undo_id = undomanager->getCurrentId();
+	    dirty = false;
 	}
 	if (filename != NULL)
 	    free(filename);
