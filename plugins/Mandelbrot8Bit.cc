@@ -15,18 +15,18 @@ class Mandelbrot8Bit : public Plugin {
 	    return "Mandelbrot8Bit";
 	}
 	virtual void init_new() {
-	    vw->width = 500;
-	    vw->height = 300;
-	    vw->bytesperline = vw->width + 3 & ~3;
-	    int size = vw->bytesperline * vw->height;
-	    vw->pixels = (unsigned char *) malloc(size);
+	    pm->width = 500;
+	    pm->height = 300;
+	    pm->bytesperline = pm->width + 3 & ~3;
+	    int size = pm->bytesperline * pm->height;
+	    pm->pixels = (unsigned char *) malloc(size);
 	    for (int i = 0; i < size; i++)
-		vw->pixels[i] = 0;
-	    vw->cmap = new Color[256];
+		pm->pixels[i] = 0;
+	    pm->cmap = new Color[256];
 	    for (int i = 0; i < 255; i++)
-		vw->cmap[i].r = vw->cmap[i].g = vw->cmap[i].b = i;
-	    vw->depth = 8;
-	    vw->finish_init();
+		pm->cmap[i].r = pm->cmap[i].g = pm->cmap[i].b = i;
+	    pm->depth = 8;
+	    init_proceed();
 	}
 	virtual void run() {
 	    paint();
@@ -35,7 +35,7 @@ class Mandelbrot8Bit : public Plugin {
 	    start_prodding();
 	}
 	virtual void restart() {
-	    if (y < vw->height)
+	    if (y < pm->height)
 		start_prodding();
 	}
 	virtual void stop() {
@@ -58,18 +58,18 @@ class Mandelbrot8Bit : public Plugin {
 		    n++;
 		}
 		if (n == 1000)
-		    vw->pixels[y * vw->bytesperline + x] = 0;
+		    pm->pixels[y * pm->bytesperline + x] = 0;
 		else
-		    vw->pixels[y * vw->bytesperline + x] = ((n % 100) * 255) / 100;
-		if (++x == vw->width) {
+		    pm->pixels[y * pm->bytesperline + x] = ((n % 100) * 255) / 100;
+		if (++x == pm->width) {
 		    x = 0;
-		    if (++y == vw->height) {
-			paint(firsty, 0, vw->height, vw->width);
+		    if (++y == pm->height) {
+			paint(firsty, 0, pm->height, pm->width);
 			return true;
 		    }
 		}
 	    }
-	    paint(firsty, 0, endy, vw->width);
+	    paint(firsty, 0, endy, pm->width);
 	    return false;
 	}
 

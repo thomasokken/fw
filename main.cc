@@ -10,6 +10,8 @@
 
 #include "main.h"
 #include "Viewer.h"
+#include "util.h"
+
 #include "fw.xpm"
 
 // Exported globals
@@ -192,7 +194,7 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
     fprintf(stderr, "  Current serial number in output stream:  ???\n");
 
     if (x_errors_coredump)
-	kill(0, SIGQUIT);
+	dump_core();
     else
 	fprintf(stderr, "\007\n");
     return 0;

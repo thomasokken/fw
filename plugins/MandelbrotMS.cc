@@ -85,7 +85,7 @@ class MandelbrotMS : public Plugin {
 	void fillrect(int top, int left, int bottom, int right, int value) {
 	    for (int y = top; y <= bottom; y++)
 		for (int x = left; x <= right; x++)
-		    vw->pixels[y * vw->bytesperline + x] = value;
+		    pm->pixels[y * pm->bytesperline + x] = value;
 	}
 
 	MandelbrotMS(void *dl) : Plugin(dl) {
@@ -100,29 +100,29 @@ class MandelbrotMS : public Plugin {
 	    return depth == 8;
 	}
 	virtual void init_new() {
-	    get_settings();
+	    get_settings_dialog();
 	}
 	virtual void get_settings_ok() {
-	    vw->width = s.width;
-	    vw->height = s.height;
-	    vw->depth = 8;
-	    vw->bytesperline = s.width + 3 & ~3;
-	    vw->pixels = (unsigned char *) malloc(vw->bytesperline * vw->height);
-	    memset(vw->pixels, 255, vw->bytesperline * vw->height);
-	    vw->cmap = new Color[256];
+	    pm->width = s.width;
+	    pm->height = s.height;
+	    pm->depth = 8;
+	    pm->bytesperline = s.width + 3 & ~3;
+	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
+	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
+	    pm->cmap = new Color[256];
 	    for (int k = 0; k < 256; k++) {
-		vw->cmap[k].r = k;
-		vw->cmap[k].g = k;
-		vw->cmap[k].b = k;
+		pm->cmap[k].r = k;
+		pm->cmap[k].g = k;
+		pm->cmap[k].b = k;
 	    }
-	    Plugin::get_settings_ok();
+	    init_proceed();
 	}
 	virtual void run() {
 	    b2 = s.bands * 253;
 	    limit2 = s.limit * s.limit;
 	    step = (s.xmax - s.xmin) / s.width;
 	    sp = 0;
-	    stack[sp].set(0, 0, vw->height - 1, vw->width - 1);
+	    stack[sp].set(0, 0, pm->height - 1, pm->width - 1);
 	    state = 0;
 	    ndirty = 0;
 	    dirty.empty();
@@ -301,7 +301,7 @@ class MandelbrotMS : public Plugin {
 	    }
 	    int value = n == s.maxiter ? 0
 			: ((n * b2) / (s.maxiter - 1)) % 254 + 1;
-	    vw->pixels[v * vw->bytesperline + h] = value;
+	    pm->pixels[v * pm->bytesperline + h] = value;
 	    return value;
 	}
 

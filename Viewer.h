@@ -1,10 +1,11 @@
 #ifndef VIEWER_H
-#define VIEWER_H
+#define VIEWER_H 1
 
 #include <Xm/Xm.h>
 
 #include "Frame.h"
-class Color;
+#include "FWPixmap.h"
+
 class Plugin;
 
 class Viewer : private Frame {
@@ -14,6 +15,7 @@ class Viewer : private Frame {
 	XImage *image;
 	Colormap priv_cmap;
 	int scale;
+	FWPixmap pm;
 	bool dithering;
 	bool direct_copy;
 	bool selection_visible;
@@ -24,13 +26,8 @@ class Viewer : private Frame {
 	Widget clipwindow;
 	static int instances;
 	static GC gc;
-
-    public:
-	// These are public so Viewer can access them
-	unsigned char *pixels;
-	Color *cmap;
-	int depth;
-	int width, height, bytesperline;
+	static char *file_directory;
+	static char *colormap_directory;
 
     public:
 	Viewer(const char *pluginname);
@@ -71,8 +68,13 @@ class Viewer : private Frame {
 	void radiocallback2(const char *id, const char *value);
 
 	static Boolean deleteLater2(XtPointer ud);
+	static void doOpen2(const char *filename, void *closure);
+	static void doLoadColors2(const char *filename, void *closure);
+	void doLoadColors3(const char *filename);
+	static void doSaveColors2(const char *filename, void *closure);
+	void doSaveColors3(const char *filename);
 
-	void doBeep();
+	static void doBeep();
 	void doNew(const char *plugin);
 	void doOpen();
 	void doClose();

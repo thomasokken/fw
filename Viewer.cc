@@ -4,10 +4,12 @@
 #include <Xm/ScrolledW.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <errno.h>
 
 #include "Viewer.h"
 #include "Menu.h"
-#include "OpenFileDialog.h"
+#include "FileDialog.h"
 #include "Plugin.h"
 #include "main.h"
 #include "util.h"
@@ -18,6 +20,12 @@ Viewer::instances = 0;
 
 /* private static */ GC
 Viewer::gc = None;
+
+/* private static */ char *
+Viewer::file_directory = NULL;
+
+/* private static */ char *
+Viewer::colormap_directory = NULL;
 
 /* public */
 Viewer::Viewer(const char *pluginname)
@@ -42,15 +50,16 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
     instances++;
     image = NULL;
     priv_cmap = None;
-    pixels = NULL;
-    cmap = NULL;
+    pm.pixels = NULL;
+    pm.cmap = NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
 	delete this;
 	return;
     }
-    plugin->setviewer(this);
+    plugin->setViewer(this);
+    plugin->setPixmap(&pm);
     if (plugin != NULL) {
 	if (src != NULL) {
 	    if (plugin->init_clone(src->plugin))
@@ -209,12 +218,12 @@ Viewer::finish_init() {
     scale = 1; // get from preferences!
     int image_width, image_height;
     if (scale > 0) {
-	image_width = scale * width;
-	image_height = scale * height;
+	image_width = scale * pm.width;
+	image_height = scale * pm.height;
     } else {
 	int s = -scale;
-	image_width = (width + s - 1) / s;
-	image_height = (height + s - 1) / s;
+	image_width = (pm.width + s - 1) / s;
+	image_height = (pm.height + s - 1) / s;
     }
 
     drawingarea = XtVaCreateManagedWidget("DrawingArea",
@@ -339,7 +348,7 @@ Viewer::finish_init() {
     selection_in_progress = false;
     selection_visible = false;
 
-    bool bitmap_ok = depth == 1 && scale >= 1;
+    bool bitmap_ok = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
 			 g_visual,
 			 bitmap_ok ? 1 : g_depth,
@@ -356,7 +365,7 @@ Viewer::finish_init() {
     if (want_priv_cmap
 	    && g_depth == 8
 	    && g_visual->c_class == PseudoColor
-	    && (depth == 8 || depth == 24 || (depth == 1 && scale <= -1))) {
+	    && (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))) {
 	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
 	setColormap(priv_cmap);
 	colormapChanged();
@@ -364,7 +373,7 @@ Viewer::finish_init() {
 
     direct_copy = canIDoDirectCopy();
     if (direct_copy)
-	image->data = (char *) pixels;
+	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
     if (g_verbosity >= 1)
@@ -385,10 +394,10 @@ Viewer::~Viewer() {
     }
     if (plugin != NULL)
 	Plugin::release(plugin);
-    if (pixels != NULL)
-	free(pixels);
-    if (cmap != NULL)
-	delete[] cmap;
+    if (pm.pixels != NULL)
+	free(pm.pixels);
+    if (pm.cmap != NULL)
+	delete[] pm.cmap;
     if (--instances == 0)
 	exit(0);
 }
@@ -459,7 +468,7 @@ Viewer::paint_direct(int top, int left, int bottom, int right) {
 
 /* private */ void
 Viewer::paint_unscaled(int top, int left, int bottom, int right) {
-    if (depth == 1) {
+    if (pm.depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
 	// special-case code that does not do the error diffusion thing.
@@ -468,28 +477,28 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 	for (int y = top; y < bottom; y++)
 	    for (int x = left; x < right; x++)
 		XPutPixel(image, x, y,
-			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
+			(pm.pixels[y * pm.bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white);
-    } else if (depth == 8 && priv_cmap != None) {
+    } else if (pm.depth == 8 && priv_cmap != None) {
 	// As in the 1-bit case, in this case we know all our colors are
 	// available, so no dithering is required and all we do is copy pixels.
 	for (int y = top; y < bottom; y++)
 	    for (int x = left; x < right; x++)
-		XPutPixel(image, x, y, pixels[y * bytesperline + x]);
+		XPutPixel(image, x, y, pm.pixels[y * pm.bytesperline + x]);
     } else if (!dithering && (g_grayramp == NULL || priv_cmap != None)) {
 	// Color display, not dithered
 	for (int y = top; y < bottom; y++) {
 	    for (int x = left; x < right; x++) {
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		unsigned long pixel;
 		if (priv_cmap != None) {
@@ -587,15 +596,15 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 	    dR = dG = dB = 0;
 	    for (int x = start; x != end; x += dir) {
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		r += (dr[x - left] + dR) >> 4;
 		if (r < 0) r = 0; else if (r > 255) r = 255;
@@ -715,15 +724,15 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 	for (int y = top; y < bottom; y++) {
 	    for (int x = left; x < right; x++) {
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 		int graylevel = 
@@ -756,15 +765,15 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 	    dK = 0;
 	    for (int x = start; x != end; x += dir) {
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 		k += (dk[x - left] + dK) >> 4;
@@ -802,7 +811,7 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
     int LEFT = left * scale;
     int RIGHT = right * scale;
 
-    if (depth == 1) {
+    if (pm.depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
 	// special-case code that does not do the error diffusion thing.
@@ -813,21 +822,21 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	    for (int x = left; x < right; x++) {
 		int X = x * scale;
 		unsigned long pixel =
-			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
+			(pm.pixels[y * pm.bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white;
 		for (int YY = Y; YY < Y + scale; YY++)
 		    for (int XX = X; XX < X + scale; XX++)
 			XPutPixel(image, XX, YY, pixel);
 	    }
 	}
-    } else if (depth == 8 && priv_cmap != None) {
+    } else if (pm.depth == 8 && priv_cmap != None) {
 	// As in the 1-bit case, in this case we know all our colors are
 	// available, so no dithering is required and all we do is copy pixels.
 	for (int y = top; y < bottom; y++) {
 	    int Y = y * scale;
 	    for (int x = left; x < right; x++) {
 		int X = x * scale;
-		unsigned long pixel = pixels[y * bytesperline + x];
+		unsigned long pixel = pm.pixels[y * pm.bytesperline + x];
 		for (int YY = Y; YY < Y + scale; YY++)
 		    for (int XX = X; XX < X + scale; XX++)
 			XPutPixel(image, XX, YY, pixel);
@@ -840,15 +849,15 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	    for (int x = left; x < right; x++) {
 		int X = x * scale;
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		unsigned long pixel;
 		if (priv_cmap != None) {
@@ -950,15 +959,15 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	    for (int X = START; X != END; X += dir) {
 		int x = X / scale;
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		r += (dr[X - LEFT] + dR) >> 4;
 		if (r < 0) r = 0; else if (r > 255) r = 255;
@@ -1080,15 +1089,15 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	    for (int x = left; x < right; x++) {
 		int X = x * scale;
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 		int graylevel = 
@@ -1125,15 +1134,15 @@ Viewer::paint_enlarged(int top, int left, int bottom, int right) {
 	    for (int X = START; X != END; X += dir) {
 		int x = X / scale;
 		int r, g, b;
-		if (depth == 8) {
-		    unsigned char index = pixels[y * bytesperline + x];
-		    r = cmap[index].r;
-		    g = cmap[index].g;
-		    b = cmap[index].b;
-		} else /* depth == 24 */ {
-		    r = pixels[y * bytesperline + (x << 2) + 1];
-		    g = pixels[y * bytesperline + (x << 2) + 2];
-		    b = pixels[y * bytesperline + (x << 2) + 3];
+		if (pm.depth == 8) {
+		    unsigned char index = pm.pixels[y * pm.bytesperline + x];
+		    r = pm.cmap[index].r;
+		    g = pm.cmap[index].g;
+		    b = pm.cmap[index].b;
+		} else /* pm.depth == 24 */ {
+		    r = pm.pixels[y * pm.bytesperline + (x << 2) + 1];
+		    g = pm.pixels[y * pm.bytesperline + (x << 2) + 2];
+		    b = pm.pixels[y * pm.bytesperline + (x << 2) + 3];
 		}
 		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 		k += (dk[X - LEFT] + dK) >> 4;
@@ -1179,12 +1188,12 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
     // Normalize source coordinates
     top = TOP * s;
     bottom = BOTTOM * s;
-    if (bottom > height)
-	bottom = height;
+    if (bottom > pm.height)
+	bottom = pm.height;
     left = LEFT * s;
     right = RIGHT * s;
-    if (right > width)
-	right = width;
+    if (right > pm.width)
+	right = pm.width;
 
     int R[RIGHT - LEFT];
     int G[RIGHT - LEFT];
@@ -1194,7 +1203,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	R[i] = G[i] = B[i] = W[i] = 0;
 
 
-    if (!dithering || (depth == 1 && priv_cmap != None)) {
+    if (!dithering || (pm.depth == 1 && priv_cmap != None)) {
 	// Color or Gray, no dithering
 	int Y = TOP;
 	int YY = 0;
@@ -1202,19 +1211,19 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    int X = 0;
 	    int XX = 0;
 	    for (int x = left; x < right; x++) {
-		if (depth == 1) {
-		    int p = ((pixels[y * bytesperline + (x >> 3)] >> (x & 7)) & 1)
+		if (pm.depth == 1) {
+		    int p = ((pm.pixels[y * pm.bytesperline + (x >> 3)] >> (x & 7)) & 1)
 				* 255;
 		    R[X] += p;
 		    G[X] += p;
 		    B[X] += p;
-		} else if (depth == 8) {
-		    int p = pixels[y * bytesperline + x];
-		    R[X] += cmap[p].r;
-		    G[X] += cmap[p].g;
-		    B[X] += cmap[p].b;
+		} else if (pm.depth == 8) {
+		    int p = pm.pixels[y * pm.bytesperline + x];
+		    R[X] += pm.cmap[p].r;
+		    G[X] += pm.cmap[p].g;
+		    B[X] += pm.cmap[p].b;
 		} else {
-		    unsigned char *p = pixels + (y * bytesperline + x * 4 + 1);
+		    unsigned char *p = pm.pixels + (y * pm.bytesperline + x * 4 + 1);
 		    R[X] += *p++;
 		    G[X] += *p++;
 		    B[X] += *p;
@@ -1236,12 +1245,12 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 
 		    if (priv_cmap != None) {
 			// Find the closest match to (R, G, B) in the colormap...
-			if (depth == 1) {
+			if (pm.depth == 1) {
 			    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
 			    if (k > 255)
 				k = 255;
 			    XPutPixel(image, X + LEFT, Y, k);
-			} else if (depth == 24) {
+			} else if (pm.depth == 24) {
 			    // 256-entry color map, with first 216 entries
 			    // containing a 6x6x6 color cube, and the remaining
 			    // 40 entries containing 40 shades of gray (which,
@@ -1277,9 +1286,9 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 			    unsigned long best_pixel;
 			    int best_error = 1000000;
 			    for (int i = 0; i < 256; i++) {
-				int dr = r - cmap[i].r;
-				int dg = g - cmap[i].g;
-				int db = b - cmap[i].b;
+				int dr = r - pm.cmap[i].r;
+				int dg = g - pm.cmap[i].g;
+				int db = b - pm.cmap[i].b;
 				int err = dr * dr + dg * dg + db * db;
 				if (err < best_error) {
 				    best_pixel = i;
@@ -1376,19 +1385,19 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
 	    for (int x = start; x != end; x += dir) {
-		if (depth == 1) {
-		    int p = ((pixels[y * bytesperline + (x >> 3)]
+		if (pm.depth == 1) {
+		    int p = ((pm.pixels[y * pm.bytesperline + (x >> 3)]
 				>> (x & 7)) & 1) * 255;
 		    R[X] += p;
 		    G[X] += p;
 		    B[X] += p;
-		} else if (depth == 8) {
-		    int p = pixels[y * bytesperline + x];
-		    R[X] += cmap[p].r;
-		    G[X] += cmap[p].g;
-		    B[X] += cmap[p].b;
+		} else if (pm.depth == 8) {
+		    int p = pm.pixels[y * pm.bytesperline + x];
+		    R[X] += pm.cmap[p].r;
+		    G[X] += pm.cmap[p].g;
+		    B[X] += pm.cmap[p].b;
 		} else {
-		    unsigned char *p = pixels + (y * bytesperline + x * 4 + 1);
+		    unsigned char *p = pm.pixels + (y * pm.bytesperline + x * 4 + 1);
 		    R[X] += *p++;
 		    G[X] += *p++;
 		    B[X] += *p;
@@ -1431,7 +1440,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		    if (b < 0) b = 0; else if (b > 255) b = 255;
 		    db[X] = 0;
 
-		    if (priv_cmap != None && depth == 24) {
+		    if (priv_cmap != None && pm.depth == 24) {
 			// 256-entry color map, with first 216 entries
 			// containing a 6x6x6 color cube, and the remaining 40
 			// entries containing 40 shades of gray (which,
@@ -1474,9 +1483,9 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 			int best_pixel;
 			int best_error = 1000000;
 			for (int i = 0; i < 256; i++) {
-			    int rerr = r - cmap[i].r;
-			    int gerr = g - cmap[i].g;
-			    int berr = b - cmap[i].b;
+			    int rerr = r - pm.cmap[i].r;
+			    int gerr = g - pm.cmap[i].g;
+			    int berr = b - pm.cmap[i].b;
 			    int err = rerr * rerr + gerr * gerr + berr * berr;
 			    if (err < best_error) {
 				best_pixel = i;
@@ -1484,9 +1493,9 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 			    }
 			}
 			XPutPixel(image, X + LEFT, Y, best_pixel);
-			dR = r - cmap[best_pixel].r;
-			dG = g - cmap[best_pixel].g;
-			dB = b - cmap[best_pixel].b;
+			dR = r - pm.cmap[best_pixel].r;
+			dG = g - pm.cmap[best_pixel].g;
+			dB = b - pm.cmap[best_pixel].b;
 		    } else {
 			unsigned long pixel;
 			if (g_colorcube != NULL) {
@@ -1588,17 +1597,17 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
 	    for (int x = start; x != end; x += dir) {
-		if (depth == 1) {
-		    int p = ((pixels[y * bytesperline + (x >> 3)]
+		if (pm.depth == 1) {
+		    int p = ((pm.pixels[y * pm.bytesperline + (x >> 3)]
 				>> (x & 7)) & 1) * 255;
 		    R[X] += p;
-		} else if (depth == 8) {
-		    int p = pixels[y * bytesperline + x];
-		    R[X] += cmap[p].r;
-		    G[X] += cmap[p].g;
-		    B[X] += cmap[p].b;
+		} else if (pm.depth == 8) {
+		    int p = pm.pixels[y * pm.bytesperline + x];
+		    R[X] += pm.cmap[p].r;
+		    G[X] += pm.cmap[p].g;
+		    B[X] += pm.cmap[p].b;
 		} else {
-		    unsigned char *p = pixels + (y * bytesperline + x * 4 + 1);
+		    unsigned char *p = pm.pixels + (y * pm.bytesperline + x * 4 + 1);
 		    R[X] += *p++;
 		    G[X] += *p++;
 		    B[X] += *p;
@@ -1625,7 +1634,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		for (X = START; X != END; X += dir) {
 		    int w = W[X];
 		    int k;
-		    if (depth == 1) {
+		    if (pm.depth == 1) {
 			k = (R[X] + w / 2) / w;
 			if (k > 255)
 			    k = 255;
@@ -1800,12 +1809,12 @@ Viewer::screen2pixmap(int *x, int *y) {
     }
     if (X < 0)
 	X = 0;
-    else if (X >= width)
-	X = width - 1;
+    else if (X >= pm.width)
+	X = pm.width - 1;
     if (Y < 0)
 	Y = 0;
-    else if (Y >= height)
-	Y = height - 1;
+    else if (Y >= pm.height)
+	Y = pm.height - 1;
     *x = X;
     *y = Y;
 }
@@ -1828,10 +1837,10 @@ Viewer::pixmap2screen(int *x, int *y) {
 /* public */ void
 Viewer::colormapChanged() {
     if (priv_cmap == None) {
-	paint(0, 0, height, width);
+	paint(0, 0, pm.height, pm.width);
     } else {
 	XColor colors[256];
-	if (depth == 1) {
+	if (pm.depth == 1) {
 	    for (int i = 0; i < 256; i++) {
 		colors[i].pixel = i;
 		int k = 257 * i;
@@ -1840,12 +1849,12 @@ Viewer::colormapChanged() {
 		colors[i].blue = k;
 		colors[i].flags = DoRed | DoGreen | DoBlue;
 	    }
-	} else if (depth == 8) {
+	} else if (pm.depth == 8) {
 	    for (int i = 0; i < 256; i++) {
 		colors[i].pixel = i;
-		colors[i].red = 257 * cmap[i].r;
-		colors[i].green = 257 * cmap[i].g;
-		colors[i].blue = 257 * cmap[i].b;
+		colors[i].red = 257 * pm.cmap[i].r;
+		colors[i].green = 257 * pm.cmap[i].g;
+		colors[i].blue = 257 * pm.cmap[i].b;
 		colors[i].flags = DoRed | DoGreen | DoBlue;
 	    }
 	} else {
@@ -1884,17 +1893,17 @@ Viewer::close() {
 Viewer::canIDoDirectCopy() {
     if (scale != 1)
 	return false;
-    if (depth == 1)
-	return image->bytes_per_line == bytesperline
+    if (pm.depth == 1)
+	return image->bytes_per_line == pm.bytesperline
 		&& image->byte_order == LSBFirst
 		&& image->bitmap_bit_order == LSBFirst;
-    if (depth == 8)
+    if (pm.depth == 8)
 	return priv_cmap != None // implies 8-bit PseudoColor visual
-		&& image->bytes_per_line == bytesperline
+		&& image->bytes_per_line == pm.bytesperline
 		&& image->byte_order == LSBFirst;
-    // depth == 24
+    // pm.depth == 24
     return image->depth == 32
-		&& image->bytes_per_line == bytesperline
+		&& image->bytes_per_line == pm.bytesperline
 		&& ((image->byte_order == LSBFirst
 			&& image->red_mask == 0x00FF0000
 			&& image->green_mask == 0x0000FF00
@@ -1914,8 +1923,8 @@ Viewer::resize(Widget w, XtPointer ud, XtPointer cd) {
 Viewer::resize2() {
     /*
     Arg args[2];
-    XtSetArg(args[0], XmNwidth, &width);
-    XtSetArg(args[1], XmNheight, &height);
+    XtSetArg(args[0], XmNwidth, &pm.width);
+    XtSetArg(args[1], XmNheight, &pm.height);
     XtGetValues(w, args, 2);
     */
 }
@@ -2099,7 +2108,70 @@ Viewer::radiocallback2(const char *id, const char *value) {
 	doScale(value);
 }
 
+/* private static */ void
+Viewer::doOpen2(const char *filename, void *closure) {
+    if (!openFile(filename))
+	doBeep();
+}
+
+/* private static */ void
+Viewer::doLoadColors2(const char *filename, void *closure) {
+    ((Viewer *) closure)->doLoadColors3(filename);
+}
+
 /* private */ void
+Viewer::doLoadColors3(const char *filename) {
+    FILE *file = fopen(filename, "r");
+    if (file == NULL) {
+	// TODO - decent error reporting
+	fprintf(stderr, "Can't open \"%s\" for reading (%s).\n",
+			    filename, strerror(errno));
+	return;
+    }
+    Color *newcmap = new Color[256];
+    for (int i = 0; i < 256; i++) {
+	int r, g, b;
+	if (fscanf(file, "%d %d %d", &r, &g, &b) != 3)
+	    goto failure;
+	if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)
+	    goto failure;
+	newcmap[i].r = r;
+	newcmap[i].g = g;
+	newcmap[i].b = b;
+    }
+    delete[] pm.cmap;
+    pm.cmap = newcmap;
+    fclose(file);
+    colormapChanged();
+    return;
+
+    failure:
+    // TODO - decent error reporting
+    doBeep();
+    delete[] newcmap;
+    fclose(file);
+}
+
+/* private static */ void
+Viewer::doSaveColors2(const char *filename, void *closure) {
+    ((Viewer *) closure)->doSaveColors3(filename);
+}
+
+/* private */ void
+Viewer::doSaveColors3(const char *filename) {
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+	// TODO - decent error reporting
+	fprintf(stderr, "Can't open \"%s\" for writing (%s).\n",
+			    filename, strerror(errno));
+	return;
+    }
+    for (int i = 0; i < 256; i++)
+	fprintf(file, "%d %d %d\n", pm.cmap[i].r, pm.cmap[i].g, pm.cmap[i].b);
+    fclose(file);
+}
+
+/* private static */ void
 Viewer::doBeep() {
     XBell(g_display, 100);
 }
@@ -2111,7 +2183,12 @@ Viewer::doNew(const char *plugin) {
 
 /* private */ void
 Viewer::doOpen() {
-    new OpenFileDialog();
+    FileDialog *opendialog = new FileDialog();
+    opendialog->setTitle("Open File");
+    opendialog->setIconTitle("Open File");
+    opendialog->setDirectory(&file_directory);
+    opendialog->setFileSelectedCB(doOpen2, this);
+    opendialog->raise();
 }
 
 /* public static */ bool
@@ -2223,12 +2300,30 @@ Viewer::doClear() {
 
 /* private */ void
 Viewer::doLoadColors() {
-    doBeep();
+    if (pm.cmap == NULL) {
+	doBeep();
+	return;
+    }
+    FileDialog *loaddialog = new FileDialog();
+    loaddialog->setTitle("Load Colormap");
+    loaddialog->setIconTitle("Load Colormap");
+    loaddialog->setDirectory(&colormap_directory);
+    loaddialog->setFileSelectedCB(doLoadColors2, this);
+    loaddialog->raise();
 }
 
 /* private */ void
 Viewer::doSaveColors() {
-    doBeep();
+    if (pm.cmap == NULL) {
+	doBeep();
+	return;
+    }
+    FileDialog *savedialog = new FileDialog();
+    savedialog->setTitle("Save Colormap");
+    savedialog->setIconTitle("Save Colormap");
+    savedialog->setDirectory(&colormap_directory);
+    savedialog->setFileSelectedCB(doSaveColors2, this);
+    savedialog->raise();
 }
 
 /* private */ void
@@ -2263,14 +2358,14 @@ Viewer::doContinueAll() {
 
 /* private */ void
 Viewer::doUpdateNow() {
-    paint(0, 0, height, width);
+    paint(0, 0, pm.height, pm.width);
 }
 
 /* private */ void
 Viewer::doPrivateColormap(bool value) {
     if (!(g_depth == 8
 		&& g_visual->c_class == PseudoColor
-		&& (depth == 8 || depth == 24 || (depth == 1 && scale <= -1))))
+		&& (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))))
 	return;
 
     if (value) {
@@ -2278,13 +2373,13 @@ Viewer::doPrivateColormap(bool value) {
 	setColormap(priv_cmap);
 	if (canIDoDirectCopy()) {
 	    free(image->data);
-	    image->data = (char *) pixels;
+	    image->data = (char *) pm.pixels;
 	    direct_copy = true;
 	    if (g_verbosity >= 1)
 		fprintf(stderr, "Using direct copy.\n");
 	}
 	colormapChanged();
-	paint(0, 0, height, width);
+	paint(0, 0, pm.height, pm.width);
     } else {
 	XFreeColormap(g_display, priv_cmap);
 	priv_cmap = None;
@@ -2302,7 +2397,7 @@ Viewer::doPrivateColormap(bool value) {
 /* private */ void
 Viewer::doDither(bool value) {
     dithering = value;
-    paint(0, 0, height, width);
+    paint(0, 0, pm.height, pm.width);
 }
 
 /* private */ void
@@ -2355,12 +2450,12 @@ Viewer::doScale(const char *value) {
     // Compute scaled image size
     int w, h;
     if (scale > 0) {
-	w = width * scale;
-	h = height * scale;
+	w = pm.width * scale;
+	h = pm.height * scale;
     } else {
 	int s = -scale;
-	w = (width + s - 1) / s;
-	h = (height + s - 1) / s;
+	w = (pm.width + s - 1) / s;
+	h = (pm.height + s - 1) / s;
     }
 
     // Resize the DrawingArea
@@ -2375,7 +2470,7 @@ Viewer::doScale(const char *value) {
     if (!direct_copy)
 	free(image->data);
     XFree(image);
-    bool bitmap_ok = depth == 1 && scale >= 1;
+    bool bitmap_ok = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
 			 g_visual,
 			 bitmap_ok ? 1 : g_depth,
@@ -2387,7 +2482,7 @@ Viewer::doScale(const char *value) {
 			 bitmap_ok ? 8 : 32,
 			 0);
 
-    if (depth == 1) {
+    if (pm.depth == 1) {
 	bool want_priv_cmap = scale <= -1
 		&& optionsmenu->getToggleValue("Options.PrivateColormap");
 	bool have_priv_cmap = priv_cmap != None;
@@ -2406,7 +2501,7 @@ Viewer::doScale(const char *value) {
     bool old_direct_copy = direct_copy;
     direct_copy = canIDoDirectCopy();
     if (direct_copy)
-	image->data = (char *) pixels;
+	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
     if (g_verbosity >= 1 && old_direct_copy != direct_copy)
@@ -2415,7 +2510,7 @@ Viewer::doScale(const char *value) {
 	else
 	    fprintf(stderr, "Not using direct copy.\n");
 
-    paint(0, 0, height, width);
+    paint(0, 0, pm.height, pm.width);
 }
 
 /* private */ void

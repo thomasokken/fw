@@ -48,17 +48,17 @@ class Ramp : public Plugin {
 	    return depth == 8 || depth == 24;
 	}
 	virtual void set_depth(int depth) {
-	    vw->depth = depth;
+	    pm->depth = depth;
 	}
 	virtual void init_new() {
-	    get_settings();
+	    get_settings_dialog();
 	}
 	virtual void get_settings_ok() {
-	    vw->width = s.width;
-	    vw->height = s.height;
-	    vw->bytesperline = vw->depth == 8 ? (vw->width + 3 & ~3) : (vw->width * 4);
-	    vw->pixels = (unsigned char *) malloc(vw->bytesperline * vw->height);
-	    unsigned char *dst = vw->pixels;
+	    pm->width = s.width;
+	    pm->height = s.height;
+	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
+	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
+	    unsigned char *dst = pm->pixels;
 
 	    int roffset = 0, boffset = 0, goffset = 0;
 	    int rshift = 0, bshift = 0, gshift = 0;
@@ -100,27 +100,27 @@ class Ramp : public Plugin {
 	    gshift = s.xg != 0 && s.yg != 0 ? 1 : 0;
 	    bshift = s.xb != 0 && s.yb != 0 ? 1 : 0;
 
-	    for (int y = 0; y < vw->height; y++) {
-		int yy = (y * 255) / (vw->height - 1);
-		for (int x = 0; x < vw->width; x++) {
-		    int xx = (x * 255) / (vw->width - 1);
-		    if (vw->depth == 24)
+	    for (int y = 0; y < pm->height; y++) {
+		int yy = (y * 255) / (pm->height - 1);
+		for (int x = 0; x < pm->width; x++) {
+		    int xx = (x * 255) / (pm->width - 1);
+		    if (pm->depth == 24)
 			*dst++ = 0;
 		    *dst++ = (roffset + s.xr * xx + s.yr * yy) >> rshift;
-		    if (vw->depth == 24) {
+		    if (pm->depth == 24) {
 			*dst++ = (goffset + s.xg * xx + s.yg * yy) >> gshift;
 			*dst++ = (boffset + s.xb * xx + s.yb * yy) >> bshift;
 		    }
 		}
 	    }
 
-	    if (vw->depth == 8) {
-		vw->cmap = new Color[256];
+	    if (pm->depth == 8) {
+		pm->cmap = new Color[256];
 		for (int k = 0; k < 256; k++)
-		    vw->cmap[k].r = vw->cmap[k].g = vw->cmap[k].b = k;
+		    pm->cmap[k].r = pm->cmap[k].g = pm->cmap[k].b = k;
 	    }
 
-	    vw->finish_init();
+	    init_proceed();
 	}
 	virtual void run() {
 	    paint();

@@ -15,15 +15,15 @@ class MandelbrotMono : public Plugin {
 	    return "MandelbrotMono";
 	}
 	virtual void init_new() {
-	    vw->width = 500;
-	    vw->height = 300;
-	    vw->bytesperline = vw->width + 7 >> 3;
-	    int size = vw->bytesperline * vw->height;
-	    vw->pixels = (unsigned char *) malloc(size);
+	    pm->width = 500;
+	    pm->height = 300;
+	    pm->bytesperline = pm->width + 7 >> 3;
+	    int size = pm->bytesperline * pm->height;
+	    pm->pixels = (unsigned char *) malloc(size);
 	    for (int i = 0; i < size; i++)
-		vw->pixels[i] = 0;
-	    vw->depth = 1;
-	    vw->finish_init();
+		pm->pixels[i] = 0;
+	    pm->depth = 1;
+	    init_proceed();
 	}
 	virtual void run() {
 	    paint();
@@ -32,7 +32,7 @@ class MandelbrotMono : public Plugin {
 	    start_prodding();
 	}
 	virtual void restart() {
-	    if (y < vw->height)
+	    if (y < pm->height)
 		start_prodding();
 	}
 	virtual void stop() {
@@ -55,16 +55,16 @@ class MandelbrotMono : public Plugin {
 		    n++;
 		}
 		if (n & 1)
-		    vw->pixels[y * vw->bytesperline + (x >> 3)] |= 1 << (x & 7);
-		if (++x == vw->width) {
+		    pm->pixels[y * pm->bytesperline + (x >> 3)] |= 1 << (x & 7);
+		if (++x == pm->width) {
 		    x = 0;
-		    if (++y == vw->height) {
-			paint(firsty, 0, vw->height, vw->width);
+		    if (++y == pm->height) {
+			paint(firsty, 0, pm->height, pm->width);
 			return true;
 		    }
 		}
 	    }
-	    paint(firsty, 0, endy, vw->width);
+	    paint(firsty, 0, endy, pm->width);
 	    return false;
 	}
 

@@ -86,19 +86,78 @@ Plugin::list_compar(const void *a, const void *b) {
     return strcmp(*(const char **) a, *(const char **) b);
 }
 
+/* public virtual */ int
+Plugin::can_open(const char *filename) {
+    return false;
+}
+
+/* public virtual */ bool
+Plugin::does_depth(int depth) {
+    return false;
+}
+
 /* public virtual */ void
-Plugin::get_settings() {
-    new SettingsDialog(settings, settings_layout, this);
+Plugin::set_depth(int depth) {
+    //
+}
+
+/* public virtual */ void
+Plugin::init_new() {
+    beep();
+    viewer->deleteLater();
+}
+
+/* public virtual */ bool
+Plugin::init_clone(const Plugin *src) {
+    beep();
+    return false;
+}
+
+/* public virtual */ bool
+Plugin::init_load(const char *filename) {
+    beep();
+    return false;
+}
+
+/* public virtual */ void
+Plugin::save(const char *filename) {
+    beep();
 }
 
 /* public virtual */ void
 Plugin::get_settings_ok() {
-    vw->finish_init();
+    init_proceed();
 }
 
 /* public virtual */ void
 Plugin::get_settings_cancel() {
-    vw->deleteLater();
+    init_abort();
+}
+
+/* public virtual */ void
+Plugin::run() {
+    //
+}
+
+/* public virtual */ void
+Plugin::restart() {
+    //
+}
+
+/* public virtual */ void
+Plugin::stop() {
+    //
+}
+
+/* public virtual */ bool
+Plugin::work() {
+    // 'true' means we're done, don't call us again
+    return true;
+}
+
+/* public virtual */ const char *
+Plugin::help() {
+    return NULL;
 }
 
 /* protected static */ void
@@ -107,18 +166,33 @@ Plugin::beep() {
 }
 
 /* protected */ void
+Plugin::get_settings_dialog() {
+    new SettingsDialog(settings, settings_layout, this);
+}
+
+/* protected */ void
+Plugin::init_proceed() {
+    viewer->finish_init();
+}
+
+/* protected */ void
+Plugin::init_abort() {
+    viewer->deleteLater();
+}
+
+/* protected */ void
 Plugin::paint() {
-    vw->paint(0, 0, vw->height, vw->width);
+    viewer->paint(0, 0, pm->height, pm->width);
 }
 
 /* protected */ void
 Plugin::paint(int top, int left, int bottom, int right) {
-    vw->paint(top, left, bottom, right);
+    viewer->paint(top, left, bottom, right);
 }
 
 /* protected */ void
 Plugin::colormapChanged() {
-    vw->colormapChanged();
+    viewer->colormapChanged();
 }
 
 /* protected */ void
