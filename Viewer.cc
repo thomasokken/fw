@@ -415,8 +415,6 @@ Viewer::~Viewer() {
 	    free(image->data);
 	XFree(image);
     }
-    if (gc != None)
-	XFreeGC(g_display, gc);
     if (pm.pixels != NULL)
 	free(pm.pixels);
     if (pm.cmap != NULL)
