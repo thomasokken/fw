@@ -192,17 +192,19 @@ static void halftone_initialize() {
     if (halftone_inited)
 	return;
 
-    for (int i = 0; i < 16; i++)
-	for (int j = 0; j < 2; j++)
-	    halftone_pattern[0][i][j] = 0;
-
-    for (int i = 1; i < 256; i++) {
+    for (int i = 0; i < 256; i++) {
 	// Each halftone patten differs by its predecessor by exactly one bit.
 	// First, copy the predecessor into the current slot:
 
-	for (int j = 0; j < 16; j++)
-	    for (int k = 0; k < 2; k++)
-		halftone_pattern[i][j][k] = halftone_pattern[i - 1][j][k];
+	if (i == 0) {
+	    for (int j = 0; j < 16; j++)
+		for (int k = 0; k < 2; k++)
+		    halftone_pattern[0][j][k] = 0;
+	} else {
+	    for (int j = 0; j < 16; j++)
+		for (int k = 0; k < 2; k++)
+		    halftone_pattern[i][j][k] = halftone_pattern[i - 1][j][k];
+	}
 
 	// Next, find the bit to set. This is a bit tricky. One possibility is
 	// to paint a gradually growing clump, which leads to clustered-dot
@@ -210,46 +212,19 @@ static void halftone_initialize() {
 	// it offers a measure of immunity to pixel smear; on computer screens,
 	// pattern dithering usually looks better, because the artefacts tend
 	// to be smaller. I use a very simplistic approach to generating these
-	// patterns...
+	// patterns, which seems to work very well (and generalizes nicely to
+	// other pattern sizes, not that that's important right here).
 
 	int v = i;
 	int x = 0;
 	int y = 0;
 
-	// Decompose 8-bit pattern number into two 4-bit coordinates.
-	// This code looks at the pattern number as follows
-	//
-	//   +----+----+----+----+----+----+----+----+
-	//   | n7 | n6 | n5 | n4 | n3 | n2 | n1 | n0 |
-	//   +----+----+----+----+----+----+----+----+
-	//   | x0 | y0 | y1 | x1 | x2 | y2 | y3 | x3 |
-	//   +----+----+----+----+----+----+----+----+
-	//
-	// This leads to alternating horizontal and vertical artefacts as you
-	// progress through the brightness levels. It would be better to use a
-	// scheme that kept such artefacts at a mimumum by picking the next
-	// pixel to color slightly more cleverly. I feel the basic bit-order-
-	// reversal idea is valid, but the right 2D variant still eludes me.
-	//
-	// Since I'm currently only using halftoning to paint the cells in the
-	// colormap editor, where artefacts are not very noticeable and
-	// certainly not as distracting as they would be in an actual image;
-	// and also, since I have been hacking for more than three weeks
-	// already and I would like to put FW 2.0 to bed within the next couple
-	// of days, I'm just going to leave it like this for now.
-	//
-	// Note to self: TODO, along with a truly general CopyBits (arbitrary
-	// scaling, halftoning support, yada yada yada). When hell freezes over
-	// seems like a nice target. :-)
+	for (int k = 0; k < 4; k++) {
+	    y = (y << 1) | (v & 1); v >>= 1;
+	    x = (x << 1) | (v & 1); v >>= 1;
+	}
+	x ^= y;
 
-	x = (x << 1) | (v & 1); v >>= 1;
-	y = (y << 1) | (v & 1); v >>= 1;
-	y = (y << 1) | (v & 1); v >>= 1;
-	x = (x << 1) | (v & 1); v >>= 1;
-	x = (x << 1) | (v & 1); v >>= 1;
-	y = (y << 1) | (v & 1); v >>= 1;
-	y = (y << 1) | (v & 1); v >>= 1;
-	x = (x << 1) | (v & 1); v >>= 1;
 	halftone_pattern[i][y][x >> 3] |= 1 << (x & 7);
     }
 
@@ -257,18 +232,18 @@ static void halftone_initialize() {
 }
 
 static int halftone(unsigned char value, int x, int y) {
-    // A little hack: since halftone_pattern[255] has one pixel off (in a 16x16
+    // A little hack: since halftone_pattern[0] has one pixel off (in a 16x16
     // pattern, you have 257 possible levels of brightness, and our table only
-    // has 256 entries), we couldn't represent 'white' exactly. We fudge that
-    // by handling white directly...
+    // has 256 entries), we couldn't represent 'black' exactly. We fudge that
+    // by handling black directly...
 
-    if (value == 255)
-	return 1;
-    else if (value > 128)
-	// This means halftone_pattern[129] is never used. Hopefully no one
-	// will notice. It should be less apparent than an inaccuracy at pure
-	// white or pure black!
-	value++;
+    if (value == 0)
+	return 0;
+    else if (value < 128)
+	// This means halftone_pattern[127] (50% gray) is never used. Hopefully
+	// no one will notice. It should be less apparent than an inaccuracy at
+	// pure white or pure black!
+	value--;
 
     halftone_initialize();
     x &= 15;
