@@ -17,7 +17,7 @@
 #include "util.h"
 
 #define WHEEL_DIAMETER 150
-#define CROSS_SIZE 16
+#define CROSS_SIZE 10
 #define SLIDER_HEIGHT 12
 #define THUMB_HEIGHT 20
 #define THUMB_WIDTH 9
@@ -742,12 +742,12 @@ ColorPicker::drawCross() {
     if (!XtIsRealized(wheel))
 	return;
     int cw = CROSS_SIZE / 2;
-    XSetForeground(g_display, gc, private_colormap ? 215 : g_white);
-    XDrawLine(g_display, XtWindow(wheel), gc, cross_x + 1, cross_y - cw,
-	      cross_x + 1, cross_y + cw);
-    XDrawLine(g_display, XtWindow(wheel), gc, cross_x - cw, cross_y + 1,
-	      cross_x + cw, cross_y + 1);
-    XSetForeground(g_display, gc, private_colormap ? 0 : g_black);
+    XSetForeground(g_display, gc, private_colormap ? 215 : g_black);
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x + 1, cross_y - cw + 1,
+	      cross_x + 1, cross_y + cw + 1);
+    XDrawLine(g_display, XtWindow(wheel), gc, cross_x - cw + 1, cross_y + 1,
+	      cross_x + cw + 1, cross_y + 1);
+    XSetForeground(g_display, gc, private_colormap ? 0 : g_white);
     XDrawLine(g_display, XtWindow(wheel), gc, cross_x, cross_y - cw,
 	      cross_x, cross_y + cw);
     XDrawLine(g_display, XtWindow(wheel), gc, cross_x - cw, cross_y,
