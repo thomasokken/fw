@@ -17,7 +17,6 @@ static bool match_blank_or_comment(FILE *file, unsigned char **buf,
 static bool match_uint(FILE *file, int *i);
 static void write_encoded_pnm_comment(FILE *file, const void *data,
 				      int length, unsigned int crc);
-static bool is_grayscale(const FWColor *cmap);
 
 #define MSGLEN 1024
 
@@ -587,11 +586,4 @@ static void write_encoded_pnm_comment(FILE *file, const void *data, int length,
 
     if (!newline)
 	fprintf(file, "\n");
-}
-
-static bool is_grayscale(const FWColor *cmap) {
-    for (int i = 0; i < 256; i++)
-	if (cmap[i].r != i || cmap[i].g != i || cmap[i].b != i)
-	    return false;
-    return true;
 }

@@ -308,7 +308,10 @@ ImageIO_PNG::write(const char *filename, const char *plugin_name,
     }
 
     png_init_io(png_ptr, png);
-    png_set_compression_level(png_ptr, 0);
+
+    // Set compression level to 0 if you want to be able to easily
+    // peek at a PNG file's contents.
+    // png_set_compression_level(png_ptr, 0);
 
     // Quote from the libpng docs:
     //

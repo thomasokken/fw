@@ -7,6 +7,7 @@
 #include <unistd.h>
 
 #include "util.h"
+#include "FWColor.h"
 
 
 extern int g_verbosity;
@@ -70,6 +71,13 @@ bool isFile(const char *name) {
     if (stat(name, &st) == -1)
 	return false;
     return S_ISREG(st.st_mode);
+}
+
+bool is_grayscale(const FWColor *cmap) {
+    for (int i = 0; i < 256; i++)
+	if (cmap[i].r != i || cmap[i].g != i || cmap[i].b != i)
+	    return false;
+    return true;
 }
 
 int bool_alignment() {

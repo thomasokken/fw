@@ -1,10 +1,13 @@
 #ifndef UTIL_H
 #define UTIL_H 1
 
+class FWColor;
+
 char *strclone(const char *src);
 unsigned int crc32(const void *buf, int size);
 bool isDirectory(const char *name);
 bool isFile(const char *name);
+bool is_grayscale(const FWColor *cmap);
 
 int bool_alignment();
 int char_alignment();
