@@ -33,7 +33,7 @@ class Viewer : private Frame {
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();
 	static void expose(Widget w, XtPointer cd, XtPointer ud);
-	void expose2();
+	void expose2(int x, int y, int w, int h);
 	virtual void close();
 	static void menucallback(void *closure, const char *id);
 	void menucallback2(const char *id);

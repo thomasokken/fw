@@ -439,12 +439,14 @@ Viewer::resize2() {
 
 /* private static */ void
 Viewer::expose(Widget w, XtPointer ud, XtPointer cd) {
-    ((Viewer *) ud)->expose2();
+    XmDrawingAreaCallbackStruct *cbs = (XmDrawingAreaCallbackStruct *) cd;
+    XExposeEvent ev = cbs->event->xexpose;
+    ((Viewer *) ud)->expose2(ev.x, ev.y, ev.width, ev.height);
 }
 
 /* private */ void
-Viewer::expose2() {
-    XPutImage(display, drawwindow, gc, image, 0, 0, 0, 0, width, height);
+Viewer::expose2(int x, int y, int w, int h) {
+    XPutImage(display, drawwindow, gc, image, x, y, x, y, w, h);
 }
 
 /* private virtual */ void
