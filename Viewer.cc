@@ -162,8 +162,8 @@ Viewer::finish_init() {
     scalemenu->addRadio("800%", NULL, NULL, "Windows.Scale@8");
 
     Menu *windowsmenu = new Menu;
-    windowsmenu->addCommand("Enlarge", NULL, NULL, "Windows.Enlarge");
-    windowsmenu->addCommand("Reduce", NULL, NULL, "Windows.Reduce");
+    windowsmenu->addCommand("Enlarge", NULL, "Ctrl+0", "Windows.Enlarge");
+    windowsmenu->addCommand("Reduce", NULL, "Ctrl+9", "Windows.Reduce");
     windowsmenu->addMenu("Scale", NULL, NULL, "Scale", scalemenu);
     windowsmenu->addSeparator();
     topmenu->addMenu("Windows", NULL, NULL, "Windows", windowsmenu);
@@ -205,6 +205,8 @@ Viewer::finish_init() {
 					    XmNbottomAttachment, XmATTACH_FORM,
 					    XmNbottomOffset, 0,
 					    NULL);
+
+    clipwindow = XtNameToWidget(scroll, "ClipWindow");
 
     Widget draw = XtVaCreateManagedWidget("DrawingArea",
 					  xmDrawingAreaWidgetClass,
@@ -298,16 +300,18 @@ Viewer::finish_init() {
     raise();
     drawwindow = XtWindow(draw);
 
+
     // TODO: better preferences handling, including persistence and
     // command-line option handling!
     // For now, enable dithering when fewer than 5 bits per component are
     // available; scale always starts at 1.
+
+    scale = 1;
     if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
 	dithering = true;
     else
 	dithering = g_visual->bits_per_rgb < 5;
     optionsmenu->setToggleValue("Options.Dither", dithering, false);
-    scale = 1;
     scalemenu->setRadioValue("Windows.Scale", "1", false);
 
     selection_active = false;
@@ -458,9 +462,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 	for (int i = 0; i < right - left; i++)
 	    dr[i] = dg[i] = db[i] = nextdr[i] = nextdg[i] = nextdb[i] = 0;
 	int dR = 0, dG = 0, dB = 0;
-	long long tot_dr = 0;
-	long long tot_dg = 0;
-	long long tot_db = 0;
 	for (int y = top; y < bottom; y++) {
 	    int dir = ((y & 1) << 1) - 1;
 	    int start, end;
@@ -541,11 +542,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
 		}
 		XPutPixel(image, x, y, pixel);
-
-		if (dR >= 0) tot_dr += dR; else tot_dr -= dR;
-		if (dG >= 0) tot_dg += dG; else tot_dg -= dG;
-		if (dB >= 0) tot_db += dB; else tot_db -= dB;
-		    
 		int prevx = x - dir;
 		int nextx = x + dir;
 		if (prevx >= (int) left && prevx < (int) right) {
@@ -566,15 +562,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		dB *= 7;
 	    }
 	}
-
-	if (g_verbosity >= 2) {
-	    long p = ((long) bottom - top) * (right - left);
-	    fprintf(stderr, "Average pixel error:\n");
-	    fprintf(stderr, "  red:   %6.2f\n", ((double) tot_dr) / p);
-	    fprintf(stderr, "  green: %6.2f\n", ((double) tot_dg) / p);
-	    fprintf(stderr, "  blue:  %6.2f\n", ((double) tot_db) / p);
-	}
-
 	delete[] dr;
 	delete[] dg;
 	delete[] db;
@@ -610,7 +597,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 	for (int i = 0; i < right - left; i++)
 	    dk[i] = nextdk[i] = 0;
 	int dK = 0;
-	long long tot_dk = 0;
 	for (int y = top; y < bottom; y++) {
 	    int dir = ((y & 1) << 1) - 1;
 	    int start, end;
@@ -647,9 +633,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		dK = k - (g_grayramp[graylevel].red >> 8);
 		unsigned long pixel = g_grayramp[graylevel].pixel;
 		XPutPixel(image, x, y, pixel);
-
-		if (dK >= 0) tot_dk += dK; else tot_dk -= dK;
-
 		int prevx = x - dir;
 		int nextx = x + dir;
 		if (prevx >= (int) left && prevx < (int) right)
@@ -660,13 +643,6 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		dK *= 7;
 	    }
 	}
-
-	if (g_verbosity >= 2) {
-	    long p = ((long) bottom - top) * (right - left);
-	    fprintf(stderr, "Average pixel error:\n");
-	    fprintf(stderr, "  gray:  %6.2f\n", ((double) tot_dk) / p);
-	}
-
 	delete[] dk;
 	delete[] nextdk;
     }
@@ -781,8 +757,6 @@ Viewer::menucallback2(const char *id) {
 	doEnlarge();
     else if (strcmp(id, "Windows.Reduce") == 0)
 	doReduce();
-    else if (strncmp(id, "Windows.Scale.", 14) == 0)
-	doScale(id + 14);
     else if (strcmp(id, "Help.General") == 0)
 	doGeneral();
     else if (strncmp(id, "Help.X.", 7) == 0)
@@ -813,6 +787,8 @@ Viewer::radiocallback(void *closure, const char *id, const char *value) {
 /* private */ void
 Viewer::radiocallback2(const char *id, const char *value) {
     fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
+    if (strcmp(id, "Windows.Scale") == 0)
+	doScale(value);
 }
 
 /* private */ void
@@ -1059,17 +1035,61 @@ Viewer::doNotify(bool) {
 
 /* private */ void
 Viewer::doEnlarge() {
-    doBeep();
+    if (scale < 8) {
+	scale++;
+	if (scale == -1)
+	    scale = 1;
+	char buf[3];
+	sprintf(buf, "%d", scale);
+	scalemenu->setRadioValue("Windows.Scale", buf, true);
+    } else
+	doBeep();
 }
 
 /* private */ void
 Viewer::doReduce() {
-    doBeep();
+    if (scale > -8) {
+	scale--;
+	if (scale == 0)
+	    scale = -2;
+	char buf[3];
+	sprintf(buf, "%d", scale);
+	scalemenu->setRadioValue("Windows.Scale", buf, true);
+    } else
+	doBeep();
 }
 
 /* private */ void
-Viewer::doScale(const char *scale) {
-    doBeep();
+Viewer::doScale(const char *value) {
+    sscanf(value, "%d", &scale);
+
+    // Find out the difference in size between the ScrolledWindow's ClipWindow
+    // and the overall window size
+    Dimension clipwidth, clipheight;
+    Arg args[2];
+    XtSetArg(args[0], XmNwidth, &clipwidth);
+    XtSetArg(args[1], XmNheight, &clipheight);
+    XtGetValues(clipwindow, args, 2);
+    Dimension windowwidth, windowheight;
+    getSize(&windowwidth, &windowheight);
+    Dimension extra_h = windowwidth - clipwidth;
+    Dimension extra_v = windowheight - clipheight;
+    
+    // Compute scaled image size
+    int w, h;
+    if (scale > 0) {
+	w = width * scale;
+	h = height * scale;
+    } else {
+	int s = -scale;
+	w = (width + s - 1) / s;
+	h = (height + s - 1) / s;
+    }
+
+    // Resize top-level window to fit
+    setSize(w + extra_h, h + extra_v);
+
+    // TODO - handle scale change
 }
 
 /* private */ void

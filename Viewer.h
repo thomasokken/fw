@@ -19,6 +19,7 @@ class Viewer : private Frame {
 	int sel_top, sel_left, sel_bottom, sel_right;
 	Menu *optionsmenu;
 	Menu *scalemenu;
+	Widget clipwindow;
 	static int instances;
 
     public:

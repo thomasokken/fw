@@ -208,6 +208,26 @@ Frame::setColormap(Colormap xcmap) {
     XtSetValues(toplevel, &arg, 1);
 }
 
+/* protected */ void
+Frame::getSize(Dimension *width, Dimension *height) {
+    Arg args[2];
+    XtSetArg(args[0], XmNwidth, width);
+    XtSetArg(args[1], XmNheight, height);
+    XtGetValues(toplevel, args, 2);
+}
+
+/* protected */ void
+Frame::setSize(Dimension width, Dimension height) {
+    XtWidgetGeometry wg;
+    XtQueryGeometry(menubar, NULL, &wg);
+    if (width < wg.width)
+	width = wg.width;
+    Arg args[2];
+    XtSetArg(args[0], XmNwidth, width);
+    XtSetArg(args[1], XmNheight, height);
+    XtSetValues(toplevel, args, 2);
+}
+
 /* private static */ void
 Frame::deleteWindow(Widget w, XtPointer ud, XtPointer cd) {
     ((Frame *) ud)->close();

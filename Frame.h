@@ -28,6 +28,8 @@ class Frame {
     protected:
 	Widget getContainer();
 	void setColormap(Colormap xcmap);
+	void getSize(Dimension *width, Dimension *height);
+	void setSize(Dimension width, Dimension height);
 
     private:
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);
