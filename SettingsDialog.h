@@ -2,17 +2,18 @@
 #define SETTINGSDIALOG_H 1
 
 #include "Frame.h"
+
 class Plugin;
-class PluginSettings;
+class SettingsHelper;
 
 class SettingsDialog : private Frame {
     private:
 	Plugin *plugin;
-	PluginSettings *settings;
+	SettingsHelper *settings;
 	Widget tf[20];
 
     public:
-	SettingsDialog(Plugin *plugin, PluginSettings *settings);
+	SettingsDialog(Plugin *plugin, SettingsHelper *settings);
 	virtual ~SettingsDialog();
 	virtual void close();
 

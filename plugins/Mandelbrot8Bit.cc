@@ -26,19 +26,19 @@ class Mandelbrot8Bit : public Plugin {
 	    pm->depth = 8;
 	    init_proceed();
 	}
-	virtual void run() {
+	virtual void start() {
 	    paint();
 	    x = 0;
 	    y = 0;
 	    start_working();
 	}
-	virtual void restart() {
-	    if (y < pm->height)
-		start_working();
-	}
 	virtual void stop() {
 	    stop_working();
 	    paint();
+	}
+	virtual void restart() {
+	    if (y < pm->height)
+		start_working();
 	}
 	virtual bool work() {
 	    int firsty = y;

@@ -72,6 +72,86 @@ bool isFile(const char *name) {
     return S_ISREG(st.st_mode);
 }
 
+int bool_alignment() {
+    struct {
+	char a;
+	bool b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int char_alignment() {
+    struct {
+	char a;
+	short b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int short_alignment() {
+    struct {
+	char a;
+	short b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int int_alignment() {
+    struct {
+	char a;
+	int b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int long_alignment() {
+    struct {
+	char a;
+	long b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int long_long_alignment() {
+    struct {
+	char a;
+	long long b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int float_alignment() {
+    struct {
+	char a;
+	float b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int double_alignment() {
+    struct {
+	char a;
+	double b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int long_double_alignment() {
+    struct {
+	char a;
+	long double b;
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
+int string_alignment() {
+    struct {
+	char a;
+	char b[13];
+    } foo;
+    return ((long) &foo.b) - ((long) &foo.a);
+}
+
 void crash() {
     kill(0, SIGQUIT);
 }

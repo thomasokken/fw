@@ -33,16 +33,7 @@ Viewer::colormap_directory = NULL;
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
     is_brand_new = true;
-    init(pluginname, NULL, NULL, 0, NULL);
-}
-
-/* public */
-Viewer::Viewer(const char *pluginname, const Viewer *src)
-    : Frame(true, false, true) {
-    is_brand_new = true; // TODO -- should probably be 'false',
-			 // but who knows, since I haven't even
-			 // gotten started on cloning yet.
-    init(pluginname, src, NULL, 0, NULL);
+    init(pluginname, NULL, 0, NULL);
 }
 
 /* public */
@@ -50,11 +41,11 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
 	               int plugin_data_length, FWPixmap *fpm)
     : Frame(true, false, true) {
     is_brand_new = false;
-    init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
+    init(pluginname, plugin_data, plugin_data_length, fpm);
 }
 
 /* private */ void
-Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
+Viewer::init(const char *pluginname, void *plugin_data,
 	     int plugin_data_length, FWPixmap *fpm) {
     instances++;
     image = NULL;
@@ -80,12 +71,7 @@ Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
     plugin->setViewer(this);
     plugin->setPixmap(&pm);
     if (plugin != NULL) {
-	if (src != NULL) {
-	    if (plugin->init_clone(src->plugin))
-		finish_init();
-	    else
-		delete this;
-	} else if (fpm != NULL) {
+	if (fpm != NULL) {
 	    pm = *fpm;
 	    plugin->deserialize(plugin_data, plugin_data_length);
 	    finish_init();
@@ -395,7 +381,7 @@ Viewer::finish_init() {
 	    fprintf(stderr, "Not using direct copy.\n");
 
     if (is_brand_new)
-	plugin->run();
+	plugin->start();
     else {
 	paint(0, 0, pm.height, pm.width);
 	plugin->restart();

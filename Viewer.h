@@ -36,7 +36,6 @@ class Viewer : private Frame {
 
     public:
 	Viewer(const char *pluginname);
-	Viewer(const char *pluginname, const Viewer *src);
 	Viewer(const char *pluginname, void *plugin_data,
 	       int plugin_data_length, FWPixmap *pm);
 	void finish_init();
@@ -47,7 +46,8 @@ class Viewer : private Frame {
 	void setFile(const char *filename, const char *filetype);
 
     private:
-	void init(const char *pluginname, const Viewer *src, void *plugin_data,			  int plugin_data_length, FWPixmap *pm);
+	void init(const char *pluginname, void *plugin_data,
+		  int plugin_data_length, FWPixmap *pm);
 	virtual void close();
 	bool canIDoDirectCopy();
 	void paint_direct(int top, int left, int bottom, int right);

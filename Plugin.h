@@ -2,13 +2,12 @@
 #define PLUGIN_H 1
 
 
-// These three headers aren't actually needed here, but they're included for
-// the convenience of plugin writers: now plugins only need to include Plugin.h
-// and nothing else.
+// These two headers aren't actually needed here, but they're included for
+// the convenience of plugin writers (so plugins only need to include Plugin.h
+// and nothing else).
 
 #include "FWColor.h"
 #include "FWPixmap.h"
-#include "PluginSettings.h"
 
 
 // We don't want to include Viewer.h here; the plugin interface should be
@@ -18,18 +17,20 @@
 // that is directly exposed to the plugin is the FWPixmap, which is a sub-
 // record of Viewer.
 
+class SettingsHelper;
 class Viewer;
-
 
 class Plugin {
     private:
 	void *dl;
 	Viewer *viewer;
-	void *dump_info;
+	SettingsHelper *settingshelper;
+	friend class SettingsHelper;
 
     protected:
 	FWPixmap *pm;
-	PluginSettings *settings;
+	char **settings_layout;
+	void *settings_base;
 
 	Plugin(void *dl);
 	virtual ~Plugin();
@@ -47,24 +48,19 @@ class Plugin {
 	// Methods implemented by Plugins
 	// (Reasonable default implementations are provided for all of
 	// these, except for name().)
-	virtual bool does_depth(int depth);
-	virtual void set_depth(int depth);
+	virtual bool does_depth(int depth) const;
 	virtual void init_new();
-	virtual bool init_clone(const Plugin *src);
-	virtual void init_undump();
 	virtual void get_settings_ok();
 	virtual void get_settings_cancel();
-	virtual void run();
-	virtual void restart();
+	virtual void start();
 	virtual void stop();
+	virtual void restart();
 	virtual bool work();
-	virtual void dump();
 	virtual const char *name() const = 0;
-	virtual const char *help();
+	virtual const char *help() const;
 
     protected:
 	// Utility methods provided for use by plugins
-	static PluginSettings *getSettingsInstance();
 	static void beep();
 	static int debug_level();
 	void get_settings_dialog();
@@ -77,20 +73,6 @@ class Plugin {
 	void paint();
 	void paint(int top, int left, int bottom, int right);
 	void colormapChanged();
-
-	// The next 5 methods should only be called from dump()
-	void dumpchar(int c);
-	void dumpbuf(void *buf, int nbytes);
-	void dumpint(int n);
-	void dumpdouble(double d);
-	void dumpstring(const char *s);
-
-	// The next 5 methods should only be called from init_undump()
-	int undumpchar();
-	void undumpbuf(void *buf, int nbytes);
-	int undumpint();
-	double undumpdouble();
-	char *undumpstring();
 };
 
 #endif

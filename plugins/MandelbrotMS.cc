@@ -40,16 +40,41 @@ struct rect {
     }
 };
 
+static char *my_settings_layout[] = {
+    "WIDTH 'Width'",			// pm->width
+    "HEIGHT 'Height'",			// pm->height
+    "double 'Lower Real Bound'",	// xmin
+    "double 'Upper Real Bound'",	// xmax
+    "double 'Lower Imaginary Bound'",	// ymin
+    "double 'Upper Imaginary Bound'",	// ymax
+    "int 'Maximum Iterations'",		// maxiter
+    "double 'Cutoff Value'",		// limit
+    "int 'Color Bands'",		// bands
+    "double",		// limit2
+    "int",		// ndirty
+    "int",		// b2
+    "double",		// step
+    "double",		// x1
+    "double",		// y1
+    "double",		// x2
+    "double",		// y2
+    "double",		// xm
+    "double",		// ym
+    "int",		// state
+    "int",		// value
+    "int",		// sp
+    "REPEAT 200",	// stack (50 levels of 4 ints each)
+    "int",
+    "ENDREP",
+    "bool"		// finished
+};
+
 class MandelbrotMS : public Plugin {
     private:
-	// Settings
-	int width, height;
 	double xmin, xmax, ymin, ymax;
 	int maxiter;
 	double limit;
 	int bands;
-	// End Settings
-
 	double limit2;
 	int ndirty;
 	int b2;
@@ -76,30 +101,8 @@ class MandelbrotMS : public Plugin {
 	}
 
 	MandelbrotMS(void *dl) : Plugin(dl) {
-	    settings = getSettingsInstance();
-
-	    settings->addField(PluginSettings::INT, "Width");
-	    settings->addField(PluginSettings::INT, "Height");
-	    settings->addField(PluginSettings::DOUBLE, "Lower Real Bound");
-	    settings->addField(PluginSettings::DOUBLE, "Upper Real Bound");
-	    settings->addField(PluginSettings::DOUBLE, "Lower Imaginary Bound");
-	    settings->addField(PluginSettings::DOUBLE, "Upper Imaginary Bound");
-	    settings->addField(PluginSettings::INT, "Maximum Iterations");
-	    settings->addField(PluginSettings::DOUBLE, "Cutoff Value");
-	    settings->addField(PluginSettings::INT, "Color Bands");
-
-	    int w = 700;
-	    int h = 500;
-
-	    settings->setIntField(0, w);
-	    settings->setIntField(1, h);
-	    settings->setDoubleField(2, -1.6 * w / h);
-	    settings->setDoubleField(3, 0.55 * w / h);
-	    settings->setDoubleField(4, -1.075);
-	    settings->setDoubleField(5, 1.075);
-	    settings->setIntField(6, 100);
-	    settings->setDoubleField(7, 2);
-	    settings->setIntField(8, 1);
+	    settings_layout = my_settings_layout;
+	    settings_base = &xmin;
 	}
 
 	virtual ~MandelbrotMS() {}
@@ -113,24 +116,20 @@ class MandelbrotMS : public Plugin {
 	}
 
 	virtual void init_new() {
+	    pm->width = 700;
+	    pm->height = 500;
+	    xmin = -1.6 * pm->width / pm->height;
+	    xmax = 0.55 * pm->width / pm->height;
+	    ymin = -1.075;
+	    ymax = 1.075;
+	    maxiter = 1000;
+	    limit = 2.0;
+	    bands = 1;
 	    get_settings_dialog();
 	}
 
 	virtual void get_settings_ok() {
-	    width = settings->getIntField(0);
-	    height = settings->getIntField(1);
-	    xmin = settings->getDoubleField(2);
-	    xmax = settings->getDoubleField(3);
-	    ymin = settings->getDoubleField(4);
-	    ymax = settings->getDoubleField(5);
-	    maxiter = settings->getIntField(6);
-	    limit = settings->getDoubleField(7);
-	    bands = settings->getIntField(8);
-
-	    pm->width = width;
-	    pm->height = height;
-	    pm->depth = 8;
-	    pm->bytesperline = width + 3 & ~3;
+	    pm->bytesperline = pm->width + 3 & ~3;
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
 	    pm->cmap = new FWColor[256];
@@ -142,10 +141,10 @@ class MandelbrotMS : public Plugin {
 	    init_proceed();
 	}
 
-	virtual void run() {
+	virtual void start() {
 	    b2 = bands * 253;
 	    limit2 = limit * limit;
-	    step = (xmax - xmin) / width;
+	    step = (xmax - xmin) / pm->width;
 	    sp = 0;
 	    stack[sp].set(0, 0, pm->height - 1, pm->width - 1);
 	    state = 0;
@@ -165,6 +164,11 @@ class MandelbrotMS : public Plugin {
 	    }
 	}
 
+	virtual void restart() {
+	    if (!finished)
+		start_working();
+	}
+	
 	virtual bool work() {
 	    int count = 1000;
 	    do {
@@ -285,94 +289,7 @@ class MandelbrotMS : public Plugin {
 	    return finished;
 	}
 
-	virtual void restart() {
-	    if (!finished)
-		start_working();
-	}
-	
-	virtual void dump() {
-	    dumpint(width);
-	    dumpint(height);
-	    dumpdouble(xmin);
-	    dumpdouble(xmax);
-	    dumpdouble(ymin);
-	    dumpdouble(ymax);
-	    dumpint(maxiter);
-	    dumpdouble(limit);
-	    dumpint(bands);
-	    dumpdouble(limit2);
-	    dumpint(ndirty);
-	    dumpint(b2);
-	    dumpdouble(step);
-	    dumpdouble(x1);
-	    dumpdouble(y1);
-	    dumpdouble(x2);
-	    dumpdouble(y2);
-	    dumpdouble(xm);
-	    dumpdouble(ym);
-	    dumpint(state);
-	    dumpint(value);
-	    dumpint(sp);
-	    dumprect(&tos);
-	    dumprect(&dirty);
-	    dumpint(hm);
-	    dumpint(vm);
-	    dumpint(hc);
-	    dumpint(vc);
-	    for (int i = 0; i < 50; i++)
-		dumprect(&stack[i]);
-	    dumpint(finished ? 1 : 0);
-	}
-
-	virtual void init_undump() {
-	    width = undumpint();
-	    height = undumpint();
-	    xmin = undumpdouble();
-	    xmax = undumpdouble();
-	    ymin = undumpdouble();
-	    ymax = undumpdouble();
-	    maxiter = undumpint();
-	    limit = undumpdouble();
-	    bands = undumpint();
-	    limit2 = undumpdouble();
-	    ndirty = undumpint();
-	    b2 = undumpint();
-	    step = undumpdouble();
-	    x1 = undumpdouble();
-	    y1 = undumpdouble();
-	    x2 = undumpdouble();
-	    y2 = undumpdouble();
-	    xm = undumpdouble();
-	    ym = undumpdouble();
-	    state = undumpint();
-	    value = undumpint();
-	    sp = undumpint();
-	    undumprect(&tos);
-	    undumprect(&dirty);
-	    hm = undumpint();
-	    vm = undumpint();
-	    hc = undumpint();
-	    vc = undumpint();
-	    for (int i = 0; i < 50; i++)
-		undumprect(&stack[i]);
-	    finished = undumpint() != 0;
-	}
-
     private:
-	void dumprect(const rect *r) {
-	    dumpint(r->top);
-	    dumpint(r->left);
-	    dumpint(r->bottom);
-	    dumpint(r->right);
-	}
-
-	void undumprect(rect *r) {
-	    r->top = undumpint();
-	    r->left = undumpint();
-	    r->bottom = undumpint();
-	    r->right = undumpint();
-	}
-
 	void recurse() {
 	    stack[sp + 1].top = vm;
 	    stack[sp + 1].left = stack[sp + 0].left;

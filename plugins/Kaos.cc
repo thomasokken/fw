@@ -25,6 +25,27 @@ static double my_rand() {
     return ((double) (rand() - RAND_MAX / 2)) / RAND_MAX * 2;
 }
 
+static char *my_settings_layout[] = {
+    "WIDTH 'Width'",
+    "HEIGHT 'Height'",
+    "REPEAT 60", // Q array
+    "double",
+    "ENDREP",
+    "REPEAT 20", // RGGB array
+    "int",
+    "ENDREP",
+    "int",       // n
+    "int",       // xmid
+    "int",       // ymid
+    "int",       // maxmid
+    "double",    // x
+    "double",    // y
+    "int",       // jop
+    "long",      // jopmax
+    "long",      // jOud1
+    "bool"       // finished
+};
+
 class Kaos : public Plugin {
     private:
 	q_struct Q[NMAX];
@@ -39,11 +60,8 @@ class Kaos : public Plugin {
 	
     public:
 	Kaos(void *dl) : Plugin(dl) {
-	    settings = getSettingsInstance();
-	    settings->addField(PluginSettings::INT, "Width");
-	    settings->addField(PluginSettings::INT, "Height");
-	    settings->setIntField(0, 983);
-	    settings->setIntField(1, 647);
+	    settings_layout = my_settings_layout;
+	    settings_base = &Q;
 	}
 	virtual ~Kaos() {}
 	virtual const char *name() const {
@@ -53,14 +71,12 @@ class Kaos : public Plugin {
 	    return depth == 8 || depth == 24;
 	}
 	virtual void init_new() {
+	    pm->width = 983;
+	    pm->height = 647;
+	    pm->depth = 24;
 	    get_settings_dialog();
 	}
-	virtual void set_depth(int depth) {
-	    pm->depth = depth;
-	}
 	virtual void get_settings_ok() {
-	    pm->width = settings->getIntField(0);
-	    pm->height = settings->getIntField(1);
 	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    if (pm->depth == 8) { 
@@ -113,13 +129,13 @@ class Kaos : public Plugin {
 	    ymid = pm->height / 2;
 	    maxmid = xmid > ymid ? xmid : ymid;
 	    jop = 0;
-	    jopmax = ((long ) xmid) * ymid;
+	    jopmax = ((long) xmid) * ymid;
 	    if (pm->depth == 8)
 		jopmax /= 4;
 
 	    init_proceed();
 	}
-	virtual void run() {
+	virtual void start() {
 	    finished = false;
 	    paint();
 	    start_working();
@@ -200,56 +216,6 @@ class Kaos : public Plugin {
 		jop = 0;
 	    }
 	    return finished;
-	}
-
-	virtual void dump() {
-	    for (int i = 0; i < NMAX; i++) {
-		dumpdouble(Q[i].a11);
-		dumpdouble(Q[i].a12);
-		dumpdouble(Q[i].a21);
-		dumpdouble(Q[i].a22);
-		dumpdouble(Q[i].b1);
-		dumpdouble(Q[i].b2);
-	    }
-	    for (int i = 0; i < NMAX; i++) {
-		dumpint(RGGB[i].rg);
-		dumpint(RGGB[i].gb);
-	    }
-	    dumpint(n);
-	    dumpint(xmid);
-	    dumpint(ymid);
-	    dumpint(maxmid);
-	    dumpdouble(x);
-	    dumpdouble(y);
-	    dumpint(jop);
-	    dumpint(jopmax);
-	    dumpint(jOud1);
-	    dumpint(finished ? 1 : 0);
-	}
-
-	virtual void init_undump() {
-	    for (int i = 0; i < NMAX; i++) {
-		Q[i].a11 = undumpdouble();
-		Q[i].a12 = undumpdouble();
-		Q[i].a21 = undumpdouble();
-		Q[i].a22 = undumpdouble();
-		Q[i].b1 = undumpdouble();
-		Q[i].b2 = undumpdouble();
-	    }
-	    for (int i = 0; i < NMAX; i++) {
-		RGGB[i].rg = undumpint();
-		RGGB[i].gb = undumpint();
-	    }
-	    n = undumpint();
-	    xmid = undumpint();
-	    ymid = undumpint();
-	    maxmid = undumpint();
-	    x = undumpdouble();
-	    y = undumpdouble();
-	    jop = undumpint();
-	    jopmax = undumpint();
-	    jOud1 = undumpint();
-	    finished = undumpint() != 0;
 	}
 };
 

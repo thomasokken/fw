@@ -9,12 +9,12 @@
 
 #include "SettingsDialog.h"
 #include "Plugin.h"
-#include "PluginSettings.h"
+#include "SettingsHelper.h"
 #include "main.h"
 #include "util.h"
 
 /* public */
-SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
+SettingsDialog::SettingsDialog(Plugin *plugin, SettingsHelper *settings)
 					: Frame(false, true, false) {
     this->plugin = plugin;
     this->settings = settings;
@@ -166,9 +166,9 @@ SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
 	    radios,
 	    XmNlabelString, xms,
 	    NULL);
-    XtAddCallback(radio1, XmNvalueChangedCallback, depth1, (XtPointer) this);
+    XtAddCallback(radio1, XmNvalueChangedCallback, depth1, (XtPointer) settings);
     XmStringFree(xms);
-    if (plugin->does_depth(1)) {
+    if (settings->allowDepth(1)) {
 	XmToggleButtonSetState(radio1, True, True);
 	depth_set = true;
     } else
@@ -180,9 +180,9 @@ SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
 	    radios,
 	    XmNlabelString, xms,
 	    NULL);
-    XtAddCallback(radio8, XmNvalueChangedCallback, depth8, (XtPointer) this);
+    XtAddCallback(radio8, XmNvalueChangedCallback, depth8, (XtPointer) settings);
     XmStringFree(xms);
-    if (plugin->does_depth(8)) {
+    if (settings->allowDepth(8)) {
 	if (!depth_set) {
 	    XmToggleButtonSetState(radio8, True, True);
 	    depth_set = true;
@@ -196,36 +196,22 @@ SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
 	    radios,
 	    XmNlabelString, xms,
 	    NULL);
-    XtAddCallback(radio24, XmNvalueChangedCallback, depth24, (XtPointer) this);
+    XtAddCallback(radio24, XmNvalueChangedCallback, depth24, (XtPointer) settings);
     XmStringFree(xms);
-    if (plugin->does_depth(24)) {
+    if (settings->allowDepth(24)) {
 	if (!depth_set)
 	    XmToggleButtonSetState(radio24, True, True);
     } else
 	XtSetSensitive(radio24, False);
 
-    char text[256];
     int nfields = settings->getFieldCount();
     if (nfields > 20)
 	crash();
     for (int t = 0; t < nfields; t++) {
-	int type;
-	const char *label;
-	settings->getFieldInfo(t, &type, &label);
-	switch (type) {
-	    case PluginSettings::INT:
-		snprintf(text, 256, "%d", settings->getIntField(t));
-		break;
-	    case PluginSettings::DOUBLE:
-		snprintf(text, 256, "%f", settings->getDoubleField(t));
-		break;
-	    case PluginSettings::STRING:
-		char *s = settings->getStringField(t);
-		snprintf(text, 256, "%s", s);
-		free(s);
-		break;
-	}
-	XmTextSetString(tf[t], text);
+	char *value = settings->getFieldValue(t);
+	XmTextSetString(tf[t], value);
+	free(value);
+	const char *label = settings->getFieldLabel(t);
 	xms = XmStringCreateLocalized((char *) label);
 	XtVaSetValues(labels[t], XmNlabelString, xms, NULL);
 	XmStringFree(xms);
@@ -236,9 +222,10 @@ SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
 	XtSetMappedWhenManaged(labels[t], False);
     }
 
-    snprintf(text, 256, "New %s", plugin->name());
-    setTitle(text);
-    setIconTitle(text);
+    char buf[256];
+    snprintf(buf, 256, "New %s", plugin->name());
+    setTitle(buf);
+    setIconTitle(buf);
     raise();
     XmProcessTraversal(tf[0], XmTRAVERSE_CURRENT);
 }
@@ -267,41 +254,9 @@ SettingsDialog::ok2() {
 	crash();
     for (int t = 0; t < nfields; t++) {
 	char *v = XmTextGetString(tf[t]);
-	int type;
-	settings->getFieldInfo(t, &type, NULL);
-	switch (type) {
-	    case PluginSettings::INT:
-		int iv;
-		sscanf(v, "%d", &iv);
-		if (iv != settings->getIntField(t)) {
-		    settings->setIntField(t, iv);
-		    settings->fieldChanged(t);
-		}
-		break;
-	    case PluginSettings::DOUBLE:
-		double dv;
-		sscanf(v, "%lf", &dv);
-		// Whoa! Comparing doubles for equality?
-		// TODO...
-		if (dv != settings->getDoubleField(t)) {
-		    settings->setDoubleField(t, dv);
-		    settings->fieldChanged(t);
-		}
-		break;
-	    case PluginSettings::STRING:
-		char sv[256];
-		snprintf(sv, 256, "%s", v);
-		char *old = settings->getStringField(t);
-		if (strcmp(sv, old) != 0) {
-		    settings->setStringField(t, sv);
-		    settings->fieldChanged(t);
-		}
-		free(old);
-		break;
-	}
+	settings->setFieldValue(t, v);
 	XtFree(v);
     }
-
     plugin->get_settings_ok();
     delete this;
 }
@@ -331,17 +286,17 @@ SettingsDialog::help2() {
 /* private static */ void
 SettingsDialog::depth1(Widget w, XtPointer ud, XtPointer cd) {
     if (XmToggleButtonGetState(w))
-	((SettingsDialog *) ud)->plugin->set_depth(1);
+	((SettingsHelper *) ud)->setDepth(1);
 }
 
 /* private static */ void
 SettingsDialog::depth8(Widget w, XtPointer ud, XtPointer cd) {
     if (XmToggleButtonGetState(w))
-	((SettingsDialog *) ud)->plugin->set_depth(8);
+	((SettingsHelper *) ud)->setDepth(8);
 }
 
 /* private static */ void
 SettingsDialog::depth24(Widget w, XtPointer ud, XtPointer cd) {
     if (XmToggleButtonGetState(w))
-	((SettingsDialog *) ud)->plugin->set_depth(24);
+	((SettingsHelper *) ud)->setDepth(24);
 }

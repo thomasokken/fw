@@ -4,22 +4,25 @@
 
 #include "Plugin.h"
 
+static char *my_settings_layout[] = {
+    "WIDTH 'Width'",
+    "HEIGHT 'Height'",
+    "int 'X contribution to Red'",
+    "int 'Y contribution to Red'",
+    "int 'X contribution to Green'",
+    "int 'Y contribution to Green'",
+    "int 'X contribution to Blue'",
+    "int 'Y contribution to Blue'"
+};
+
 class Ramp : public Plugin {
+    private:
+	int xr, yr, xg, yg, xb, yb;
+
     public:
 	Ramp(void *dl) : Plugin(dl) {
-	    settings = getSettingsInstance();
-	    settings->addField(PluginSettings::INT, "Width");
-	    settings->addField(PluginSettings::INT, "Height");
-	    settings->addField(PluginSettings::INT, "X contribution to Red");
-	    settings->addField(PluginSettings::INT, "Y contribution to Red");
-	    settings->addField(PluginSettings::INT, "X contribution to Green");
-	    settings->addField(PluginSettings::INT, "Y contribution to Green");
-	    settings->addField(PluginSettings::INT, "X contribution to Blue");
-	    settings->addField(PluginSettings::INT, "Y contribution to Blue");
-	    settings->setIntField(0, 256);
-	    settings->setIntField(1, 256);
-	    settings->setIntField(2, 1);
-	    settings->setIntField(5, 1);
+	    settings_layout = my_settings_layout;
+	    settings_base = &xr;
 	}
 	virtual ~Ramp() {}
 	virtual const char *name() const {
@@ -28,24 +31,10 @@ class Ramp : public Plugin {
 	virtual bool does_depth(int depth) {
 	    return depth == 8 || depth == 24;
 	}
-	virtual void set_depth(int depth) {
-	    pm->depth = depth;
-	}
 	virtual void init_new() {
 	    get_settings_dialog();
 	}
 	virtual void get_settings_ok() {
-	    int width = settings->getIntField(0);
-	    int height = settings->getIntField(1);
-	    int xr = settings->getIntField(2);
-	    int yr = settings->getIntField(3);
-	    int xg = settings->getIntField(4);
-	    int yg = settings->getIntField(5);
-	    int xb = settings->getIntField(6);
-	    int yb = settings->getIntField(7);
-
-	    pm->width = width;
-	    pm->height = height;
 	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    unsigned char *dst = pm->pixels;
@@ -112,7 +101,7 @@ class Ramp : public Plugin {
 
 	    init_proceed();
 	}
-	virtual void run() {
+	virtual void start() {
 	    paint();
 	}
 };
