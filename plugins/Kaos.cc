@@ -226,6 +226,12 @@ class Kaos : public Plugin {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Kaos(dl);
 }
+#else
+Plugin *Kaos_factory(void *dl) {
+    return new Kaos(dl);
+}
+#endif

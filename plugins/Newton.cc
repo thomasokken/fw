@@ -170,6 +170,12 @@ class Newton : public MarianiSilver {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Newton(dl);
 }
+#else
+Plugin *Newton_factory(void *dl) {
+    return new Newton(dl);
+}
+#endif

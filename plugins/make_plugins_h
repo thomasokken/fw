@@ -1,0 +1,16 @@
+#!/bin/sh
+(
+for i in *.cc
+do
+    CLASSNAME=`basename $i .cc`
+    echo "Plugin *${CLASSNAME}_factory(void *dl);"
+done
+echo
+echo "void register_plugins() {"
+for i in *.cc
+do
+    CLASSNAME=`basename $i .cc`
+    echo "    register_plugin(\"${CLASSNAME}\", ${CLASSNAME}_factory);"
+done
+echo "}"
+) > plugins.h

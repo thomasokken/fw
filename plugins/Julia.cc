@@ -85,6 +85,12 @@ class Julia : public MarianiSilver {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Julia(dl);
 }
+#else
+Plugin *Julia_factory(void *dl) {
+    return new Julia(dl);
+}
+#endif

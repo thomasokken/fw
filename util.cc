@@ -423,7 +423,7 @@ Map::put(const char *key, const void *value) {
 	entries[0].key = strclone(key);
 	entries[0].value = value;
 	nentries = 1;
-	size = 1;
+	capacity = 1;
 	if (g_verbosity >= 3)
 	    dump();
 	return;
@@ -448,10 +448,10 @@ Map::put(const char *key, const void *value) {
 	}
     }
     // Key not found: insert at 'low'
-    if (nentries == size) {
+    if (nentries == capacity) {
 	// entries array full; grow it
-	size++;
-	entries = (Entry *) realloc(entries, size * sizeof(Entry));
+	capacity++;
+	entries = (Entry *) realloc(entries, capacity * sizeof(Entry));
     }
     memmove(entries + (low + 1), entries + low,
 	    (nentries - low) * sizeof(Entry));
@@ -504,6 +504,14 @@ Map::remove(const char *key) {
 	dump();
 }
 
+/* public */ int
+Map::size() {
+    if (entries == NULL)
+	return 0;
+    else
+	return nentries;
+}
+
 /* public */ Iterator *
 Map::keys() {
     return new MapIterator(entries, nentries, true);
@@ -516,8 +524,8 @@ Map::values() {
 
 /* public */ void
 Map::dump() {
-    fprintf(stderr, "Contents of Map instance %p (entries=%d, size=%d)\n",
-	    this, nentries, size);
+    fprintf(stderr, "Contents of Map instance %p (entries=%d, capacity=%d)\n",
+	    this, nentries, capacity);
     for (int i = 0; i < nentries; i++)
 	fprintf(stderr, "  \"%s\" => %p\n", entries[i].key, entries[i].value);
 }

@@ -79,6 +79,12 @@ class Mandelbrot : public MarianiSilver {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Mandelbrot(dl);
 }
+#else
+Plugin *Mandelbrot_factory(void *dl) {
+    return new Mandelbrot(dl);
+}
+#endif

@@ -325,6 +325,12 @@ class Life : public Plugin {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Life(dl);
 }
+#else
+Plugin *Life_factory(void *dl) {
+    return new Life(dl);
+}
+#endif

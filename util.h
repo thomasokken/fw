@@ -62,7 +62,7 @@ class Map {
     private:
 	Entry *entries;
 	int nentries;
-	int size;
+	int capacity;
 
     public:
 	Map();
@@ -70,6 +70,7 @@ class Map {
 	void put(const char *key, const void *value);
 	const void *get(const char *key);
 	void remove(const char *key);
+	int size();
 	Iterator *keys();
 	Iterator *values();
 	void dump();

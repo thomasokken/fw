@@ -1,0 +1,27 @@
+CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include -DSTATICPLUGINS
+LDFLAGS = -L/usr/X11R6/lib
+LOADLIBES = -lXm -lXpm -ljpeg -lpng
+
+# To link a "mostly" static version (everything linked statically,
+# except libc, libm, libstdc++, and libdl):
+# LOADLIBES = -Xlinker -Bstatic -lXmu -lXm -lXp -lXt -lX11 -lXpm -ljpeg \
+#             -lpng -lz -lSM -lICE -lXext -ldl -Xlinker -Bdynamic
+
+SRCS := $(wildcard *.cc)
+OBJS := $(SRCS:.cc=.o)
+
+all: fw plugins
+
+fw: plugins $(OBJS)
+	$(CXX) $(LDFLAGS) -o fw $(OBJS) plugins/*.o $(LOADLIBES)
+
+plugins: FORCE
+	cd plugins && $(MAKE) -f Makefile.staticplugins
+
+clean: FORCE
+	rm -f $(OBJS) $(SRCS:.cc=.d) fw core.*
+	cd plugins && $(MAKE) -f Makefile.staticplugins clean
+
+FORCE:
+
+-include $(SRCS:.cc=.d)

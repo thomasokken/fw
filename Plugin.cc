@@ -1,10 +1,13 @@
 #include <X11/Intrinsic.h>
 #include <stdio.h>
 #include <dirent.h>
-#include <dlfcn.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <sys/types.h>
+
+#ifndef STATICPLUGINS
+#include <dlfcn.h>
+#endif
 
 #include "Plugin.h"
 #include "SettingsDialog.h"
@@ -14,6 +17,24 @@
 #include "util.h"
 
 #include "About.xbm"
+
+
+#ifdef STATICPLUGINS
+static Map *pluginmap;
+static void register_plugin(const char *name, Plugin *(*factory)(void *)) {
+    pluginmap->put(name, (void *) factory);
+}
+#include "plugins/plugins.h"
+// In Java, the following would be a static {} block; here we use a trick...
+struct PluginMapInitializer {
+    PluginMapInitializer() {
+	pluginmap = new Map;
+	register_plugins();
+    }
+};
+static PluginMapInitializer dummy;
+// ...end of poor man's static {} block.
+#endif
 
 
 static int list_compar(const void *a, const void *b) {
@@ -211,6 +232,7 @@ Plugin::get(const char *name) {
     else if (strcmp(name, "About") == 0)
 	return new About();
 
+#ifndef STATICPLUGINS
     char dlname[PATH_MAX];
     snprintf(dlname, PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
@@ -221,18 +243,32 @@ Plugin::get(const char *name) {
     }
     Plugin *(*factory)(void *) = (Plugin *(*)(void *)) dlsym(dl, "factory");
     return (*factory)(dl);
+#else
+    Plugin *(*factory)(void *) = (Plugin *(*)(void *)) pluginmap->get(name);
+    if (factory == NULL) {
+	if (g_verbosity >= 1)
+	    fprintf(stderr, "Plugin \"%s\" does not exist.\n", name);
+	return NULL;
+    }
+    return (*factory)(NULL);
+#endif
 }
 
 /* public static */ void
 Plugin::release(Plugin *plugin) {
+#ifndef STATICPLUGINS
     void *dl = plugin->dl;
     delete plugin;
     if (dl != NULL)
 	dlclose(dl);
+#else
+    delete plugin;
+#endif
 }
 
 /* public static */ char **
 Plugin::list() {
+#ifndef STATICPLUGINS
     char dirname[PATH_MAX];
     snprintf(dirname, PATH_MAX, "%s/.fw", getenv("HOME"));
     DIR *dir = opendir(dirname);
@@ -255,10 +291,18 @@ Plugin::list() {
 	}
     }
     closedir(dir);
+#else
+    char **names = (char **) malloc((pluginmap->size() + 1) * sizeof(char *));
+    Iterator *iter = pluginmap->keys();
+    int n = 0;
+    while (iter->hasNext())
+	names[n++] = strclone((const char *) iter->next());
+#endif
     if (n == 0) {
 	free(names);
 	return NULL;
     }
+    names[n] = NULL;
     qsort(names, n, sizeof(char *), list_compar);
     return names;
 }

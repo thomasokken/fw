@@ -108,6 +108,12 @@ class Polynomial : public MarianiSilver {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Polynomial(dl);
 }
+#else
+Plugin *Polynomial_factory(void *dl) {
+    return new Polynomial(dl);
+}
+#endif

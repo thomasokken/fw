@@ -114,6 +114,12 @@ class Ramp : public Plugin {
 	}
 };
 
+#ifndef STATICPLUGINS
 extern "C" Plugin *factory(void *dl) {
     return new Ramp(dl);
 }
+#else
+Plugin *Ramp_factory(void *dl) {
+    return new Ramp(dl);
+}
+#endif
