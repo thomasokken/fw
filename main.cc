@@ -33,7 +33,6 @@ int main(int argc, char **argv) {
 				 NULL,		/* fallback resources */
 				 NULL);		/* end of varargs list */
 
-    // TODO: handle all command line options thru XtAppInitialize
     bool gray = false;
     for (int i = 1; i < argc; i++) {
 	int remove = 0;
@@ -203,6 +202,8 @@ int main(int argc, char **argv) {
     for (int i = 1; i < argc; i++) {
 	if (Viewer::openFile(argv[i]))
 	    nothingOpened = false;
+	else if (verbosity >= 1)
+	    fprintf(stderr, "Can't open \"%s\".\n", argv[i]);
     }
     if (nothingOpened)
 	new Viewer("AboutViewer");
