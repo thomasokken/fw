@@ -18,7 +18,7 @@ char *strclone(const char *src) {
     if (src == NULL)
 	return NULL;
     int len = strlen(src);
-    char *dst = new char[len + 1];
+    char *dst = (char *) malloc(len + 1);
     strcpy(dst, src);
     return dst;
 }
@@ -434,6 +434,15 @@ List::remove(int index) {
 	    (length - index - 1) * sizeof(void *));
     length--;
     return result;
+}
+
+/* public */ void
+List::remove(void *item) {
+    for (int i = 0; i < length; i++)
+	if (array[i] == item) {
+	    remove(i);
+	    return;
+	}
 }
 
 /* public */ void

@@ -52,6 +52,7 @@ class List {
 	void append(void *item);
 	void insert(int index, void *item);
 	void *remove(int index);
+	void remove(void *item);
 	void set(int index, void *item);
 	void *get(int index);
 	int size();

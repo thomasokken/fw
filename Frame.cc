@@ -191,6 +191,13 @@ Frame::setIconTitle(const char *title) {
     XtVaSetValues(toplevel, XmNiconName, title, NULL);
 }
 
+/* public */ const char *
+Frame::getTitle() {
+    const char *title;
+    XtVaGetValues(toplevel, XmNtitle, &title, NULL);
+    return title;
+}
+
 /* public virtual */ void
 Frame::close() {
     delete this;

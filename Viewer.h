@@ -7,11 +7,13 @@
 #include "FWPixmap.h"
 
 class ColormapEditor;
+class List;
 class Plugin;
 class SaveImageDialog;
 
 class Viewer : private Frame {
     private:
+	int id;
 	char *filename;
 	char *filetype;
 	bool is_brand_new;
@@ -29,9 +31,11 @@ class Viewer : private Frame {
 	bool selection_in_progress;
 	int sel_x1, sel_y1, sel_x2, sel_y2;
 	Menu *optionsmenu;
+	Menu *windowsmenu;
 	Menu *scalemenu;
 	Widget clipwindow;
-	static int instances;
+	static List *instances;
+	static int idcount;
 	static GC gc;
 	static char *file_directory;
 	static char *colormap_directory;
@@ -51,6 +55,8 @@ class Viewer : private Frame {
 	void init(const char *pluginname, void *plugin_data,
 		  int plugin_data_length, FWPixmap *pm);
 	virtual void close();
+	static void addViewer(Viewer *viewer);
+	static void removeViewer(Viewer *viewer);
 	bool canIDoDirectCopy();
 	void draw_selection();
 	void erase_selection();
@@ -107,6 +113,7 @@ class Viewer : private Frame {
 	void doNotify(bool value);
 	void doEnlarge();
 	void doReduce();
+	void doWindows(const char *sid);
 	void doScale(const char *scale);
 	void doGeneral();
 	void doHelp(const char *plugin);

@@ -2,10 +2,10 @@
 #include <Xm/DrawingA.h>
 #include <Xm/Form.h>
 #include <Xm/ScrolledW.h>
+#include <errno.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <errno.h>
 
 #include "Viewer.h"
 #include "ColormapEditor.h"
@@ -19,8 +19,11 @@
 #include "util.h"
 
 
+/* private static */ List *
+Viewer::instances = new List;
+
 /* private static */ int
-Viewer::instances = 0;
+Viewer::idcount = 0;
 
 /* private static */ GC
 Viewer::gc = None;
@@ -49,7 +52,7 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
 /* private */ void
 Viewer::init(const char *pluginname, void *plugin_data,
 	     int plugin_data_length, FWPixmap *fpm) {
-    instances++;
+    id = idcount++;
     image = NULL;
     priv_cmap = None;
     filename = NULL;
@@ -172,11 +175,17 @@ Viewer::finish_init() {
     scalemenu->addRadio("700%", NULL, NULL, "Windows.Scale@7");
     scalemenu->addRadio("800%", NULL, NULL, "Windows.Scale@8");
 
-    Menu *windowsmenu = new Menu;
+    windowsmenu = new Menu;
     windowsmenu->addCommand("Enlarge", NULL, "Ctrl+0", "Windows.Enlarge");
     windowsmenu->addCommand("Reduce", NULL, "Ctrl+9", "Windows.Reduce");
     windowsmenu->addMenu("Scale", NULL, NULL, "Scale", scalemenu);
     windowsmenu->addSeparator();
+    for (int i = 0; i < instances->size(); i++) {
+	Viewer *vw = (Viewer *) instances->get(i);
+	char buf[64];
+	snprintf(buf, 256, "Windows.X.%d", vw->id);
+	windowsmenu->addCommand(vw->getTitle(), NULL, NULL, buf);
+    }
     topmenu->addMenu("Windows", NULL, NULL, "Windows", windowsmenu);
 
     Menu *helpmenu = new Menu;
@@ -389,6 +398,8 @@ Viewer::finish_init() {
 	paint(0, 0, pm.height, pm.width);
 	plugin->restart();
     }
+
+    addViewer(this);
 }
 
 /* public */
@@ -422,7 +433,9 @@ Viewer::~Viewer() {
 	free(pm.pixels);
     if (pm.cmap != NULL)
 	delete[] pm.cmap;
-    if (--instances == 0)
+
+    removeViewer(this);
+    if (instances->size() == 0)
 	exit(0);
 }
 
@@ -449,6 +462,32 @@ Viewer::deleteLater2(XtPointer ud) {
     Viewer *This = (Viewer *) ud;
     delete This;
     return True;
+}
+
+/* private static */ void
+Viewer::addViewer(Viewer *viewer) {
+    instances->append(viewer);
+    char buf[64];
+    snprintf(buf, 64, "Windows.X.%d", viewer->id);
+    Iterator *iter = instances->iterator();
+    while (iter->hasNext()) {
+	Viewer *v = (Viewer *) iter->next();
+	v->windowsmenu->addCommand(viewer->getTitle(), NULL, NULL, buf);
+    }
+    delete iter;
+}
+
+/* private static */ void
+Viewer::removeViewer(Viewer *viewer) {
+    char buf[64];
+    snprintf(buf, 64, "Windows.X.%d", viewer->id);
+    Iterator *iter = instances->iterator();
+    while (iter->hasNext()) {
+	Viewer *v = (Viewer *) iter->next();
+	v->windowsmenu->remove(buf);
+    }
+    delete iter;
+    instances->remove(viewer);
 }
 
 /* public */ void
@@ -910,6 +949,8 @@ Viewer::menucallback2(const char *id) {
 	doEnlarge();
     else if (strcmp(id, "Windows.Reduce") == 0)
 	doReduce();
+    else if (strncmp(id, "Windows.X.", 10) == 0)
+	doWindows(id + 10);
     else if (strcmp(id, "Help.General") == 0)
 	doGeneral();
     else if (strncmp(id, "Help.X.", 7) == 0)
@@ -1214,7 +1255,13 @@ Viewer::doEditColors() {
 
 /* private */ void
 Viewer::doStopOthers() {
-    doBeep();
+    Iterator *iter = instances->iterator();
+    while (iter->hasNext()) {
+	Viewer *viewer = (Viewer *) iter->next();
+	if (viewer != this)
+	    viewer->plugin->stop();
+    }
+    delete iter;
 }
 
 /* private */ void
@@ -1224,7 +1271,12 @@ Viewer::doStop() {
 
 /* private */ void
 Viewer::doStopAll() {
-    doBeep();
+    Iterator *iter = instances->iterator();
+    while (iter->hasNext()) {
+	Viewer *viewer = (Viewer *) iter->next();
+	viewer->plugin->stop();
+    }
+    delete iter;
 }
 
 /* private */ void
@@ -1234,7 +1286,12 @@ Viewer::doContinue() {
 
 /* private */ void
 Viewer::doContinueAll() {
-    doBeep();
+    Iterator *iter = instances->iterator();
+    while (iter->hasNext()) {
+	Viewer *viewer = (Viewer *) iter->next();
+	viewer->plugin->restart();
+    }
+    delete iter;
 }
 
 /* private */ void
@@ -1314,6 +1371,26 @@ Viewer::doReduce() {
 	scalemenu->setRadioValue("Windows.Scale", buf, true);
     } else
 	doBeep();
+}
+
+/* private */ void
+Viewer::doWindows(const char *sid) {
+    int nid;
+    if (sscanf(sid, "%d", &nid) != 1)
+	doBeep();
+    else {
+	Iterator *iter = instances->iterator();
+	while (iter->hasNext()) {
+	    Viewer *viewer = (Viewer *) iter->next();
+	    if (viewer->id == nid) {
+		delete iter;
+		viewer->raise();
+		return;
+	    }
+	}
+	delete iter;
+	doBeep();
+    }
 }
 
 /* private */ void

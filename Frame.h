@@ -23,6 +23,7 @@ class Frame {
 	void setMenu(Menu *menu);
 	void setTitle(const char *title);
 	void setIconTitle(const char *title);
+	const char *getTitle();
 	virtual void close();
 
     protected:

@@ -21,6 +21,7 @@ Menu::Menu() {
     radioGroupToSelectedWidgetMap = new Map;
     radioGroupToSelectedIdMap = new Map;
     optionmenu = NULL;
+    parent = NULL;
 }
 
 /* public */
@@ -42,6 +43,8 @@ Menu::addCommand(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,
 					    id, ITEM_COMMAND, this);
+    if (parent != NULL)
+	makeItem(parent, item);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -52,10 +55,51 @@ Menu::addCommand(const char *name, const char *mnemonic,
 }
 
 /* public */ void
+Menu::remove(const char *id) {
+    ItemNode *item = firstitem, *previtem = NULL;
+    while (item != NULL) {
+	if (item->id != NULL && strcmp(id, item->id) == 0)
+	    goto found;
+	previtem = item;
+	item = item->next;
+    }
+    fprintf(stderr, "Attempt to remove nonexistent id \"%s\" from menu.\n", id);
+    return;
+
+    found:
+
+    if (item->type == ITEM_COMMAND)
+	commandIdToWidgetMap->remove(id);
+    else if (item->type == ITEM_TOGGLE)
+	toggleIdToWidgetMap->remove(id);
+    else if (item->type == ITEM_RADIO) {
+	radioIdToWidgetMap->remove(id);
+	char *groupid = strclone(id);
+	*strchr(groupid, '@') = 0;
+	radioGroupToSelectedWidgetMap->remove(groupid);
+	radioGroupToSelectedIdMap->remove(groupid);
+	free(groupid);
+    }
+
+    if (item->widget != NULL)
+	XtDestroyWidget(item->widget);
+    if (previtem == NULL)
+	firstitem = item->next;
+    else
+	previtem->next = item->next;
+    if (item == lastitem)
+	lastitem = previtem;
+
+    delete item;
+}
+
+/* public */ void
 Menu::addToggle(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,
 					    id, ITEM_TOGGLE, this);
+    if (parent != NULL)
+	makeItem(parent, item);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -70,6 +114,8 @@ Menu::addRadio(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,
 					    id, ITEM_RADIO, this);
+    if (parent != NULL)
+	makeItem(parent, item);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -83,6 +129,8 @@ Menu::addRadio(const char *name, const char *mnemonic,
 Menu::addMenu(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id, Menu *menu) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator, id, menu, this);
+    if (parent != NULL)
+	makeItem(parent, item);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -95,6 +143,8 @@ Menu::addMenu(const char *name, const char *mnemonic,
 /* public */ void
 Menu::addSeparator() {
     ItemNode *item = new ItemNode;
+    if (parent != NULL)
+	makeItem(parent, item);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -107,85 +157,12 @@ Menu::addSeparator() {
 /* public */ void
 Menu::makeWidgets(Widget parent) {
     ItemNode *item = firstitem;
-    Arg args[10];
-    int nargs;
     while (item != NULL) {
-	nargs = 0;
-	XmString label = XmStringCreateLocalized((char *) item->name);
-	XtSetArg(args[nargs], XmNlabelString, label); nargs++;
-	KeySym ks = item->mnemonic != NULL ?
-		    XStringToKeysym(item->mnemonic) : NoSymbol;
-	XtSetArg(args[nargs], XmNmnemonic, ks); nargs++;
-	XmString acc;
-	if (item->accelerator != NULL) {
-	    char *accKey = new char[strlen(item->accelerator) + 5];
-	    char *plus = strchr(item->accelerator, '+');
-	    if (plus == NULL)
-		strcpy(accKey, item->accelerator);
-	    else {
-		memcpy(accKey, item->accelerator, plus - item->accelerator);
-		accKey[plus - item->accelerator] = 0;
-		strcat(accKey, "<Key>");
-		strcat(accKey, plus + 1);
-	    }
-	    XtSetArg(args[nargs], XmNaccelerator, accKey); nargs++;
-	    acc = XmStringCreateLocalized((char *) item->accelerator);
-	    XtSetArg(args[nargs], XmNacceleratorText, acc); nargs++;
-	}
-	if (item->type == ITEM_SEPARATOR) {
-	    XtCreateManagedWidget("Separator",
-				  xmSeparatorWidgetClass,
-				  parent,
-				  NULL, 0);
-	} else if (item->type == ITEM_COMMAND) {
-	    // Regular menu item
-	    Widget w = XtCreateManagedWidget("Command",
-					     xmPushButtonWidgetClass,
-					     parent,
-					     args, nargs);
-	    commandIdToWidgetMap->put(item->id, w);
-	    XtAddCallback(w, XmNactivateCallback,
-			  commandCB, (XtPointer) item);
-	} else if (item->type == ITEM_TOGGLE) {
-	    // Toggle menu item
-	    Widget w = XtCreateManagedWidget("Toggle",
-					     xmToggleButtonWidgetClass,
-					     parent,
-					     args, nargs);
-	    toggleIdToWidgetMap->put(item->id, w);
-	    XtAddCallback(w, XmNvalueChangedCallback,
-			  toggleCB, (XtPointer) item);
-	} else if (item->type == ITEM_RADIO) {
-	    // Radio menu item
-	    if (strchr(item->id, '@') == NULL) {
-		fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
-	    } else {
-		XtSetArg(args[nargs], XmNindicatorType, XmONE_OF_MANY); nargs++;
-		Widget w = XtCreateManagedWidget("Radio",
-						 xmToggleButtonWidgetClass,
-						 parent,
-						 args, nargs);
-		radioIdToWidgetMap->put(item->id, w);
-		XtAddCallback(w, XmNvalueChangedCallback,
-			    radioCB, (XtPointer) item);
-	    }
-	} else {
-	    // Submenu
-	    Widget submenu = XmCreatePulldownMenu(parent, "Menu", NULL, 0);
-	    XtSetArg(args[nargs], XmNsubMenuId, submenu); nargs++;
-	    Widget w = XtCreateManagedWidget("Cascade",
-					     xmCascadeButtonWidgetClass,
-					     parent,
-					     args, nargs);
-	    if (strcmp(item->name, "Help") == 0)
-		XtVaSetValues(parent, XmNmenuHelpWidget, w, NULL);
-	    item->menu->makeWidgets(submenu);
-	}
-	XmStringFree(label);
-	if (item->accelerator != NULL)
-	    XmStringFree(acc);
+	makeItem(parent, item);
 	item = item->next;
     }
+
+    this->parent = parent;
 }
 
 /* public */ void
@@ -289,6 +266,93 @@ Menu::setSelected(const char *id) {
     }
 }
 
+/* private */ void
+Menu::makeItem(Widget parent, ItemNode *item) {
+    Arg args[10];
+    int nargs = 0;
+    XmString label = XmStringCreateLocalized((char *) item->name);
+    XtSetArg(args[nargs], XmNlabelString, label); nargs++;
+    KeySym ks = item->mnemonic != NULL ?
+		XStringToKeysym(item->mnemonic) : NoSymbol;
+    XtSetArg(args[nargs], XmNmnemonic, ks); nargs++;
+    XmString acc;
+    char *accKey;
+    if (item->accelerator != NULL) {
+	accKey = new char[strlen(item->accelerator) + 5];
+	char *plus = strchr(item->accelerator, '+');
+	if (plus == NULL)
+	    strcpy(accKey, item->accelerator);
+	else {
+	    memcpy(accKey, item->accelerator, plus - item->accelerator);
+	    accKey[plus - item->accelerator] = 0;
+	    strcat(accKey, "<Key>");
+	    strcat(accKey, plus + 1);
+	}
+	XtSetArg(args[nargs], XmNaccelerator, accKey); nargs++;
+	acc = XmStringCreateLocalized((char *) item->accelerator);
+	XtSetArg(args[nargs], XmNacceleratorText, acc); nargs++;
+    }
+    if (item->type == ITEM_SEPARATOR) {
+	item->widget = XtCreateManagedWidget(
+		"Separator",
+		xmSeparatorWidgetClass,
+		parent,
+		NULL, 0);
+    } else if (item->type == ITEM_COMMAND) {
+	// Regular menu item
+	item->widget = XtCreateManagedWidget(
+		"Command",
+		xmPushButtonWidgetClass,
+		parent,
+		args, nargs);
+	commandIdToWidgetMap->put(item->id, item->widget);
+	XtAddCallback(item->widget, XmNactivateCallback, commandCB,
+		(XtPointer) item);
+    } else if (item->type == ITEM_TOGGLE) {
+	// Toggle menu item
+	item->widget = XtCreateManagedWidget(
+		"Toggle",
+		xmToggleButtonWidgetClass,
+		parent,
+		args, nargs);
+	toggleIdToWidgetMap->put(item->id, item->widget);
+	XtAddCallback(item->widget, XmNvalueChangedCallback, toggleCB,
+		(XtPointer) item);
+    } else if (item->type == ITEM_RADIO) {
+	// Radio menu item
+	if (strchr(item->id, '@') == NULL) {
+	    fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
+	} else {
+	    XtSetArg(args[nargs], XmNindicatorType, XmONE_OF_MANY); nargs++;
+	    item->widget = XtCreateManagedWidget(
+		    "Radio",
+		    xmToggleButtonWidgetClass,
+		    parent,
+		    args, nargs);
+	    radioIdToWidgetMap->put(item->id, item->widget);
+	    XtAddCallback(item->widget, XmNvalueChangedCallback, radioCB,
+		    (XtPointer)item);
+	}
+    } else {
+	// Submenu
+	Widget submenu = XmCreatePulldownMenu(parent, "Menu", NULL, 0);
+	XtSetArg(args[nargs], XmNsubMenuId, submenu); nargs++;
+	item->widget = XtCreateManagedWidget(
+		"Cascade",
+		xmCascadeButtonWidgetClass,
+		parent,
+		args, nargs);
+	if (strcmp(item->name, "Help") == 0)
+	    XtVaSetValues(parent, XmNmenuHelpWidget, item->widget, NULL);
+	item->menu->makeWidgets(submenu);
+    }
+    XmStringFree(label);
+    if (item->accelerator != NULL) {
+	XmStringFree(acc);
+	delete[] accKey;
+    }
+}
+
 /* private static */ void
 Menu::commandCB(Widget w, XtPointer ud, XtPointer cd) {
     ItemNode *item = (ItemNode *) ud;
@@ -369,13 +433,13 @@ Menu::ItemNode::ItemNode() {
 /* private::public */
 Menu::ItemNode::~ItemNode() {
     if (name != NULL)
-	delete[] name;
+	free(name);
     if (mnemonic != NULL)
-	delete[] mnemonic;
+	free(mnemonic);
     if (accelerator != NULL)
-	delete[] accelerator;
+	free(accelerator);
     if (id != NULL)
-	delete[] id;
+	free(id);
     if (menu != NULL)
 	delete menu;
 }
