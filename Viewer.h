@@ -38,7 +38,9 @@ class Viewer : private Frame {
 	virtual void close();
 	static void menucallback(void *closure, const char *id);
 	void menucallback2(const char *id);
+
 	static Boolean deleteLater2(XtPointer ud);
+	static void doOpen2(Widget w, XtPointer cd, XtPointer ud);
 
 	void doBeep();
 	void doNew(const char *plugin);

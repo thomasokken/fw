@@ -29,8 +29,10 @@ class Plugin {
     public:
 	static Plugin *get(const char *name);
 	static void release(Plugin *plugin);
+	static char **list();
 	void setviewer(Viewer *viewer) { this->viewer = viewer; }
 	void getsize(unsigned int *width, unsigned int *height);
+	virtual int can_open(const char *filename) { return false; }
 	virtual bool does_depth(int depth) { return false; }
 	virtual void set_depth(int depth) {}
 	virtual void init_new() { beep(); delete viewer; }
@@ -60,6 +62,7 @@ class Plugin {
 
     private:
 	static Boolean workproc(XtPointer ud);
+	static int list_compar(const void *a, const void *b);
 };
 
 #endif

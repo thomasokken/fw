@@ -25,6 +25,8 @@ static int cmp(const void *a, const void *b) {
     return strcmp(*(char **) a, *(char **) b);
 }
 
+// TODO: this duplicates Plugin::list() (but the latter does not
+// filter out "About".
 char **getpluginnames() {
     node *head = NULL;
 

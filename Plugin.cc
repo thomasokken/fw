@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <dlfcn.h>
+#include <sys/types.h>
+#include <dirent.h>
 
 #include "Plugin.h"
 #include "SettingsDialog.h"
@@ -48,6 +50,43 @@ Plugin::release(Plugin *plugin) {
     void *dl = plugin->dl;
     delete plugin;
     dlclose(dl);
+}
+
+/* public static */ char **
+Plugin::list() {
+    char dirname[_POSIX_PATH_MAX];
+    snprintf(dirname, _POSIX_PATH_MAX, "%s/.fw", getenv("HOME"));
+    DIR *dir = opendir(dirname);
+    if (dir == NULL)
+	return NULL;
+    int n = 0;
+    char **names = (char **) malloc(sizeof(char *));
+    names[0] = NULL;
+    struct dirent *dent;
+    while ((dent = readdir(dir)) != NULL) {
+	int len = strlen(dent->d_name);
+	if (len >= 3 && strcmp(dent->d_name + (len - 3), ".so") == 0) {
+	    char *name = (char *) malloc(len - 2);
+	    strncpy(name, dent->d_name, len - 3);
+	    name[len - 3] = 0;
+	    n++;
+	    names = (char **) realloc(names, (n + 1) * sizeof(char *));
+	    names[n - 1] = name;
+	    names[n] = NULL;
+	}
+    }
+    closedir(dir);
+    if (n == 0) {
+	free(names);
+	return NULL;
+    }
+    qsort(names, n, sizeof(char *), list_compar);
+    return names;
+}
+
+/* private static */ int
+Plugin::list_compar(const void *a, const void *b) {
+    return strcmp(*(const char **) a, *(const char **) b);
 }
 
 /* public */ void

@@ -23,6 +23,17 @@ XColor *colorcube = NULL, *grayramp = NULL;
 int cubesize, rampsize;
 
 int main(int argc, char **argv) {
+    // TODO: handle all command line options thru XtAppInitialize
+    bool gray = false;
+    if (argc > 1 && strcmp(argv[1], "-gray") == 0) {
+	fprintf(stderr, "Forcing grayscale operation.\n");
+	gray = true;
+	argc--;
+	for (int i = 1; i < argc; i++)
+	    argv[i] = argv[i + 1];
+	argv[argc] = NULL;
+    }
+    
     XtSetLanguageProc(NULL, NULL, NULL);
     appshell = XtVaAppInitialize(&appcontext,	/* application context */
 				 "FW",		/* class name */
@@ -40,7 +51,8 @@ int main(int argc, char **argv) {
     visual = DefaultVisual(display, screennumber);
     colormap = DefaultColormap(display, screennumber);
     depth = DefaultDepth(display, screennumber);
-    if (visual->c_class == StaticColor || visual->c_class == PseudoColor) {
+    if (!gray && (visual->c_class == StaticColor
+		|| visual->c_class == PseudoColor)) {
 	// Try to allocate as large as possible a color cube
 	cubesize = 1;
 	while (cubesize * cubesize * cubesize <= (1 << depth))
@@ -77,7 +89,8 @@ int main(int argc, char **argv) {
 	}
     }
 
-    if ((visual->c_class == StaticGray || visual->c_class == GrayScale)
+    if (gray
+	|| (visual->c_class == StaticGray || visual->c_class == GrayScale)
 	|| (visual->c_class == StaticColor || visual->c_class == PseudoColor)
 	    && colorcube == NULL) {
 	int realdepth = depth;
@@ -85,6 +98,33 @@ int main(int argc, char **argv) {
 	    realdepth = visual->bits_per_rgb;
 	if (realdepth > 8)
 	    realdepth = 8;
+
+	if (visual->c_class == TrueColor || visual->c_class == DirectColor) {
+	    // Seems pointless, but we need to handle this to make the
+	    // -gray option work properly. Without this, you get a 64-level
+	    // gray ramp on a 16-bit TrueColor display, even though with the
+	    // usual 5-6-5 component sizes, the display is only capable of
+	    // 32 pure shades of gray.
+	    unsigned long redmask = visual->red_mask;
+	    unsigned long greenmask = visual->green_mask;
+	    unsigned long bluemask = visual->blue_mask;
+	    int redbits = 0, greenbits = 0, bluebits = 0;
+	    while (redmask != 0 || greenmask != 0 || bluemask != 0) {
+		redbits += redmask & 1;
+		redmask >>= 1;
+		greenbits += greenmask & 1;
+		greenmask >>= 1;
+		bluebits += bluemask & 1;
+		bluemask >>= 1;
+	    }
+	    if (realdepth > redbits)
+		realdepth = redbits;
+	    if (realdepth > greenbits)
+		realdepth = greenbits;
+	    if (realdepth > bluebits)
+		realdepth = bluebits;
+	}
+
 	rampsize = 1 << realdepth;
 	while (grayramp == NULL) {
 	    grayramp = new XColor[rampsize];

@@ -1,5 +1,6 @@
 #include <Xm/Xm.h>
 #include <Xm/DrawingA.h>
+#include <Xm/FileSB.h>
 #include <Xm/Form.h>
 #include <Xm/ScrolledW.h>
 #include <stdio.h>
@@ -52,6 +53,8 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
 	} else {
 	    plugin->init_new();
 	    // the plugin must call finish_init or delete the Viewer.
+	    // If it deletes the viewer, it should do so using
+	    // Viewer::deleteLater(), NOT using Viewer::~Viewer().
 	}
     }
 }
@@ -610,7 +613,48 @@ Viewer::doNew(const char *plugin) {
 
 /* private */ void
 Viewer::doOpen() {
-    doBeep();
+    Widget fsb = XmCreateFileSelectionDialog(getContainer(), "Open", NULL, 0);
+    XtAddCallback(fsb, XmNokCallback, doOpen2, (XtPointer) this);
+    XtAddCallback(fsb, XmNcancelCallback, doOpen2, (XtPointer) this);
+    XtManageChild(fsb);
+}
+
+/* private static */ void
+Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
+    XmSelectionBoxCallbackStruct *cbs = (XmSelectionBoxCallbackStruct *) cd;
+    if (cbs->reason == XmCR_OK) {
+	char *filename;
+	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
+	    fprintf(stderr, "Opening \"%s\"...\n", filename);
+	    char **names = Plugin::list();
+	    if (names != NULL) {
+		char *pluginname = NULL;
+		for (char **n = names; *n != NULL; n++) {
+		    // fprintf(stderr, "Could use plugin \"%s\"...\n", *n);
+		    if (pluginname == NULL) {
+			Plugin *plugin = Plugin::get(*n);
+			if (plugin->can_open(filename))
+			    pluginname = *n;
+			else
+			    free(*n);
+		    } else
+			free(*n);
+		}
+		free(names);
+		if (pluginname != NULL) {
+		    new Viewer(pluginname, filename);
+		    free(pluginname);
+		} else
+		    // No matching plugin found
+		    XBell(display, 100);
+	    } else
+		// No plugins found at all
+		XBell(display, 100);
+
+	    XtFree(filename);
+	}
+    }
+    XtUnmanageChild(w);
 }
 
 /* private */ void
