@@ -1706,7 +1706,7 @@ Viewer::draw_selection() {
 	    x = s_left / s;
 	    y = s_top / s;
 	    w = (s_right / s) - x;
-	    h = (s_bottom / s) - x;
+	    h = (s_bottom / s) - y;
 	}
 	XSetLineAttributes(g_display, gc, 1, LineOnOffDash, CapButt, JoinMiter);
 	XSetDashes(g_display, gc, 0, "\004\004", 2);
@@ -1761,7 +1761,7 @@ Viewer::erase_selection() {
 	    x = s_left / s;
 	    y = s_top / s;
 	    w = (s_right / s) - x + 1;
-	    h = (s_bottom / s) - x + 1;
+	    h = (s_bottom / s) - y + 1;
 	}
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  x, y, x, y, w, 1);
@@ -1907,23 +1907,86 @@ Viewer::input2(XEvent *event) {
     switch (event->type) {
 	case KeyPress:
 	    // event->xkey.state, event->xkey.keycode
-	    erase_selection();
+	    // TODO: xv-like use of cursor keys to move or resize the selection
 	    break;
 	case KeyRelease:
 	    // event->xkey.state, event->xkey.keycode
-	    draw_selection();
+	    // TODO: xv-like use of cursor keys to move or resize the selection
 	    break;
-	case ButtonPress:
+	case ButtonPress: {
 	    // event->xbutton.x, event->xbutton.y,
 	    // event->xbutton.state, event->xbutton.button
+	    if (selection_visible)
+		erase_selection();
+	    int x, y;
+	    if (scale == 1) {
+		x = event->xbutton.x;
+		y = event->xbutton.y;
+	    } else if (scale <= -1) {
+		x = event->xbutton.x * (-scale);
+		y = event->xbutton.y * (-scale);
+	    } else {
+		x = event->xbutton.x / scale;
+		y = event->xbutton.y / scale;
+	    }
+	    sel_x1 = sel_x2 = x;
+	    sel_y1 = sel_y2 = y;
+	    draw_selection();
+	    selection_visible = true;
+	    selection_in_progress = true;
 	    break;
-	case ButtonRelease:
+	}
+	case ButtonRelease: {
 	    // event->xbutton.x, event->xbutton.y,
-	    // event->xbutton.state, event->xbutton.button);
+	    // event->xbutton.state, event->xbutton.button
+	    if (!selection_in_progress)
+		return;
+	    int x, y;
+	    if (scale == 1) {
+		x = event->xbutton.x;
+		y = event->xbutton.y;
+	    } else if (scale <= -1) {
+		x = event->xbutton.x * (-scale);
+		y = event->xbutton.y * (-scale);
+	    } else {
+		x = event->xbutton.x / scale;
+		y = event->xbutton.y / scale;
+	    }
+	    if (x == sel_x1 || y == sel_y1) {
+		erase_selection();
+		selection_visible = false;
+	    } else if (sel_x2 != x || sel_y2 != y) {
+		erase_selection();
+		sel_x2 = x;
+		sel_y2 = y;
+		draw_selection();
+	    }
+	    selection_in_progress = false;
 	    break;
-	case MotionNotify:
+	}
+	case MotionNotify: {
 	    // event->xmotion.x, event->xmotion.y
+	    if (!selection_in_progress)
+		return;
+	    int x, y;
+	    if (scale == 1) {
+		x = event->xbutton.x;
+		y = event->xbutton.y;
+	    } else if (scale <= -1) {
+		x = event->xbutton.x * (-scale);
+		y = event->xbutton.y * (-scale);
+	    } else {
+		x = event->xbutton.x / scale;
+		y = event->xbutton.y / scale;
+	    }
+	    if (sel_x2 != x || sel_y2 != y) {
+		erase_selection();
+		sel_x2 = x;
+		sel_y2 = y;
+		draw_selection();
+	    }
 	    break;
+	}
     }
 }
 
