@@ -96,13 +96,14 @@ MarianiSilver::init_clone(Plugin *src) {
 	sh = clonee->pm->height;
     }
 
-    int scale = clonee->get_scale();
-    if (scale >= 1) {
-	pm->width = sw * scale;
-	pm->height = sh * scale;
+    int rw, rh;
+    get_recommended_size(&rw, &rh);
+    if (sw * rh > rw * sh) {
+	pm->width = rw;
+	pm->height = rw * sh / sw;
     } else {
-	pm->width = sw / (-scale);
-	pm->height = sh / (-scale);
+	pm->width = rh * sw / sh;
+	pm->height = rh;
     }
 
     xmin = clonee->xmin + ((clonee->xmax - clonee->xmin)
