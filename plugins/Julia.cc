@@ -45,6 +45,8 @@ static const char *my_settings_layout[] = {
     "double 'Upper Real Bound'",	// xmax
     "double 'Lower Imaginary Bound'",	// ymin
     "double 'Upper Imaginary Bound'",	// ymax
+    "double 'c[r]'",			// cr
+    "double 'c[i]'",			// ci
     "int 'Maximum Iterations'",		// maxiter
     "double 'Cutoff Value'",		// limit
     "int 'Color Bands'",		// bands
@@ -80,9 +82,10 @@ static const char *my_settings_layout[] = {
     NULL
 };
 
-class Mandelbrot : public Plugin {
+class Julia : public Plugin {
     private:
 	double xmin, xmax, ymin, ymax;
+	double cr, ci;
 	int maxiter;
 	double limit;
 	int bands;
@@ -111,15 +114,15 @@ class Mandelbrot : public Plugin {
 		    pm->pixels[y * pm->bytesperline + x] = value;
 	}
 
-	Mandelbrot(void *dl) : Plugin(dl) {
+	Julia(void *dl) : Plugin(dl) {
 	    settings_layout = my_settings_layout;
 	    settings_base = &xmin;
 	}
 
-	virtual ~Mandelbrot() {}
+	virtual ~Julia() {}
 
 	virtual const char *name() {
-	    return "Mandelbrot";
+	    return "Julia";
 	}
 
 	virtual bool does_depth(int depth) {
@@ -129,13 +132,15 @@ class Mandelbrot : public Plugin {
 	virtual void init_new() {
 	    pm->width = 700;
 	    pm->height = 500;
-	    xmin = -1.6 * pm->width / pm->height;
-	    xmax = 0.55 * pm->width / pm->height;
-	    ymin = -1.075;
-	    ymax = 1.075;
-	    maxiter = 1000;
-	    limit = 100;
-	    bands = 10;
+	    xmin = -2.0 * pm->width / pm->height;
+	    xmax = 2.0 * pm->width / pm->height;
+	    ymin = -2.0;
+	    ymax = 2.0;
+	    cr = 0;
+	    ci = -1;
+	    maxiter = 100;
+	    limit = 2.0;
+	    bands = 1;
 	    get_settings_dialog();
 	}
 
@@ -334,9 +339,8 @@ class Mandelbrot : public Plugin {
 	    double re2 = re * re;
 	    double im2 = im * im;
 	    while (n < maxiter && re2 + im2 < limit2) {
-		double tmp = re2 - im2 + x;
-		im = 2 * re * im + y;
-		re = tmp;
+		im = 2 * re * im + ci;
+		re = re2 - im2 + cr;
 		re2 = re * re;
 		im2 = im * im;
 		n++;
@@ -349,5 +353,5 @@ class Mandelbrot : public Plugin {
 };
 
 extern "C" Plugin *factory(void *dl) {
-    return new Mandelbrot(dl);
+    return new Julia(dl);
 }
