@@ -35,7 +35,8 @@ static void set_geom(Widget w, int x, int y, int width, int height) {
 
 /* public */
 YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
-				    Listener *listener, bool showCancel = true) 
+				     Listener *listener,
+				     bool showCancel /* = true */) 
 	: Frame(parent, true) {
     
     this->listener = listener;
