@@ -1176,6 +1176,8 @@ Viewer::input2(XEvent *event) {
 	    draw_selection();
 	    selection_visible = true;
 	    selection_in_progress = true;
+	    if (cme != NULL)
+		cme->selectColor(pm.pixels[y * pm.bytesperline + x]);
 	    break;
 	}
 	case ButtonRelease: {
@@ -1196,6 +1198,10 @@ Viewer::input2(XEvent *event) {
 		draw_selection();
 	    }
 	    selection_in_progress = false;
+	    if (cme != NULL) {
+		cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
+		cme->finishSelection();
+	    }
 	    break;
 	}
 	case MotionNotify: {
@@ -1211,6 +1217,8 @@ Viewer::input2(XEvent *event) {
 		sel_y2 = y;
 		draw_selection();
 	    }
+	    if (cme != NULL)
+		cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
 	    break;
 	}
     }

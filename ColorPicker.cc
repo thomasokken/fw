@@ -907,7 +907,7 @@ ColorPicker::ok(Widget w, XtPointer ud, XtPointer cd) {
 	       && g <= 255 && b >= 0 && b <= 255)
 	This->listener->colorPicked(r, g, b);
     else
-	XBell(g_display, 100);
+	beep();
     This->close();
 }
 

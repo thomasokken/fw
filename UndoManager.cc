@@ -89,7 +89,7 @@ UndoManager::undo() {
 	action->undo();
 	notifyListeners();
     } else
-	XBell(g_display, 100);
+	beep();
 }
 
 /* public */ void
@@ -99,7 +99,7 @@ UndoManager::redo() {
 	action->redo();
 	notifyListeners();
     } else
-	XBell(g_display, 100);
+	beep();
 }
 
 /* public */ int

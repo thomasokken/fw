@@ -455,29 +455,26 @@ ColormapEditor::colorsChanged(int startindex, int endindex) {
     // that itself (remember, the action can depend on the Viewer existing;
     // it cannot depend on a Colormap Editor existing).
 
-    // First, get rid of selection, if it exists
-    sel_in_progress = false;
-    if (sel_start != -1) {
-	// A selection existed already; it needs to be erased
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	sel_start = -1;
-	for (int i = start; i <= end; i++)
-	    update_cell(i);
-	redraw_cells(start, end);
-    }
-
-    // Now fix color grid. Note that this is a no-op if we're using a private
+    // Fix color grid. Note that this is a no-op if we're using a private
     // colormap.
-    if (colormap != g_colormap) {
+    if (colormap == g_colormap) {
 	for (int i = startindex; i <= endindex; i++)
 	    update_cell(i);
+
+	// Repair selection, if appropriate
+	if (sel_start != -1) {
+	    int start, end;
+	    if (sel_start < sel_end) {
+		start = sel_start;
+		end = sel_end;
+	    } else {
+		start = sel_end;
+		end = sel_start;
+	    }
+	    for (int i = start; i <= end; i++)
+		if (i >= startindex && i <= endindex)
+		    select_cell(i);
+	}
 	redraw_cells(startindex, endindex);
     }
 }
@@ -507,7 +504,7 @@ class CPListener : public ColorPicker::Listener {
 /* private */ void
 ColormapEditor::doPick() {
     if (sel_start == -1 || sel_start != sel_end)
-	XBell(g_display, 100);
+	beep();
     else {
 	if (colorpicker != NULL)
 	    colorpicker->close();
@@ -524,7 +521,7 @@ ColormapEditor::doPick() {
 /* private */ void
 ColormapEditor::doBlend() {
     if (sel_start == -1 || sel_start == sel_end)
-	XBell(g_display, 100);
+	beep();
     else {
 	int start, end;
 	if (sel_start < sel_end) {
@@ -543,7 +540,7 @@ ColormapEditor::doBlend() {
 /* private */ void
 ColormapEditor::doSwap() {
     if (sel_start == -1 || sel_start == sel_end)
-	XBell(g_display, 100);
+	beep();
     else {
 	int start, end;
 	if (sel_start < sel_end) {
@@ -562,7 +559,7 @@ ColormapEditor::doSwap() {
 /* private */ void
 ColormapEditor::doMix() {
     if (sel_start == -1 || sel_start == sel_end)
-	XBell(g_display, 100);
+	beep();
     else {
 	int start, end;
 	if (sel_start < sel_end) {
@@ -580,8 +577,8 @@ ColormapEditor::doMix() {
 
 /* private */ void
 ColormapEditor::doCopy() {
-    if (sel_start == -1 || sel_start == sel_end)
-	XBell(g_display, 100);
+    if (sel_start == -1)
+	beep();
     else {
 	for (int i = sel_start; i <= sel_end; i++)
 	    color_clipboard[i - sel_start] = pm->cmap[i];
@@ -592,7 +589,7 @@ ColormapEditor::doCopy() {
 /* private */ void
 ColormapEditor::doPaste() {
     if (sel_start == -1 || color_clipboard_size == 0)
-	XBell(g_display, 100);
+	beep();
     else {
 	int start, end;
 	if (sel_start < sel_end) {
@@ -602,7 +599,7 @@ ColormapEditor::doPaste() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	if (sel_start == sel_end) {
+	if (start == end) {
 	    // If exactly one cell is selected, while the color clipboard
 	    // contains more than one color, we paste the entire range from
 	    // the color clipboard, starting at the selected cell, and
@@ -611,9 +608,9 @@ ColormapEditor::doPaste() {
 	    // mimic the behavior of an "insertion point" in a word processor,
 	    // kind of. Only it's more like an "overwriting point" here since
 	    // I don't move anything out of the way first.
-	    sel_end = sel_start + color_clipboard_size - 1;
-	    if (sel_end > 255)
-		sel_end = 255;
+	    end = start + color_clipboard_size - 1;
+	    if (end > 255)
+		end = 255;
 	}
 	PasteAction *action = new PasteAction(listener, pm, start, end,
 					ColormapEditor::color_clipboard_size,
@@ -801,75 +798,88 @@ ColormapEditor::input2(XEvent *event) {
     int c = x + 16 * y;
 
     if (event->type == ButtonPress && !sel_in_progress) {
-	if (sel_start != -1) {
-	    // A selection existed already; it needs to be erased
-	    int start, end;
-	    if (sel_start < sel_end) {
-		start = sel_start;
-		end = sel_end;
-	    } else {
-		start = sel_end;
-		end = sel_start;
-	    }
-	    sel_start = -1;
-	    for (int i = start; i <= end; i++)
-		update_cell(i);
-	    redraw_cells(start, end);
-	}
-	sel_in_progress = true;
-	sel_start = sel_end = c;
-	select_cell(c);
-	redraw_cells(c, c);
+	selectColor(c);
     } else if (sel_in_progress) {
-	// Selection in progress; first let's take care of painting it
-	if (c != sel_end) {
-	    int old_sel_end = sel_end;
-	    sel_end = c;
-	    if (old_sel_end >= sel_start) {
-		if (sel_end > old_sel_end) {
-		    // Selection grows
-		    for (int i = old_sel_end + 1; i <= sel_end; i++)
-			select_cell(i);
-		    redraw_cells(old_sel_end + 1, sel_end);
-		} else if (sel_end >= sel_start) {
-		    // Selection shrinks
-		    for (int i = sel_end + 1; i <= old_sel_end; i++)
-			update_cell(i);
-		    redraw_cells(sel_end + 1, old_sel_end);
-		} else {
-		    // Selection crossed over its anchor
-		    for (int i = sel_end; i < sel_start; i++)
-			select_cell(i);
-		    for (int i = sel_start + 1; i <= old_sel_end; i++)
-			update_cell(i);
-		    redraw_cells(sel_end, old_sel_end);
-		}
-	    } else {
-		if (sel_end < old_sel_end) {
-		    // Selection grows
-		    for (int i = sel_end; i < old_sel_end; i++)
-			select_cell(i);
-		    redraw_cells(sel_end, old_sel_end - 1);
-		} else if (sel_end <= sel_start) {
-		    // Selection shrinks
-		    for (int i = old_sel_end; i < sel_end; i++)
-			update_cell(i);
-		    redraw_cells(old_sel_end, sel_end - 1);
-		} else {
-		    // Selection crossed over its anchor
-		    for (int i = sel_start + 1; i <= sel_end; i++)
-			select_cell(i);
-		    for (int i = old_sel_end; i < sel_start; i++)
-			update_cell(i);
-		    redraw_cells(old_sel_end, sel_end);
-		}
-	    }
-	}
-	// OK, that took care of keeping the on-screen representation in sync
-	// with our internal one. Now, what exactly was that event?
+	extendSelection(c);
 	if (event->type == ButtonRelease)
 	    sel_in_progress = false;
     }
+}
+
+/* public */ void
+ColormapEditor::selectColor(int c) {
+    if (sel_start != -1) {
+	// A selection existed already; it needs to be erased
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	sel_start = -1;
+	for (int i = start; i <= end; i++)
+	    update_cell(i);
+	redraw_cells(start, end);
+    }
+    sel_in_progress = true;
+    sel_start = sel_end = c;
+    select_cell(c);
+    redraw_cells(c, c);
+}
+
+/* public */ void
+ColormapEditor::extendSelection(int c) {
+    // Selection in progress; first let's take care of painting it
+    if (c != sel_end) {
+	int old_sel_end = sel_end;
+	sel_end = c;
+	if (old_sel_end >= sel_start) {
+	    if (sel_end > old_sel_end) {
+		// Selection grows
+		for (int i = old_sel_end + 1; i <= sel_end; i++)
+		    select_cell(i);
+		redraw_cells(old_sel_end + 1, sel_end);
+	    } else if (sel_end >= sel_start) {
+		// Selection shrinks
+		for (int i = sel_end + 1; i <= old_sel_end; i++)
+		    update_cell(i);
+		redraw_cells(sel_end + 1, old_sel_end);
+	    } else {
+		// Selection crossed over its anchor
+		for (int i = sel_end; i < sel_start; i++)
+		    select_cell(i);
+		for (int i = sel_start + 1; i <= old_sel_end; i++)
+		    update_cell(i);
+		redraw_cells(sel_end, old_sel_end);
+	    }
+	} else {
+	    if (sel_end < old_sel_end) {
+		// Selection grows
+		for (int i = sel_end; i < old_sel_end; i++)
+		    select_cell(i);
+		redraw_cells(sel_end, old_sel_end - 1);
+	    } else if (sel_end <= sel_start) {
+		// Selection shrinks
+		for (int i = old_sel_end; i < sel_end; i++)
+		    update_cell(i);
+		redraw_cells(old_sel_end, sel_end - 1);
+	    } else {
+		// Selection crossed over its anchor
+		for (int i = sel_start + 1; i <= sel_end; i++)
+		    select_cell(i);
+		for (int i = old_sel_end; i < sel_start; i++)
+		    update_cell(i);
+		redraw_cells(old_sel_end, sel_end);
+	    }
+	}
+    }
+}
+
+/* public */ void
+ColormapEditor::finishSelection() {
+    sel_in_progress = false;
 }
 
 /* private */ void

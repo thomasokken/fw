@@ -6,6 +6,7 @@ class ColorPicker;
 class FWColor;
 class FWPixmap;
 class UndoManager;
+class UndoableAction;
 
 class ColormapEditor : public Frame {
     public:
@@ -42,6 +43,9 @@ class ColormapEditor : public Frame {
 	virtual ~ColormapEditor();
 	void colormapChanged(Colormap colormap);
 	void colorsChanged(int startindex, int endindex);
+	void selectColor(int c);
+	void extendSelection(int c);
+	void finishSelection();
 
     private:
 	void doPick();

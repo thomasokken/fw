@@ -11,6 +11,7 @@
 #include "SettingsHelper.h"
 #include "Viewer.h"
 #include "main.h"
+#include "util.h"
 
 #include "About.xbm"
 
@@ -352,7 +353,7 @@ Plugin::help() {
 
 /* protected static */ void
 Plugin::beep() {
-    XBell(g_display, 100);
+    ::beep();
 }
 
 /* protected static */ int
