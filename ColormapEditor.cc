@@ -262,6 +262,7 @@ ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm)
     image->data = (char *) malloc(image->bytes_per_line * image->height);
 
     colormap = g_colormap;
+    colorpicker = NULL;
 
     update_image();
 }
@@ -277,6 +278,8 @@ ColormapEditor::~ColormapEditor() {
     free(image->data);
     XFree(image);
     delete undomgr;
+    if (colorpicker != NULL)
+	colorpicker->close();
 }
 
 /* public virtual */ void
@@ -306,6 +309,9 @@ class CPListener : public ColorPicker::Listener {
 	    this->cme = cme;
 	    this->index = index;
 	}
+	virtual ~CPListener() {
+	    cme->colorpicker = NULL;
+	}
 	virtual void colorPicked(unsigned char r,
 				 unsigned char g,
 				 unsigned char b) {
@@ -320,12 +326,14 @@ ColormapEditor::doPick() {
     if (sel_start == -1 || sel_start != sel_end)
 	XBell(g_display, 100);
     else {
-	ColorPicker *picker = new ColorPicker(
+	if (colorpicker != NULL)
+	    colorpicker->close();
+	colorpicker = new ColorPicker(
 		    new CPListener(this, sel_start),
 		    pm->cmap[sel_start].r,
 		    pm->cmap[sel_start].g,
 		    pm->cmap[sel_start].b);
-	picker->raise();
+	colorpicker->raise();
     }
 }
 
@@ -512,6 +520,7 @@ ColormapEditor::addButton(Widget parent, const char *label, int id) {
 	    parent,
 	    XmNlabelString, s,
 	    XmNuserData, (XtPointer) id,
+	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
 	    NULL);
     XmStringFree(s);
     XtAddCallback(button, XmNactivateCallback, activate, (XtPointer) this);

@@ -14,6 +14,12 @@ class ColorPicker : public Frame {
     private:
 	Listener *listener;
 	Widget red, green, blue;
+	XImage *colorwheel_image;
+	XImage *colorslider_image;
+	XImage *oldandnew_image;
+	Widget colorwheel;
+	Widget colorslider;
+	Widget oldandnew;
 
     public:
 	ColorPicker(Listener *listener, unsigned char r, unsigned char g,

@@ -6,8 +6,8 @@
 
 /* public static */ void
 CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
-			 bool priv_cmap, bool dither,
-			 int top, int left, int bottom, int right) {
+			bool priv_cmap, bool dither,
+			int top, int left, int bottom, int right) {
     if (pm->depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple

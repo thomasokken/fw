@@ -2,6 +2,7 @@
 
 #include "Frame.h"
 
+class ColorPicker;
 class FWColor;
 class FWPixmap;
 class UndoManager;
@@ -28,6 +29,7 @@ class ColormapEditor : public Frame {
 	int sel_start, sel_end;
 	Dimension imagesize;
 	XImage *image;
+	ColorPicker *colorpicker;
 
     public:
 	ColormapEditor(Owner *owner, FWPixmap *pm);
