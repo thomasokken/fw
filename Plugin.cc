@@ -55,11 +55,16 @@ class About : public Plugin {
 	virtual void init_new() {
 	    pm->width = About_width;
 	    pm->height = About_height;
-	    pm->bytesperline = About_width + 7 >> 3;
+	    pm->bytesperline = (About_width + 31 >> 3) & ~3;
+	    int srcbpl = About_width + 7 >> 3;
 	    int size = pm->bytesperline * pm->height;
 	    pm->pixels = (unsigned char *) malloc(size);
-	    for (int i = 0; i < size; i++)
-		pm->pixels[i] = ~About_bits[i];
+	    for (int v = 0; v < pm->height; v++) {
+		unsigned char *src = About_bits + v * srcbpl;
+		unsigned char *dst = pm->pixels + v * pm->bytesperline;
+		for (int h = 0; h < srcbpl; h++)
+		    *dst++ = ~*src++;
+	    }
 	    pm->depth = 1;
 	    init_proceed();
 	}

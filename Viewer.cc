@@ -346,16 +346,16 @@ Viewer::finish_init() {
     selection_in_progress = false;
     selection_visible = false;
 
-    bool bitmap_ok = pm.depth == 1 && scale >= 1;
+    bool use_bitmap = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
 			 g_visual,
-			 bitmap_ok ? 1 : g_depth,
-			 bitmap_ok ? XYBitmap : ZPixmap,
+			 use_bitmap ? 1 : g_depth,
+			 use_bitmap ? XYBitmap : ZPixmap,
 			 0,
 			 NULL,
 			 image_width,
 			 image_height,
-			 bitmap_ok ? 8 : 32,
+			 32,
 			 0);
 
     bool want_priv_cmap = false; // get from preferences!
@@ -480,6 +480,11 @@ Viewer::paint(int top, int left, int bottom, int right) {
 
 /* private */ void
 Viewer::paint_direct(int top, int left, int bottom, int right) {
+    // Plugin may have switched bitmaps. (It is not allowed to change
+    // any aspect of bitmap qeometry, though, so keeping image->data
+    // up to date is all we have to worry about.
+    image->data = (char *) pm.pixels;
+
     XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 	      left, top, left, top,
 	      right - left, bottom - top);
@@ -2503,16 +2508,16 @@ Viewer::doScale(const char *value) {
     if (!direct_copy)
 	free(image->data);
     XFree(image);
-    bool bitmap_ok = pm.depth == 1 && scale >= 1;
+    bool use_bitmap = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
 			 g_visual,
-			 bitmap_ok ? 1 : g_depth,
-			 bitmap_ok ? XYBitmap : ZPixmap,
+			 use_bitmap ? 1 : g_depth,
+			 use_bitmap ? XYBitmap : ZPixmap,
 			 0,
 			 NULL,
 			 w,
 			 h,
-			 bitmap_ok ? 8 : 32,
+			 32,
 			 0);
 
     if (pm.depth == 1) {

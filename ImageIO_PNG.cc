@@ -186,7 +186,7 @@ ImageIO_PNG::read(const char *filename, char **plugin_name,
 
     switch (pm->depth) {
 	case 1:
-	    pm->bytesperline = (pm->width + 7) >> 3;
+	    pm->bytesperline = (pm->width + 31 >> 3) & ~3;
 	    break;
 	case 8:
 	    pm->bytesperline = (pm->width + 3) & ~3;

@@ -23,7 +23,7 @@ class MandelbrotMono : public Plugin {
 	virtual void init_new() {
 	    pm->width = 500;
 	    pm->height = 300;
-	    pm->bytesperline = pm->width + 7 >> 3;
+	    pm->bytesperline = (pm->width + 31 >> 3) & ~3;
 	    int size = pm->bytesperline * pm->height;
 	    pm->pixels = (unsigned char *) malloc(size);
 	    for (int i = 0; i < size; i++)
@@ -47,7 +47,7 @@ class MandelbrotMono : public Plugin {
 	}
 	virtual bool work() {
 	    if (y >= pm->height)
-		return false;
+		return true;
 	    int firsty = y;
 	    int endy = y + 10;
 	    while (y < endy) {

@@ -175,7 +175,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 
     if (mono) {
 	pm->depth = 1;
-	pm->bytesperline = (pm->width + 7) >> 3;
+	pm->bytesperline = (pm->width + 31 >> 3) & ~3;
     } else {
 	pm->depth = 8;
 	pm->bytesperline = (pm->width + 3) & ~3;

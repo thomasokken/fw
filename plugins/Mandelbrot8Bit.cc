@@ -51,7 +51,7 @@ class Mandelbrot8Bit : public Plugin {
 	}
 	virtual bool work() {
 	    if (y >= pm->height)
-		return false;
+		return true;
 	    int firsty = y;
 	    int endy = y + 10;
 	    while (y < endy) {

@@ -151,7 +151,7 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
     switch (pm->depth) {
 	case 1:
 	    // 0=black 1=white
-	    pm->bytesperline = (pm->width + 7) >> 3;
+	    pm->bytesperline = (pm->width + 31 >> 3) & ~3;
 	    break;
 	case 8:
 	    // 0=black 255=white
@@ -227,17 +227,21 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 	    break;
 	case '4': {
 	    fread(pm->pixels, 1, size, pnm);
-	    unsigned char *p = pm->pixels;
-	    for (int i = 0; i < size; i++) {
-		char c = *p;
-		char d = 0;
-		for (int j = 0; j < 8; j++) {
-		    d |= (~c & 1);
-		    if (j < 7)
+	    int srcbpl = pm->width + 7 >> 3;
+	    for (int v = pm->height - 1; v >= 0; v--) {
+		unsigned char *src = pm->pixels + (v + 1) * srcbpl - 1;
+		unsigned char *dst = pm->pixels + v * pm->bytesperline
+							+ srcbpl - 1;
+		for (int h = srcbpl - 1; h >= 0; h--) {
+		    unsigned char c = *src--;
+		    unsigned char d = 0;
+		    for (int j = 0; j < 8; j++) {
 			d <<= 1;
-		    c >>= 1;
+			d |= (~c & 1);
+			c >>= 1;
+		    }
+		    *dst-- = d;
 		}
-		*p++ = d;
 	    }
 	    break;
 	}
