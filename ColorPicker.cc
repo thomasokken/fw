@@ -577,6 +577,9 @@ ColorPicker::repaintOldNewImage() {
 
 	oldnew_image_initialized = true;
     } else {
+	// TODO: It always uses dithering. At 5 or more bits per RGB component,
+	// that's really not necessary. Should check for that case.
+
 	if (g_grayramp != NULL) {
 	    // Greyscale halftoning
 	    unsigned char r, g, b;
@@ -670,6 +673,8 @@ ColorPicker::repaintOldNewImage() {
 //	for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
 //	    for (int x = 1; x < OLDNEW_W - 1; x++)
 //		pm.put_pixel(x, y, newp);
+//	// TODO: It always uses dithering. At 5 or more bits per RGB component,
+//	// that's really not necessary. Should check for that case.
 //	CopyBits::copy_unscaled(&pm, oldnew_image, false, true, true,
 //				0, 0, OLDNEW_H, OLDNEW_W);
 //	free(pm.pixels);
@@ -743,6 +748,8 @@ ColorPicker::repaintWheelImage() {
 	}
     } while (x >= y);
 
+    // TODO: It always uses dithering. At 5 or more bits per RGB component,
+    // that's really not necessary. Should check for that case.
     CopyBits::copy_unscaled(&pm, wheel_image, private_colormap, true, true,
 			    0, 0, WHEEL_H, WHEEL_W);
     free(pm.pixels);
@@ -797,6 +804,8 @@ ColorPicker::repaintSliderImage() {
 	pm.put_pixel(CROSS_SIZE / 2 + WHEEL_DIAMETER, y, 0);
     }
 
+    // TODO: It always uses dithering. At 5 or more bits per RGB component,
+    // that's really not necessary. Should check for that case.
     CopyBits::copy_unscaled(&pm, slider_image, private_colormap, true, true,
 			    0, 0, SLIDER_H, SLIDER_W);
     free(pm.pixels);
