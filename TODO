@@ -1,6 +1,3 @@
-Add "Replace Existing" dialogs in all "save as" type situations (save as,
-save colormap).
-
 YesNoCancelDialog and SaveImageDialog should not be application-modal.
 How to reduce modality to one window only, and still make sure that the user
 can't throw the application into an inconsistent state by mucking about in

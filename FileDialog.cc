@@ -20,7 +20,7 @@ FileDialog::Listener::~Listener() {
 
 
 /* public */
-FileDialog::FileDialog(Frame *parent, Listener *listener)
+FileDialog::FileDialog(Frame *parent, bool confirmReplace, Listener *listener)
 	    : Frame(parent, true, false, true, false) {
     // I'm using the protected frame-or-dialog constructor from Frame,
     // so the FileDialog will be a modal dialog if 'parent' is non-null,
@@ -30,7 +30,9 @@ FileDialog::FileDialog(Frame *parent, Listener *listener)
     XtAddCallback(fsb, XmNcancelCallback, okOrCancel, (XtPointer) this);
     XtManageChild(fsb);
     directory = NULL;
+    this->confirmReplace = confirmReplace;
     this->listener = listener;
+    ync = NULL;
 }
 
 /* public virtual */
@@ -76,10 +78,44 @@ FileDialog::okOrCancel(Widget w, XtPointer ud, XtPointer cd) {
 	}
 	char *filename;
 	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
-	    This->listener->fileSelected(filename);
-	    XtFree(filename);
-	}
+	    if (This->confirmReplace && isFile(filename)) {
+		This->filename = filename;
+		char buf[1024];
+		snprintf(buf, 1024, "Replace existing \"%s\"?", filename);
+		This->ync = new YesNoCancelDialog(This, buf, This, false);
+		This->ync->raise();
+	    } else {
+		This->listener->fileSelected(filename);
+		XtFree(filename);
+	    }
+	} else
+	    This->listener->cancelled();
     } else if (cbs->reason == XmCR_CANCEL) {
 	This->listener->cancelled();
     }
+}
+
+/* private */ void
+FileDialog::yes() {
+    delete ync;
+    ync = NULL;
+    listener->fileSelected(filename);
+    XtFree(filename);
+}
+
+/* private */ void
+FileDialog::no() {
+    delete ync;
+    ync = NULL;
+    XtFree(filename);
+}
+
+/* private */ void
+FileDialog::cancel() {
+    // We're suppressing the cancel button, but of course the user can
+    // still use the WM to close the window, and that causes cancel()
+    // to be called.
+    delete ync;
+    ync = NULL;
+    XtFree(filename);
 }

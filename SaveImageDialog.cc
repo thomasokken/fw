@@ -21,7 +21,8 @@ SaveImageDialog::Listener::~Listener() {
 
 /* public */
 SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
-	const char *filetype, Listener *listener) : FileDialog(parent, this) {
+				 const char *filetype, Listener *listener)
+	: FileDialog(parent, true, this) {
 
     this->listener = listener;
 

@@ -125,17 +125,64 @@ MarianiSilver::init_clone(Plugin *src) {
 MarianiSilver::get_settings_ok() {
     pm->bytesperline = pm->width + 3 & ~3;
     pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
-    memset(pm->pixels, 255, pm->bytesperline * pm->height);
     pm->cmap = new FWColor[256];
     if (clonee != NULL && clonee->pm->depth == 8) {
-	for (int k = 0; k < 256; k++)
-	    pm->cmap[k] = clonee->pm->cmap[k];
+	FWPixmap *cpm = clonee->pm;
+
+	// We're a clone. We copy our original's colormap, and we copy a
+	// greyed-out version of the original bitmap so the user has something
+	// to look at while the computation is under way. Since there is no
+	// guarantee that there's white in the color map, we look for the
+	// brightest color.
+	int brightest_pixel = 0;
+	int brightest_value = 0;
+	for (int k = 0; k < 256; k++) {
+	    pm->cmap[k] = cpm->cmap[k];
+	    int brightness = 306 * pm->cmap[k].r
+			   + 601 * pm->cmap[k].g
+			   + 117 * pm->cmap[k].b;
+	    if (brightness > brightest_value) {
+		brightest_value = brightness;
+		brightest_pixel = k;
+	    }
+	}
+
+	// Preparations for clonee->clone pixel coordinate transformation
+	int sx, sy, sw, sh;
+	clonee->get_selection(&sx, &sy, &sw, &sh);
+	if (sx == -1) {
+	    sx = 0;
+	    sy = 0;
+	    sw = cpm->width;
+	    sh = cpm->height;
+	}
+	float xscale = ((float) sw) / pm->width;
+	float yscale = ((float) sh) / pm->height;
+
+	for (int y = 0; y < pm->height; y++)
+	    for (int x = 0; x < pm->width; x++) {
+		unsigned char *addr = pm->pixels + y * pm->bytesperline + x;
+		if (((x ^ y) & 1) == 0)
+		    *addr = brightest_pixel;
+		else {
+		    int xx = ((int) (x * xscale)) + sx;
+		    if (xx >= 0 && xx < cpm->width) {
+			int yy = ((int) (y * yscale)) + sy;
+			if (yy >= 0 && yy < cpm->width)
+			    *addr = cpm->pixels[yy * cpm->bytesperline + xx];
+			else
+			    *addr = brightest_pixel;
+		    } else
+			*addr = brightest_pixel;
+		}
+	    }
     } else {
 	for (int k = 0; k < 256; k++) {
 	    pm->cmap[k].r = k;
 	    pm->cmap[k].g = k;
 	    pm->cmap[k].b = k;
 	}
+	memset(pm->pixels, 255, pm->bytesperline * pm->height);
     }
     init_proceed();
 }

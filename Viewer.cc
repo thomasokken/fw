@@ -1500,7 +1500,7 @@ class OpenListener : public FileDialog::Listener {
 /* private */ void
 Viewer::doOpen() {
     OpenListener *listener = new OpenListener(this);
-    FileDialog *opendialog = new FileDialog(NULL, listener);
+    FileDialog *opendialog = new FileDialog(NULL, false, listener);
     listener->setDialog(opendialog);
     opendialog->setTitle("Open File");
     opendialog->setIconTitle("Open File");
@@ -1791,7 +1791,7 @@ Viewer::doLoadColors() {
 	return;
     }
     LoadColorsListener *listener = new LoadColorsListener(this);
-    FileDialog *loaddialog = new FileDialog(NULL, listener);
+    FileDialog *loaddialog = new FileDialog(NULL, false, listener);
     listener->setDialog(loaddialog);
     loaddialog->setTitle("Load Colormap");
     loaddialog->setIconTitle("Load Colormap");
@@ -1844,7 +1844,7 @@ Viewer::doSaveColors() {
 	return;
     }
     SaveColorsListener *listener = new SaveColorsListener(this);
-    FileDialog *savedialog = new FileDialog(NULL, listener);
+    FileDialog *savedialog = new FileDialog(NULL, true, listener);
     listener->setDialog(savedialog);
     savedialog->setTitle("Save Colormap");
     savedialog->setIconTitle("Save Colormap");
