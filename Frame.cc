@@ -151,7 +151,7 @@ Frame::raise() {
 	    fitToScreen();
 	}
 
-	XMapRaised(display, XtWindow(toplevel));
+	XMapRaised(display, 0x123456 /*XtWindow(toplevel)*/);
     } else {
 	Window win = XtWindow(toplevel);
 
