@@ -6,10 +6,12 @@
 #include "Frame.h"
 #include "FWPixmap.h"
 
+class CMEOwner;
 class ColormapEditor;
 class List;
 class Plugin;
 class SaveImageDialog;
+class UndoManager;
 
 class Viewer : private Frame {
     private:
@@ -20,9 +22,11 @@ class Viewer : private Frame {
 	bool finished;
 	bool untitled;
 	bool dirty;
-	bool reallydirty;
+	UndoManager *undomanager;
+	int saved_undo_id;
 	SaveImageDialog *savedialog;
 	ColormapEditor *cme;
+	CMEOwner *cmeproxy;
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
@@ -34,6 +38,7 @@ class Viewer : private Frame {
 	bool selection_visible;
 	bool selection_in_progress;
 	int sel_x1, sel_y1, sel_x2, sel_y2;
+	Menu *editmenu;
 	Menu *optionsmenu;
 	Menu *windowsmenu;
 	Menu *scalemenu;
@@ -61,7 +66,7 @@ class Viewer : private Frame {
 	int get_scale();
 	void colormapChanged();
 	void setFile(const char *filename, const char *filetype);
-	void setReallyDirty();
+	void setDirty();
 	void pluginFinished(bool notify);
 
     private:
@@ -133,7 +138,8 @@ class Viewer : private Frame {
 	void doGeneral();
 	void doHelp(const char *plugin);
 
-	friend class CMEProxy;
+	friend class CMEOwner;
+	friend class UMListener;
 };
 
 #endif

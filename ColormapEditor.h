@@ -13,15 +13,18 @@ class ColormapEditor : public Frame {
 	    public:
 		Owner() {}
 		virtual ~Owner() {}
+		virtual void cmeClosed() = 0;
 		virtual void colormapChanged() = 0;
 		virtual void loadColors() = 0;
 		virtual void saveColors() = 0;
+		virtual ColormapEditor *getCME() = 0;
 	};
 
     private:
 	Owner *owner;
 	FWPixmap *pm;
-	FWColor *backup_cmap;
+	FWColor *initial_cmap;
+	int initial_undo_id;
 	UndoManager *undomgr;
 	Widget drawingarea;
 	Colormap colormap;
@@ -32,7 +35,8 @@ class ColormapEditor : public Frame {
 	ColorPicker *colorpicker;
 
     public:
-	ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap);
+	ColormapEditor(Owner *owner, FWPixmap *pm,
+		       UndoManager *undomanager, Colormap colormap);
 	virtual ~ColormapEditor();
 	void colormapChanged(Colormap colormap);
 

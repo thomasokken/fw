@@ -91,7 +91,7 @@ class SlaveDriver {
 		}
 	    }
 
-	    node->worker->viewer->setReallyDirty();
+	    node->worker->viewer->setDirty();
 	    if (node->worker->work()) {
 		node->worker->finished = true;
 		node->worker->viewer->pluginFinished(true);

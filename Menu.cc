@@ -96,6 +96,33 @@ Menu::remove(const char *id) {
 }
 
 /* public */ void
+Menu::changeLabel(const char *id, const char *label) {
+    ItemNode *item = firstitem, *previtem = NULL;
+    while (item != NULL) {
+	if (item->id != NULL && strcmp(id, item->id) == 0)
+	    goto found;
+	previtem = item;
+	item = item->next;
+    }
+    if (g_verbosity >= 2)
+	fprintf(stderr, "Attempt to relabel nonexistent id \"%s\" in menu.\n", id);
+    return;
+
+    found:
+
+    if (item->name != NULL)
+	free(item->name);
+    item->name = strclone(label);
+    if (item->widget != NULL) {
+	XmString s = XmStringCreateLocalized((char *) label);
+	Arg arg;
+	XtSetArg(arg, XmNlabelString, s);
+	XtSetValues(item->widget, &arg, 1);
+	XmStringFree(s);
+    }
+}
+
+/* public */ void
 Menu::addToggle(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
     ItemNode *item = new ItemNode(name, mnemonic, accelerator,

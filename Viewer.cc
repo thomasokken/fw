@@ -16,6 +16,7 @@
 #include "Plugin.h"
 #include "SaveImageDialog.h"
 #include "TextViewer.h"
+#include "UndoManager.h"
 #include "main.h"
 #include "util.h"
 
@@ -76,6 +77,43 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
     init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
 
+class UMListener : public UndoManager::Listener {
+    private:
+	Viewer *viewer;
+    public:
+	UMListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual void titleChanged(const char *undo, const char *redo) {
+	    viewer->editmenu->changeLabel("Edit.Undo", undo);
+	    viewer->editmenu->changeLabel("Edit.Redo", redo);
+	}
+};
+
+class CMEOwner : public ColormapEditor::Owner {
+    private:
+	Viewer *viewer;
+    public:
+	CMEOwner(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual void cmeClosed() {
+	    viewer->cme = NULL;
+	}
+	virtual void colormapChanged() {
+	    viewer->colormapChanged();
+	}
+	virtual void loadColors() {
+	    viewer->doLoadColors();
+	}
+	virtual void saveColors() {
+	    viewer->doSaveColors();
+	}
+	virtual ColormapEditor *getCME() {
+	    return viewer->cme;
+	}
+};
+
 /* private */ void
 Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 	     int plugin_data_length, FWPixmap *fpm) {
@@ -88,22 +126,23 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     cme = NULL;
     finished = false;
     untitled = true;
+    undomanager = new UndoManager;
+    undomanager->addListener(new UMListener(this));
+    saved_undo_id = undomanager->getCurrentId();
+    cmeproxy = NULL;
 
-    // The 'dirty' flag is used to keep track of changes made by the user.
-    // These are the kind of changes that could be undone. That is, the Actions
-    // that are pushed onto the UndoManager, which do/undo/redo the actual work
-    // of making the user's events turn into actual changes to FW's state, also
-    // update the 'dirty' flag, so that if you start hitting Ctrl-Z until
-    // you're back at the beginning, 'dirty' will be 'false' once again.
-    // The 'reallydirty' flag, on the other hand, is used to track changes made
-    // by the plugin. Viewer sets this flag whenever it calls plugin->start()
-    // or plugin->restart() and they return 'false' (if they return 'true', it
-    // is assumed that no changes took place, in addition to 'finished' being
-    // set). Also, SlaveDriver sets 'reallydirty' thenever it invokes 'work()'
-    // on our plugin, regardless of the value returned by 'work()'.
+    // The 'dirty' flag is used to track changes made by the plugin. Viewer
+    // sets this flag whenever it calls plugin->start() or plugin->restart()
+    // and they return 'false' (if they return 'true', it is assumed that no
+    // changes took place, in addition to 'finished' being set).
+    // Also, SlaveDriver sets 'dirty' thenever it invokes 'work()' on our
+    // plugin, regardless of the value returned by 'work()'.
+    // The determination of whether or not to ask "save changes?" when the user
+    // tries to close a Viewer or quit the application, is made using this
+    // 'dirty' flag, and the state of the UndoManager (by comparing
+    // saved_undo_id to undomanager->getCurrentId()).
 
     dirty = false;
-    reallydirty = false;
 
     if (clonee != NULL)
 	pluginname = clonee->name();
@@ -184,7 +223,7 @@ Viewer::finish_init() {
     filemenu->addCommand("Quit", "Q", "Ctrl+Q", "File.Quit");
     topmenu->addMenu("File", "F", NULL, "File", filemenu);
 
-    Menu *editmenu = new Menu;
+    editmenu = new Menu;
     editmenu->addCommand("Undo", NULL, "Ctrl+Z", "Edit.Undo");
     editmenu->addCommand("Redo", NULL, "Ctrl+Y", "Edit.Redo");
     editmenu->addSeparator();
@@ -515,7 +554,7 @@ Viewer::finish_init() {
 	    finished = true;
 	    plugin->setFinished();
 	} else
-	    reallydirty = true;
+	    dirty = true;
     } else {
 	paint(0, 0, pm.height, pm.width);
 	if (!finished) {
@@ -523,7 +562,7 @@ Viewer::finish_init() {
 		finished = true;
 		plugin->setFinished();
 	    } else
-		reallydirty = true;
+		dirty = true;
 	}
     }
 
@@ -544,6 +583,9 @@ Viewer::~Viewer() {
 	Plugin::release(plugin);
 	plugin = NULL;
     }
+    delete undomanager;
+    if (cmeproxy != NULL)
+	delete cmeproxy;
     if (colormap != g_colormap) {
 	XFreeColormap(g_display, colormap);
 	setColormap(g_colormap);
@@ -629,8 +671,8 @@ Viewer::setFile(const char *name, const char *type) {
 }
 
 /* public */ void
-Viewer::setReallyDirty() {
-    reallydirty = true;
+Viewer::setDirty() {
+    dirty = true;
 }
 
 /* public */ void
@@ -1398,12 +1440,12 @@ Viewer::doQuit() {
 
 /* private */ void
 Viewer::doUndo() {
-    doBeep();
+    undomanager->undo();
 }
 
 /* private */ void
 Viewer::doRedo() {
-    doBeep();
+    undomanager->redo();
 }
 
 /* private */ void
@@ -1454,35 +1496,16 @@ Viewer::doSaveColors() {
     savedialog->raise();
 }
 
-class CMEProxy : public ColormapEditor::Owner {
-    private:
-	Viewer *viewer;
-    public:
-	CMEProxy(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	virtual ~CMEProxy() {
-	    viewer->cme = NULL;
-	}
-	virtual void colormapChanged() {
-	    viewer->colormapChanged();
-	}
-	virtual void loadColors() {
-	    viewer->doLoadColors();
-	}
-	virtual void saveColors() {
-	    viewer->doSaveColors();
-	}
-};
-
 /* private */ void
 Viewer::doEditColors() {
     if (pm.depth != 8) {
 	doBeep();
 	return;
     }
+    if (cmeproxy == NULL)
+	cmeproxy = new CMEOwner(this);
     if (cme == NULL)
-	cme = new ColormapEditor(new CMEProxy(this), &pm, colormap);
+	cme = new ColormapEditor(cmeproxy, &pm, undomanager, colormap);
     cme->raise();
 }
 
@@ -1525,7 +1548,7 @@ Viewer::doContinue() {
 	    finished = true;
 	    plugin->setFinished();
 	} else
-	    reallydirty = true;
+	    dirty = true;
     }
 }
 
@@ -1539,7 +1562,7 @@ Viewer::doContinueAll() {
 		viewer->finished = true;
 		viewer->plugin->setFinished();
 	    } else
-		viewer->reallydirty = true;
+		viewer->dirty = true;
 	}
     }
     delete iter;

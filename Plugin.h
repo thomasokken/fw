@@ -66,7 +66,7 @@ class Plugin {
 	// NOTE: when any of start(), restart(), or work() return 'true',
 	// FW marks the document as 'finished', and will never invoke any
 	// of those methods again. If start() or restart() return 'true',
-	// FW assumes that no changes were made, and 'reallydirty' is not set.
+	// FW assumes that no changes were made, and 'dirty' is not set.
 	// The default implementations of all three methods do nothing and
 	// return 'true'.
 	virtual bool does_depth(int depth);

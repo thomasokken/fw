@@ -32,100 +32,117 @@
 
 class PickAction : public UndoableAction {
     private:
-	ColormapEditor *cme;
+	ColormapEditor::Owner *owner;
+	FWPixmap *pm;
 	int index;
 	unsigned char old_r, old_g, old_b;
 	unsigned char new_r, new_g, new_b;
     public:
-	PickAction(ColormapEditor *cme, int index,
+	PickAction(ColormapEditor::Owner *owner, FWPixmap *pm, int index,
 		   unsigned char new_r,
 		   unsigned char new_g,
 		   unsigned char new_b) {
-	    this->cme = cme;
+	    this->owner = owner;
+	    this->pm = pm;
 	    this->index = index;
-	    old_r = cme->pm->cmap[index].r;
-	    old_g = cme->pm->cmap[index].g;
-	    old_b = cme->pm->cmap[index].b;
+	    old_r = pm->cmap[index].r;
+	    old_g = pm->cmap[index].g;
+	    old_b = pm->cmap[index].b;
 	    this->new_r = new_r;
 	    this->new_g = new_g;
 	    this->new_b = new_b;
 	}
 	virtual void undo() {
-	    cme->pm->cmap[index].r = old_r;
-	    cme->pm->cmap[index].g = old_g;
-	    cme->pm->cmap[index].b = old_b;
-	    cme->update_cell(index);
-	    cme->redraw_cells(index, index);
-	    cme->owner->colormapChanged();
+	    pm->cmap[index].r = old_r;
+	    pm->cmap[index].g = old_g;
+	    pm->cmap[index].b = old_b;
+	    ColormapEditor *cme = owner->getCME();
+	    if (cme != NULL) {
+		cme->update_cell(index);
+		cme->redraw_cells(index, index);
+	    }
+	    owner->colormapChanged();
 	}
 	virtual void redo() {
-	    cme->pm->cmap[index].r = new_r;
-	    cme->pm->cmap[index].g = new_g;
-	    cme->pm->cmap[index].b = new_b;
-	    cme->update_cell(index);
-	    cme->redraw_cells(index, index);
-	    cme->owner->colormapChanged();
+	    pm->cmap[index].r = new_r;
+	    pm->cmap[index].g = new_g;
+	    pm->cmap[index].b = new_b;
+	    ColormapEditor *cme = owner->getCME();
+	    if (cme != NULL) {
+		cme->update_cell(index);
+		cme->redraw_cells(index, index);
+	    }
+	    owner->colormapChanged();
 	}
-	virtual const char *undoTitle() {
+	virtual const char *getUndoTitle() {
 	    return "Undo Pick Color";
 	}
-	virtual const char *redoTitle() {
+	virtual const char *getRedoTitle() {
 	    return "Redo Pick Color";
 	}
 };
 
 class ChangeRangeAction : public UndoableAction {
     private:
-	ColormapEditor *cme;
+	ColormapEditor::Owner *owner;
+	FWPixmap *pm;
 	int startindex, endindex;
 	FWColor *oldcolors;
     protected:
 	FWColor *newcolors;
     public:
-	ChangeRangeAction(ColormapEditor *cme,
+	ChangeRangeAction(ColormapEditor::Owner *owner, FWPixmap *pm,
 			  int startindex,
 			  int endindex) {
-	    this->cme = cme;
+	    this->owner = owner;
+	    this->pm = pm;
 	    this->startindex = startindex;
 	    this->endindex = endindex;
 	    oldcolors = new FWColor[endindex - startindex + 1];
 	    newcolors = new FWColor[endindex - startindex + 1];
 	    for (int i = startindex; i <= endindex; i++)
-		oldcolors[i - startindex] = cme->pm->cmap[i];
+		oldcolors[i - startindex] = pm->cmap[i];
 	}
 	virtual ~ChangeRangeAction() {
 	    delete[] oldcolors;
 	    delete[] newcolors;
 	}
 	virtual void undo() {
+	    ColormapEditor *cme = owner->getCME();
 	    for (int i = startindex; i <= endindex; i++) {
-		cme->pm->cmap[i] = oldcolors[i - startindex];
-		cme->update_cell(i);
+		pm->cmap[i] = oldcolors[i - startindex];
+		if (cme != NULL)
+		    cme->update_cell(i);
 	    }
-	    cme->redraw_cells(startindex, endindex);
-	    cme->owner->colormapChanged();
+	    if (cme != NULL)
+		cme->redraw_cells(startindex, endindex);
+	    owner->colormapChanged();
 	}
 	virtual void redo() {
+	    ColormapEditor *cme = owner->getCME();
 	    for (int i = startindex; i <= endindex; i++) {
-		cme->pm->cmap[i] = newcolors[i - startindex];
-		cme->update_cell(i);
+		pm->cmap[i] = newcolors[i - startindex];
+		if (cme != NULL)
+		    cme->update_cell(i);
 	    }
-	    cme->redraw_cells(startindex, endindex);
-	    cme->owner->colormapChanged();
+	    if (cme != NULL)
+		cme->redraw_cells(startindex, endindex);
+	    owner->colormapChanged();
 	}
 };
 
 class BlendAction : public ChangeRangeAction {
     public:
-	BlendAction(ColormapEditor *cme, int startindex, int endindex)
-		: ChangeRangeAction(cme, startindex, endindex) {
+	BlendAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+		    int startindex, int endindex)
+		: ChangeRangeAction(owner, pm, startindex, endindex) {
 	    int rstart, gstart, bstart, rend, gend, bend;
-	    rstart = cme->pm->cmap[startindex].r;
-	    gstart = cme->pm->cmap[startindex].g;
-	    bstart = cme->pm->cmap[startindex].b;
-	    rend = cme->pm->cmap[endindex].r;
-	    gend = cme->pm->cmap[endindex].g;
-	    bend = cme->pm->cmap[endindex].b;
+	    rstart = pm->cmap[startindex].r;
+	    gstart = pm->cmap[startindex].g;
+	    bstart = pm->cmap[startindex].b;
+	    rend = pm->cmap[endindex].r;
+	    gend = pm->cmap[endindex].g;
+	    bend = pm->cmap[endindex].b;
 	    for (int i = startindex; i <= endindex; i++) {
 		newcolors[i - startindex].r =
 		    rstart + ((int) rend - (int) rstart) * (i - startindex)
@@ -138,49 +155,67 @@ class BlendAction : public ChangeRangeAction {
 				/ (endindex - startindex);
 	    }
 	}
-	virtual const char *undoTitle() {
-	    return "Undo Blend";
+	virtual const char *getUndoTitle() {
+	    return "Undo Blend Colors";
 	}
-	virtual const char *redoTitle() {
-	    return "Redo Blend";
+	virtual const char *getRedoTitle() {
+	    return "Redo Blend Colors";
 	}
 };
 
 class SwapAction : public ChangeRangeAction {
     public:
-	SwapAction(ColormapEditor *cme, int startindex, int endindex)
-		: ChangeRangeAction(cme, startindex, endindex) {
+	SwapAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+		   int startindex, int endindex)
+		: ChangeRangeAction(owner, pm, startindex, endindex) {
 	    for (int i = startindex; i <= endindex; i++)
 		newcolors[i - startindex] =
-			cme->pm->cmap[startindex + endindex - i];
+			pm->cmap[startindex + endindex - i];
 	}
-	virtual const char *undoTitle() {
-	    return "Undo Swap";
+	virtual const char *getUndoTitle() {
+	    return "Undo Swap Colors";
 	}
-	virtual const char *redoTitle() {
-	    return "Redo Swap";
+	virtual const char *getRedoTitle() {
+	    return "Redo Swap Colors";
 	}
 };
 
 class MixAction : public ChangeRangeAction {
     public:
-	MixAction(ColormapEditor *cme, int startindex, int endindex)
-		: ChangeRangeAction(cme, startindex, endindex) {
+	MixAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+		  int startindex, int endindex)
+		: ChangeRangeAction(owner, pm, startindex, endindex) {
 	    int k = (endindex - startindex + 1) / 2;
 	    for (int i = 0; i < k; i++) {
 		newcolors[2 * i] =
-			cme->pm->cmap[startindex + k + i];
+			pm->cmap[startindex + k + i];
 		newcolors[2 * i + 1] =
-			cme->pm->cmap[startindex + i];
+			pm->cmap[startindex + i];
 	    }
 	    if ((endindex - startindex) % 2 == 0)
-		newcolors[endindex - startindex] = cme->pm->cmap[endindex];
+		newcolors[endindex - startindex] = pm->cmap[endindex];
 	}
-	virtual const char *undoTitle() {
-	    return "Undo Mix";
+	virtual const char *getUndoTitle() {
+	    return "Undo Mix Colors";
 	}
-	virtual const char *redoTitle() {
-	    return "Redo Mix";
+	virtual const char *getRedoTitle() {
+	    return "Redo Mix Colors";
+	}
+};
+
+class CancelAction : public ChangeRangeAction {
+    public:
+	CancelAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+		     FWColor *restore_cmap)
+		: ChangeRangeAction(owner, pm, 0, 255) {
+	    for (int i = 0; i <= 255; i++)
+		newcolors[i] = restore_cmap[i];
+	}
+	virtual const char *getUndoTitle() {
+	    return "Undo Cancel Color Edits";
+	}
+	virtual const char *getRedoTitle() {
+	    return "Redo Cancel Color Edits";
 	}
 };
 
@@ -254,7 +289,8 @@ static int halftone(unsigned char value, int x, int y) {
 
 
 /* public */
-ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap)
+ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm,
+			       UndoManager *undomanager, Colormap colormap)
 				    : Frame(false, true, false) {
     setTitle("Colormap Editor");
     setIconTitle("Colormap Editor");
@@ -262,11 +298,12 @@ ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap)
     this->owner = owner;
     this->pm = pm;
 
-    undomgr = new UndoManager;
+    undomgr = undomanager;
 
-    backup_cmap = new FWColor[256];
+    initial_cmap = new FWColor[256];
     for (int i = 0; i < 256; i++)
-	backup_cmap[i] = pm->cmap[i];
+	initial_cmap[i] = pm->cmap[i];
+    initial_undo_id = undomgr->getCurrentId();
 
     Widget form = getContainer();
 
@@ -341,15 +378,10 @@ ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap)
 
 /* public virtual */
 ColormapEditor::~ColormapEditor() {
-    // Of course we're not deleting the owner itself, we're deleting
-    // its proxy; this proxy should have a destructor that takes care
-    // of nulling out any references the owner might have to us, thus
-    // severing the bonds in both directions.
-    delete owner;
-    delete[] backup_cmap;
+    owner->cmeClosed();
+    delete[] initial_cmap;
     free(image->data);
     XFree(image);
-    delete undomgr;
     if (colorpicker != NULL)
 	colorpicker->close();
 }
@@ -386,7 +418,8 @@ class CPListener : public ColorPicker::Listener {
 	virtual void colorPicked(unsigned char r,
 				 unsigned char g,
 				 unsigned char b) {
-	    PickAction *action = new PickAction(cme, index, r, g, b);
+	    PickAction *action = new PickAction(cme->owner, cme->pm,
+						index, r, g, b);
 	    cme->undomgr->addAction(action);
 	    action->redo();
 	}
@@ -422,7 +455,7 @@ ColormapEditor::doBlend() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	BlendAction *action = new BlendAction(this, start, end);
+	BlendAction *action = new BlendAction(owner, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -441,7 +474,7 @@ ColormapEditor::doSwap() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	SwapAction *action = new SwapAction(this, start, end);
+	SwapAction *action = new SwapAction(owner, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -460,7 +493,7 @@ ColormapEditor::doMix() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	MixAction *action = new MixAction(this, start, end);
+	MixAction *action = new MixAction(owner, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -503,9 +536,11 @@ ColormapEditor::doOK() {
 
 /* private */ void
 ColormapEditor::doCancel() {
-    for (int i = 0; i < 256; i++)
-	pm->cmap[i] = backup_cmap[i];
-    owner->colormapChanged();
+    if (undomgr->getCurrentId() != initial_undo_id) {
+	CancelAction *action = new CancelAction(owner, pm, initial_cmap);
+	undomgr->addAction(action);
+	action->redo();
+    }
     close();
 }
 

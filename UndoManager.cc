@@ -5,16 +5,54 @@
 #include "main.h"
 #include "util.h"
 
+
+/* private static */ int
+UndoableAction::id_seq = 0;
+
+/* public */
+UndoableAction::UndoableAction() {
+    id = id_seq++;
+}
+
+/* public virtual */
+UndoableAction::~UndoableAction() {
+    //
+}
+
+/* public */ int
+UndoableAction::getId() {
+    return id;
+}
+
+
+/* public::public */
+UndoManager::Listener::Listener() {
+    //
+}
+
+/* public::public virtual */
+UndoManager::Listener::~Listener() {
+    //
+}
+
 /* public */
 UndoManager::UndoManager() {
     sp = -1;
-    stack = new List();
+    stack = new List;
+    listeners = new List;
 }
 
 /* public */
 UndoManager::~UndoManager() {
     clear();
     delete stack;
+    Iterator *iter = listeners->iterator();
+    while (iter->hasNext()) {
+	Listener *listener = (Listener *) iter->next();
+	delete listener;
+    }
+    delete iter;
+    delete listeners;
 }
 
 /* public */ void
@@ -41,36 +79,76 @@ UndoManager::addAction(UndoableAction *action) {
     }
     stack->append(action);
     sp++;
+    notifyListeners();
 }
 
 /* public */ void
 UndoManager::undo() {
-    if (sp >= 0)
-	((UndoableAction *) stack->get(sp--))->undo();
-    else
+    if (sp >= 0) {
+	UndoableAction *action = (UndoableAction *) stack->get(sp--);
+	action->undo();
+	notifyListeners();
+    } else
 	XBell(g_display, 100);
 }
 
 /* public */ void
 UndoManager::redo() {
-    if (sp < stack->size() - 1)
-	((UndoableAction *) stack->get(++sp))->redo();
-    else
+    if (sp < stack->size() - 1) {
+	UndoableAction *action = (UndoableAction *) stack->get(++sp);
+	action->redo();
+	notifyListeners();
+    } else
 	XBell(g_display, 100);
 }
 
+/* public */ int
+UndoManager::getCurrentId() {
+    if (sp >= 0) {
+	UndoableAction *action = (UndoableAction *) stack->get(sp);
+	return action->getId();
+    } else
+	return -1;
+}
+
 /* public */ const char *
-UndoManager::undoTitle() {
-    if (sp > -1)
-	return ((UndoableAction *) stack->get(sp))->undoTitle();
-    else
+UndoManager::getUndoTitle() {
+    if (sp > -1) {
+	UndoableAction *action = (UndoableAction *) stack->get(sp);
+	return action->getUndoTitle();
+    } else
 	return NULL;
 }
 
 /* public */ const char *
-UndoManager::redoTitle() {
-    if (sp < stack->size() - 1)
-	return ((UndoableAction *) stack->get(sp + 1))->redoTitle();
-    else
+UndoManager::getRedoTitle() {
+    if (sp < stack->size() - 1) {
+	UndoableAction *action = (UndoableAction *) stack->get(sp + 1);
+	return action->getRedoTitle();
+    } else
 	return NULL;
+}
+
+/* public */ void
+UndoManager::addListener(Listener *listener) {
+    listeners->append(listener);
+}
+
+/* public */ void
+UndoManager::removeListener(Listener *listener) {
+    listeners->remove(listener);
+}
+
+/* private */ void
+UndoManager::notifyListeners() {
+    const char *undoTitle = getUndoTitle();
+    if (undoTitle == NULL)
+	undoTitle = "Undo";
+    const char *redoTitle = getRedoTitle();
+    if (redoTitle == NULL)
+	redoTitle = "Redo";
+    Iterator *iter = listeners->iterator();
+    while (iter->hasNext())
+	((Listener *) iter->next())->titleChanged(undoTitle, redoTitle);
+    delete iter;
 }

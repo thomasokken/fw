@@ -64,6 +64,7 @@ class Menu {
 		     const char *accelerator, const char *id, Menu *menu);
 	void addSeparator();
 	void remove(const char *id);
+	void changeLabel(const char *id, const char *label);
 	void setCommandListener(void (*callback)(void *closure, const char *id),
 			void *closure);
 	void setToggleListener(void (*callback)(void *closure, const char *id,
