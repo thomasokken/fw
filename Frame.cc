@@ -144,6 +144,13 @@ Frame::init(Frame *parent, bool modal) {
     }
     XtSetArg(args[nargs], XmNdeleteResponse, XmDO_NOTHING); nargs++;
 
+    // If I ever find I need resizable dialogs, this will need a parameter,
+    // as in Frame::Frame(bool, bool, bool).
+    XtSetArg(args[nargs], XmNmwmFunctions,
+	MWM_FUNC_ALL | MWM_FUNC_RESIZE | MWM_FUNC_MAXIMIZE); nargs++;
+    XtSetArg(args[nargs], XmNmwmDecorations,
+	MWM_DECOR_ALL | MWM_DECOR_RESIZEH | MWM_DECOR_MAXIMIZE); nargs++;
+
     container = XmCreateFormDialog(parent->toplevel, "Dialog", args, nargs);
     toplevel = XtParent(container);
 
