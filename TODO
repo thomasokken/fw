@@ -1,11 +1,6 @@
 Add "Replace Existing" dialogs in all "save as" type situations (save as,
 save colormap).
 
-The Mariani-Silver code in Mandelbrot, Newton, Julia, and Polynomial, should be
-moved to a base class, like EDPLib in FW 1.x.
-The new Newton and Polynomial plugins don't use the 'bands' setting yet.
-Newton, Polynomial, Julia, Ramp: implement init_clone().
-
 YesNoCancelDialog and SaveImageDialog should not be application-modal.
 How to reduce modality to one window only, and still make sure that the user
 can't throw the application into an inconsistent state by mucking about in
