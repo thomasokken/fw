@@ -32,14 +32,14 @@ class Mandelbrot8Bit : public Plugin {
 	    paint();
 	    x = 0;
 	    y = 0;
-	    start_prodding();
+	    start_working();
 	}
 	virtual void restart() {
 	    if (y < pm->height)
-		start_prodding();
+		start_working();
 	}
 	virtual void stop() {
-	    stop_prodding();
+	    stop_working();
 	    paint();
 	}
 	virtual bool work() {

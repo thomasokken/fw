@@ -130,15 +130,15 @@ class Kaos : public Plugin {
 	virtual void run() {
 	    finished = false;
 	    paint();
-	    start_prodding();
+	    start_working();
 	}
 	virtual void stop() {
-	    stop_prodding();
+	    stop_working();
 	    paint();
 	}
 	virtual void restart() {
 	    if (!finished)
-		start_prodding();
+		start_working();
 	}
 	virtual bool work() {
 	    if (pm->depth == 8) {

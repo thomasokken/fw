@@ -128,10 +128,10 @@ class MandelbrotMS : public Plugin {
 	    dirty.empty();
 	    finished = false;
 	    paint();
-	    start_prodding();
+	    start_working();
 	}
 	virtual void stop() {
-	    stop_prodding();
+	    stop_working();
 	    paint();
 	}
 	virtual bool work() {
@@ -255,7 +255,7 @@ class MandelbrotMS : public Plugin {
 	}
 	virtual void restart() {
 	    if (!finished)
-		start_prodding();
+		start_working();
 	}
 
     private:

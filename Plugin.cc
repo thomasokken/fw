@@ -12,11 +12,11 @@
 #include "main.h"
 
 
-struct ProdNode {
-    Plugin *proddee;
-    ProdNode *next;
+struct WorkNode {
+    Plugin *worker;
+    WorkNode *next;
 };
-static ProdNode *prodlist = NULL;
+static WorkNode *worklist = NULL;
 static XtWorkProcId workproc_id;
 
 static Boolean workproc(XtPointer ud);
@@ -32,7 +32,7 @@ Plugin::Plugin(void *dl) {
 
 /* protected virtual */
 Plugin::~Plugin() {
-    stop_prodding();
+    stop_working();
 }
 
 /* public static */ Plugin *
@@ -202,33 +202,33 @@ Plugin::colormapChanged() {
 }
 
 /* protected */ void
-Plugin::start_prodding() {
-    ProdNode *node = prodlist;
+Plugin::start_working() {
+    WorkNode *node = worklist;
     bool found = false;
     while (node != NULL) {
-	if (node->proddee == this) {
+	if (node->worker == this) {
 	    found = true;
 	    break;
 	}
 	node = node->next;
     }
     if (!found) {
-	if (prodlist == NULL)
+	if (worklist == NULL)
 	    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
-	node = new ProdNode;
-	node->proddee = this;
-	node->next = prodlist;
-	prodlist = node;
+	node = new WorkNode;
+	node->worker = this;
+	node->next = worklist;
+	worklist = node;
     }
 }
 
 /* protected */ void
-Plugin::stop_prodding() {
-    ProdNode *node = prodlist;
-    ProdNode **prev = &prodlist;
+Plugin::stop_working() {
+    WorkNode *node = worklist;
+    WorkNode **prev = &worklist;
     bool found = false;
     while (node != NULL) {
-	if (node->proddee == this) {
+	if (node->worker == this) {
 	    found = true;
 	    break;
 	}
@@ -238,7 +238,7 @@ Plugin::stop_prodding() {
     if (found) {
 	*prev = node->next;
 	delete node;
-	if (prodlist == NULL)
+	if (worklist == NULL)
 	    XtRemoveWorkProc(workproc_id);
     }
 }
@@ -252,26 +252,26 @@ static Boolean workproc(XtPointer ud) {
     static int n = 0;
 
     // Just to be safe
-    if (prodlist == NULL)
+    if (worklist == NULL)
 	return True;
 
-    ProdNode *node = prodlist;
-    ProdNode **prev = &prodlist;
+    WorkNode *node = worklist;
+    WorkNode **prev = &worklist;
     for (int i = 0; i < n; i++) {
 	prev = &node->next;
 	node = node->next;
 	if (node == NULL) {
 	    n = 0;
-	    prev = &prodlist;
-	    node = prodlist;
+	    prev = &worklist;
+	    node = worklist;
 	    break;
 	}
     }
 
-    if (node->proddee->work()) {
+    if (node->worker->work()) {
 	*prev = node->next;
 	delete node;
-	if (prodlist == NULL)
+	if (worklist == NULL)
 	    return True;
     }
     n++;

@@ -62,8 +62,8 @@ class Plugin {
 	void paint();
 	void paint(int top, int left, int bottom, int right);
 	void colormapChanged();
-	void start_prodding();
-	void stop_prodding();
+	void start_working();
+	void stop_working();
 	static int debug_level();
 };
 
