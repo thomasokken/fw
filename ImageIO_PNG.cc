@@ -11,6 +11,7 @@
 #include "FWPixmap.h"
 #include "main.h"
 #include "util.h"
+#include "kludges.h"
 
 
 #define MSGLEN 1024

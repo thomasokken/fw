@@ -9,6 +9,7 @@
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "util.h"
+#include "kludges.h"
 
 static bool match_one_blank(FILE *file);
 static void optional_blank(FILE *file);

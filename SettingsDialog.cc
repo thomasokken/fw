@@ -13,6 +13,7 @@
 #include "TextViewer.h"
 #include "main.h"
 #include "util.h"
+#include "kludges.h"
 
 /* public */
 SettingsDialog::SettingsDialog(Plugin *plugin, SettingsHelper *settings)

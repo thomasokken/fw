@@ -20,6 +20,7 @@
 
 #include "fw.xpm"
 
+
 // Exported globals
 
 XtAppContext g_appcontext;
