@@ -240,7 +240,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		    lcmap[i].b = b;
 		}
 		if (pm->depth != 24) {
-		    if (g_prefs->verbosity >= 1)
+		    if (g_verbosity >= 1)
 			fprintf(stderr, "GIFViewer: Local colormap found, switching to 24-bit mode!\n");
 		    int newbytesperline = pm->width * 4;
 		    unsigned char *newpixels = (unsigned char *)
@@ -873,7 +873,7 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 
     data_done:
 
-    if (g_prefs->verbosity >= 2) {
+    if (g_verbosity >= 2) {
 	if (hash_searches == 0)
 	    fprintf(stderr, "No hashing statistics available.\n");
 	else {

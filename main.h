@@ -4,8 +4,6 @@
 #include <X11/Xlib.h>
 #include <X11/Intrinsic.h>
 
-#include "Preferences.h"
-
 extern XtAppContext g_appcontext;
 extern Widget g_appshell;
 extern Display *g_display;
@@ -20,6 +18,6 @@ extern unsigned long g_black, g_white;
 extern Pixmap g_icon, g_iconmask;
 extern XColor *g_colorcube, *g_grayramp;
 extern int g_cubesize, g_rampsize;
-extern Preferences *g_prefs;
+extern int g_verbosity;
 
 #endif

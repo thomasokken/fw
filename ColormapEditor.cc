@@ -334,7 +334,8 @@ ColormapEditor::doPick() {
 		    new CPListener(this, sel_start),
 		    pm->cmap[sel_start].r,
 		    pm->cmap[sel_start].g,
-		    pm->cmap[sel_start].b);
+		    pm->cmap[sel_start].b,
+		    colormap != g_colormap);
 	colorpicker->raise();
     }
 }

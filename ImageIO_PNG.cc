@@ -204,7 +204,7 @@ ImageIO_PNG::read(const char *filename, char **plugin_name,
 	    int palettesize;
 	    if (png_get_PLTE(png_ptr, info_ptr, &palette, &palettesize)
 		    == 0) {
-		if (g_prefs->verbosity >= 1)
+		if (g_verbosity >= 1)
 		    fprintf(stderr, "PNGViewer: no palette found in colormapped image; using gray ramp.\n");
 		needgrayramp = true;
 	    } else {

@@ -430,7 +430,7 @@ Viewer::finish_init() {
 	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_prefs->verbosity >= 1)
+    if (g_verbosity >= 1)
 	if (direct_copy)
 	    fprintf(stderr, "Using direct copy.\n");
 	else
@@ -1059,7 +1059,7 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
-    if (g_prefs->verbosity >= 1)
+    if (g_verbosity >= 1)
 	fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
     if (strcmp(id, "Options.PrivateColormap") == 0)
 	doPrivateColormap(value);
@@ -1076,7 +1076,7 @@ Viewer::radiocallback(void *closure, const char *id, const char *value) {
 
 /* private */ void
 Viewer::radiocallback2(const char *id, const char *value) {
-    if (g_prefs->verbosity >= 1)
+    if (g_verbosity >= 1)
 	fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
     if (strcmp(id, "Windows.Scale") == 0)
 	doScale(value);
@@ -1427,7 +1427,7 @@ Viewer::doPrivateColormap(bool value) {
 	    free(image->data);
 	    image->data = (char *) pm.pixels;
 	    direct_copy = true;
-	    if (g_prefs->verbosity >= 1)
+	    if (g_verbosity >= 1)
 		fprintf(stderr, "Using direct copy.\n");
 	}
 	colormapChanged();
@@ -1440,7 +1440,7 @@ Viewer::doPrivateColormap(bool value) {
 	setColormap(g_colormap);
 	if (direct_copy) {
 	    image->data = (char *) malloc(image->bytes_per_line * image->height);
-	    if (g_prefs->verbosity >= 1 && direct_copy)
+	    if (g_verbosity >= 1 && direct_copy)
 		fprintf(stderr, "Not using direct copy.\n");
 	    direct_copy = false;
 	}
@@ -1569,7 +1569,7 @@ Viewer::doScale(const char *value) {
 	image->data = (char *) pm.pixels;
     else
 	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_prefs->verbosity >= 1 && old_direct_copy != direct_copy)
+    if (g_verbosity >= 1 && old_direct_copy != direct_copy)
 	if (direct_copy)
 	    fprintf(stderr, "Using direct copy.\n");
 	else

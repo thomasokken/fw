@@ -37,7 +37,7 @@ class ColorPicker : public Frame {
 
     public:
 	ColorPicker(Listener *listener, unsigned char r, unsigned char g,
-		    unsigned char b);
+		    unsigned char b, bool allow_private_cmap);
 	virtual ~ColorPicker();
 
     private:

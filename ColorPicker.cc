@@ -58,7 +58,8 @@ ColorPicker::instances = 0;
 
 /* public */
 ColorPicker::ColorPicker(Listener *listener, unsigned char r,
-	unsigned char g, unsigned char b) : Frame(false, true, false) {
+	unsigned char g, unsigned char b, bool allow_private_cmap)
+				: Frame(false, true, false) {
     this->listener = listener;
 
     setTitle("Color Picker");
@@ -421,7 +422,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	// allocate a private colormap.
 	
 	int p = 0;
-	if (g_colorcube != NULL && g_cubesize == 6) {
+	if (!allow_private_cmap || (g_colorcube != NULL && g_cubesize == 6)) {
 	    unsigned long pixels[2];
 	    if (XAllocColorCells(g_display, g_colormap, False, NULL, 0,
 				 pixels, 2) != 0) {
@@ -446,7 +447,10 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	// the "old" and "new" color display. So, now we play hardball and
 	// allocate a private colormap.
 	
-	if (g_prefs->no_priv_cmap_in_cpicker)
+	if (!allow_private_cmap)
+	    // The user isn't using a private colormap on the window from where
+	    // we were invoked; we take that as a hint that they don't like
+	    // colormap flashing, and so we don't use one either.
 	    goto color_alloc_done;
 
 	xcube = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
