@@ -1,3 +1,18 @@
+In 8-bit PseudoColor mode, running fvwm95 and therefore limited to a 2x2x2
+color cube, About looks solid black! WTF?!? (May need to open another window
+and use color editor and color picker a bit before it starts to do this.)
+Very odd, because according to xcmap, pixels 0 and 1 are black and white,
+as always, and aren't those the only ones that FW uses when rendering un-
+reduced bitmaps?
+
+8-bit PseudoColor: if you turn priv_cmap on and then off while the color editor
+is active, the latter gets messed up. Kinda like it never gets notified that it
+needs to re-rended the XImage. Or maybe it just doesn't handle the notification
+right.
+
+ColorPicker: when constraining HSL coordinates (the MotionNotify case), make
+sure the actual screen coordinates (cross_[xy], slider_x) are also constrained!
+
 Take another careful look at the colormap editor. It needs a tidy API for
 the *Actions to control it by: changing the selection, changing color cell
 values; CME should repaint as necessary (which it may not be; if using a

@@ -6,7 +6,7 @@
 
 /* public static */ void
 CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
-			bool priv_cmap, bool dither,
+			bool priv_cmap, bool no_grays, bool dither,
 			int top, int left, int bottom, int right) {
     if (pm->depth == 1) {
 	// Black and white are always available, so we never have to
@@ -57,7 +57,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    gerr = g - k;
 		    berr = b - k;
 		    int gray_err = rerr * rerr + gerr * gerr + berr * berr;
-		    if (color_err < gray_err) {
+		    if (color_err < gray_err || no_grays) {
 			int rr = (r + 25) / 51;
 			int gg = (g + 25) / 51;
 			int bb = (b + 25) / 51;
@@ -172,7 +172,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 		    int dg2 = g - k;
 		    int db2 = b - k;
 		    int gray_err = dr2 * dr2 + dg2 * dg2 + db2 * db2;
-		    if (color_err < gray_err) {
+		    if (color_err < gray_err || no_grays) {
 			int rr = (r + 25) / 51;
 			int gg = (g + 25) / 51;
 			int bb = (b + 25) / 51;
@@ -344,7 +344,7 @@ CopyBits::copy_unscaled(FWPixmap *pm, XImage *image,
 /* public static */ void
 CopyBits::copy_enlarged(int factor,
 			FWPixmap *pm, XImage *image,
-			bool priv_cmap, bool dither,
+			bool priv_cmap, bool no_grays, bool dither,
 			int top, int left, int bottom, int right) {
     int TOP = top * factor;
     int BOTTOM = bottom * factor;
@@ -416,7 +416,7 @@ CopyBits::copy_enlarged(int factor,
 		    gerr = g - k;
 		    berr = b - k;
 		    int gray_err = rerr * rerr + gerr * gerr + berr * berr;
-		    if (color_err < gray_err) {
+		    if (color_err < gray_err || no_grays) {
 			int rr = (r + 25) / 51;
 			int gg = (g + 25) / 51;
 			int bb = (b + 25) / 51;
@@ -535,7 +535,7 @@ CopyBits::copy_enlarged(int factor,
 		    int dg2 = g - k;
 		    int db2 = b - k;
 		    int gray_err = dr2 * dr2 + dg2 * dg2 + db2 * db2;
-		    if (color_err < gray_err) {
+		    if (color_err < gray_err || no_grays) {
 			int rr = (r + 25) / 51;
 			int gg = (g + 25) / 51;
 			int bb = (b + 25) / 51;
@@ -713,7 +713,7 @@ CopyBits::copy_enlarged(int factor,
 /* public static */ void
 CopyBits::copy_reduced(int factor,
 		       FWPixmap *pm, XImage *image,
-		       bool priv_cmap, bool dither,
+		       bool priv_cmap, bool no_grays, bool dither,
 		       int top, int left, int bottom, int right) {
     int TOP = top / factor;
     int BOTTOM = (bottom + factor - 1) / factor;
@@ -807,7 +807,7 @@ CopyBits::copy_reduced(int factor,
 			    berr = b - k;
 			    int gray_err = rerr * rerr + gerr * gerr + berr * berr;
 			    unsigned long pixel;
-			    if (color_err < gray_err) {
+			    if (color_err < gray_err || no_grays) {
 				int rr = (r + 25) / 51;
 				int gg = (g + 25) / 51;
 				int bb = (b + 25) / 51;
@@ -997,7 +997,7 @@ CopyBits::copy_reduced(int factor,
 			int db2 = b - k;
 			int gray_err = dr2 * dr2 + dg2 * dg2 + db2 * db2;
 			unsigned long pixel;
-			if (color_err < gray_err) {
+			if (color_err < gray_err || no_grays) {
 			    int rr = (r + 25) / 51;
 			    int gg = (g + 25) / 51;
 			    int bb = (b + 25) / 51;

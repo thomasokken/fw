@@ -59,6 +59,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 
     private_colormap = false;
     private_colorcells = false;
+    oldnew_image_initialized = false;
     disable_rgbChanged = false;
 
     R = oldR = r;
@@ -418,6 +419,14 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 		private_colorcells = true;
 		old_pixel = pixels[0];
 		new_pixel = pixels[1];
+		// Store old_pixel; we'll take care of new_pixel later.
+		XColor xc;
+		xc.pixel = old_pixel;
+		xc.red = R * 257;
+		xc.green = G * 257;
+		xc.blue = B * 257;
+		xc.flags = DoRed | DoGreen | DoBlue;
+		XStoreColors(g_display, g_colormap, &xc, 1);
 		goto color_alloc_done;
 	    }
 	}
@@ -427,8 +436,7 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	// the "old" and "new" color display. So, now we play hardball and
 	// allocate a private colormap.
 	
-	private_6x6x6_cube = XCreateColormap(g_display, g_rootwindow,
-						 g_visual, AllocAll);
+	xcube = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
 	XColor colors[218];
 	for (int r = 0; r < 6; r++)
 	    for (int g = 0; g < 6; g++)
@@ -454,8 +462,9 @@ ColorPicker::ColorPicker(Listener *listener, unsigned char r,
 	colors[new_pixel].red = B;
 	colors[new_pixel].flags = DoRed | DoGreen | DoBlue;
 
-	XStoreColors(g_display, private_6x6x6_cube, colors, 216);
-	setColormap(private_6x6x6_cube);
+	XStoreColors(g_display, xcube, colors, p);
+	setColormap(xcube);
+	private_colormap = true;
 
 	color_alloc_done:;
     }
@@ -475,8 +484,10 @@ ColorPicker::~ColorPicker() {
     XtFree(rs);
     XtFree(gs);
     XtFree(bs);
-    if (private_colormap)
-	XFreeColormap(g_display, private_6x6x6_cube);
+    if (private_colormap) {
+	XFreeColormap(g_display, xcube);
+	setColormap(g_colormap);
+    }
     if (private_colorcells) {
 	unsigned long pixels[2];
 	pixels[0] = old_pixel;
@@ -517,14 +528,20 @@ ColorPicker::rgbChanged() {
 
 /* private */ void
 ColorPicker::repaintOldNewImage() {
-    // The "old/new" area requires special treatment in the case we are using
-    // a private colormap or private colorcells. I'll just write the image data
-    // manually in that case...
-
     if (private_colormap || private_colorcells) {
+	XColor xc;
+	xc.pixel = new_pixel;
+	xc.red = R * 257;
+	xc.green = G * 257;
+	xc.blue = B * 257;
+	xc.flags = DoRed | DoGreen | DoBlue;
+	XStoreColors(g_display, private_colormap ? xcube : g_colormap, &xc, 1);
+
+	if (oldnew_image_initialized)
+	    return;
+
 	for (int x = 1; x < OLDNEW_W - 1; x++) {
 	    XPutPixel(oldnew_image, x, 0, 0);
-	    XPutPixel(oldnew_image, x, OLDNEW_H / 2, 0);
 	    XPutPixel(oldnew_image, x, OLDNEW_H - 1, 0);
 	}
 	for (int y = 0; y < OLDNEW_H; y++) {
@@ -534,10 +551,11 @@ ColorPicker::repaintOldNewImage() {
 	for (int y = 1; y < OLDNEW_H / 2; y++)
 	    for (int x = 1; x < OLDNEW_W - 1; x++)
 		XPutPixel(oldnew_image, x, y, old_pixel);
-	for (int y = OLDNEW_H / 2 + 1; y < OLDNEW_H - 1; y++)
+	for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
 	    for (int x = 1; x < OLDNEW_W - 1; x++)
-
 		XPutPixel(oldnew_image, x, y, new_pixel);
+
+	oldnew_image_initialized = true;
     } else {
 	FWPixmap pm;
 	pm.width = OLDNEW_W;
@@ -547,7 +565,6 @@ ColorPicker::repaintOldNewImage() {
 	pm.pixels = (unsigned char *) malloc(pm.height * pm.bytesperline);
 	for (int x = 1; x < OLDNEW_W - 1; x++) {
 	    pm.put_pixel(x, 0, 0);
-	    pm.put_pixel(x, OLDNEW_H / 2, 0);
 	    pm.put_pixel(x, OLDNEW_H - 1, 0);
 	}
 	for (int y = 0; y < OLDNEW_H; y++) {
@@ -559,10 +576,10 @@ ColorPicker::repaintOldNewImage() {
 	    for (int x = 1; x < OLDNEW_W - 1; x++)
 		pm.put_pixel(x, y, oldp);
 	unsigned long newp = (R << 16) | (G << 8) | B;
-	for (int y = OLDNEW_H / 2 + 1; y < OLDNEW_H - 1; y++)
+	for (int y = OLDNEW_H / 2; y < OLDNEW_H - 1; y++)
 	    for (int x = 1; x < OLDNEW_W - 1; x++)
 		pm.put_pixel(x, y, newp);
-	CopyBits::copy_unscaled(&pm, oldnew_image, false, true,
+	CopyBits::copy_unscaled(&pm, oldnew_image, false, true, true,
 				0, 0, OLDNEW_H, OLDNEW_W);
 	free(pm.pixels);
     }
@@ -587,8 +604,7 @@ ColorPicker::repaintWheelImage() {
     Arg arg;
     XtSetArg(arg, XmNbackground, &xc.pixel);
     XtGetValues(bb, &arg, 1);
-    XQueryColor(g_display, private_colormap ? private_6x6x6_cube :
-		g_colormap, &xc);
+    XQueryColor(g_display, private_colormap ? xcube : g_colormap, &xc);
     unsigned long background = ((xc.red / 257) << 16)
 				| ((xc.green / 257) << 8) | (xc.blue / 257);
     for (int y = 0; y < WHEEL_H; y++)
@@ -636,7 +652,7 @@ ColorPicker::repaintWheelImage() {
 	}
     } while (x >= y);
 
-    CopyBits::copy_unscaled(&pm, wheel_image, false, true,
+    CopyBits::copy_unscaled(&pm, wheel_image, private_colormap, true, true,
 			    0, 0, WHEEL_H, WHEEL_W);
     free(pm.pixels);
 
@@ -660,8 +676,7 @@ ColorPicker::repaintSliderImage() {
     Arg arg;
     XtSetArg(arg, XmNbackground, &xc.pixel);
     XtGetValues(bb, &arg, 1);
-    XQueryColor(g_display, private_colormap ? private_6x6x6_cube :
-		g_colormap, &xc);
+    XQueryColor(g_display, private_colormap ? xcube : g_colormap, &xc);
     unsigned long background = ((xc.red / 257) << 16)
 				| ((xc.green / 257) << 8) | (xc.blue / 257);
     for (int y = 0; y < SLIDER_H; y++)
@@ -691,7 +706,7 @@ ColorPicker::repaintSliderImage() {
 	pm.put_pixel(CROSS_SIZE / 2 + WHEEL_DIAMETER, y, 0);
     }
 
-    CopyBits::copy_unscaled(&pm, slider_image, false, true,
+    CopyBits::copy_unscaled(&pm, slider_image, private_colormap, true, true,
 			    0, 0, SLIDER_H, SLIDER_W);
     free(pm.pixels);
 
@@ -769,7 +784,7 @@ ColorPicker::removeThumb() {
 
 /* private */ void
 ColorPicker::mouseInOldNew(XEvent *event) {
-    if (event->type == ButtonPress && event->xbutton.y < OLDNEW_H) {
+    if (event->type == ButtonPress && event->xbutton.y < OLDNEW_H / 2) {
 	updateRGBTextFields(oldR, oldG, oldB);
 	rgbChanged();
     }
@@ -789,7 +804,10 @@ ColorPicker::mouseInWheel(XEvent *event) {
 		    / (WHEEL_DIAMETER / 2);
     float s = sqrt(x * x + y * y);
     if (s > 1)
-	return;
+	if (event->type != MotionNotify)
+	    return;
+	else
+	    s = 1;
     if (cross_x == event->xbutton.x && cross_y == event->xbutton.y)
 	return;
     removeCross();
@@ -815,7 +833,12 @@ ColorPicker::mouseInSlider(XEvent *event) {
 	return;
     float l = ((float) event->xbutton.x - CROSS_SIZE / 2) / WHEEL_DIAMETER;
     if (l < 0 || l > 1)
-	return;
+	if (event->type != MotionNotify)
+	    return;
+	else if (l < 0)
+	    l = 0;
+	else
+	    l = 1;
     if (slider_x == event->xbutton.x)
 	return;
     removeThumb();

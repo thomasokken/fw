@@ -405,8 +405,10 @@ Viewer::~Viewer() {
 	Plugin::release(plugin);
 	plugin = NULL;
     }
-    if (priv_cmap != None)
+    if (priv_cmap != None) {
+	XFreeColormap(g_display, priv_cmap);
 	setColormap(g_colormap);
+    }
     if (filename != NULL)
 	free(filename);
     if (filetype != NULL)
@@ -467,12 +469,12 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  left, top, left, top,
 		  right - left, bottom - top);
     } else if (scale == 1) {
-	CopyBits::copy_unscaled(&pm, image, priv_cmap != None, dithering,
+	CopyBits::copy_unscaled(&pm, image, priv_cmap != None, false, dithering,
 				 top, left, bottom, right);
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  left, top, left, top, right - left, bottom - top);
     } else if (scale > 1) {
-	CopyBits::copy_enlarged(scale, &pm, image, priv_cmap != None, dithering,
+	CopyBits::copy_enlarged(scale, &pm, image, priv_cmap != None, false, dithering,
 				 top, left, bottom, right);
 	int TOP = top * scale;
 	int BOTTOM = bottom * scale;
@@ -482,7 +484,7 @@ Viewer::paint(int top, int left, int bottom, int right) {
 		  LEFT, TOP, LEFT, TOP,
 		  RIGHT - LEFT, BOTTOM - TOP);
     } else {
-	CopyBits::copy_reduced(-scale, &pm, image, priv_cmap != None, dithering,
+	CopyBits::copy_reduced(-scale, &pm, image, priv_cmap != None, false, dithering,
 				top, left, bottom, right);
 	int s = -scale;
 	int TOP = top / s;

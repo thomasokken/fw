@@ -23,7 +23,8 @@ class ColorPicker : public Frame {
 	Widget oldnew;
 	bool private_colormap;
 	bool private_colorcells;
-	Colormap private_6x6x6_cube;
+	bool oldnew_image_initialized;
+	Colormap xcube;
 	unsigned long old_pixel;
 	unsigned long new_pixel;
 	unsigned char R, G, B, oldR, oldG, oldB;
