@@ -1,8 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 
 #include "Plugin.h"
 
@@ -117,14 +115,8 @@ class Ramp : public Plugin {
 	virtual void run() {
 	    paint();
 	}
-
-	friend Plugin *factory2(void *dl);
 };
 
-Plugin *factory2(void *dl) {
-    return new Ramp(dl);
-}
-
 extern "C" Plugin *factory(void *dl) {
-    return factory2(dl);
+    return new Ramp(dl);
 }

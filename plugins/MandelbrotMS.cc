@@ -329,14 +329,8 @@ class MandelbrotMS : public Plugin {
 	    pm->pixels[v * pm->bytesperline + h] = value;
 	    return value;
 	}
-
-	friend Plugin *factory2(void *dl);
 };
 
-Plugin *factory2(void *dl) {
-    return new MandelbrotMS(dl);
-}
-
 extern "C" Plugin *factory(void *dl) {
-    return factory2(dl);
+    return new MandelbrotMS(dl);
 }

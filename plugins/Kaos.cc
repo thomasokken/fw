@@ -201,15 +201,8 @@ class Kaos : public Plugin {
 	    }
 	    return finished;
 	}
-
-    private:
-	friend Plugin *factory2(void *dl);
 };
 
-Plugin *factory2(void *dl) {
-    return new Kaos(dl);
-}
-
 extern "C" Plugin *factory(void *dl) {
-    return factory2(dl);
+    return new Kaos(dl);
 }

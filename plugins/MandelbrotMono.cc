@@ -1,7 +1,4 @@
 #include <stdlib.h>
-#include <string.h>
-#include <X11/Xlib.h>
-#include <X11/Xutil.h>
 
 #include "Plugin.h"
 
@@ -67,14 +64,8 @@ class MandelbrotMono : public Plugin {
 	    paint(firsty, 0, endy, pm->width);
 	    return false;
 	}
-
-	friend Plugin *factory2(void *dl);
 };
 
-Plugin *factory2(void *dl) {
-    return new MandelbrotMono(dl);
-}
-
 extern "C" Plugin *factory(void *dl) {
-    return factory2(dl);
+    return new MandelbrotMono(dl);
 }
