@@ -179,7 +179,7 @@ int main(int argc, char **argv) {
 			    &iconmask,
 			    NULL);
 
-    new Viewer("About");
+    new Viewer("AboutViewer");
 
     XtAppMainLoop(appcontext);
 

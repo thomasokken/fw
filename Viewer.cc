@@ -75,16 +75,17 @@ Viewer::finish_init() {
     Menu *topmenu = new Menu;
 
     Menu *pluginmenu = new Menu;
-    char **plugins = getpluginnames();
+    char **plugins = Plugin::list();
     if (plugins == NULL)
 	pluginmenu->addItem("No Plugins", NULL, NULL, "File.Beep");
     else {
-	char **p = plugins;
-	while (*p != NULL) {
-	    char id[100];
-	    snprintf(id, 100, "File.New.%s", *p);
-	    pluginmenu->addItem(*p, NULL, NULL, id);
-	    p++;
+	for (char **p = plugins; *p != NULL; p++) {
+	    int len = strlen(*p);
+	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
+		char id[100];
+		snprintf(id, 100, "File.New.%s", *p);
+		pluginmenu->addItem(*p, NULL, NULL, id);
+	    }
 	}
     }
 	
@@ -160,18 +161,20 @@ Viewer::finish_init() {
     topmenu->addItem("Windows", NULL, NULL, "Windows", windowsmenu);
 
     Menu *helpmenu = new Menu;
-    helpmenu->addItem("About Fractal Wizard", NULL, NULL, "File.New.About");
+    helpmenu->addItem("About Fractal Wizard", NULL, NULL, "File.New.AboutViewer");
     helpmenu->addItem("General", NULL, NULL, "Help.General");
     if (plugins != NULL) {
 	helpmenu->addItem();
-	char **p = plugins;
-	while (*p != NULL) {
-	    char id[100];
-	    snprintf(id, 100, "Help.X.%s", *p);
-	    helpmenu->addItem(*p, NULL, NULL, id);
-	    p++;
+	for (char **p = plugins; *p != NULL; p++) {
+	    int len = strlen(*p);
+	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
+		char id[100];
+		snprintf(id, 100, "Help.X.%s", *p);
+		helpmenu->addItem(*p, NULL, NULL, id);
+	    }
+	    free(*p);
 	}
-	deletenamelist(plugins);
+	free(plugins);
     }
     topmenu->addItem("Help", NULL, NULL, "Help", helpmenu);
 
