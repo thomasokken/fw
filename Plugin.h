@@ -1,11 +1,14 @@
 #ifndef PLUGIN_H
 #define PLUGIN_H 1
 
-#include <X11/Xlib.h>
-#include <X11/Intrinsic.h>
 
-#include "Color.h"
+// These two headers aren't actually needed here, but they're included for the
+// convenience of plugin writers: now plugins only need to include Plugin.h
+// and nothing else.
+
+#include "FWColor.h"
 #include "FWPixmap.h"
+
 
 // We don't want to include Viewer.h here; the plugin interface should be
 // as independent as possible of the FW internals, so that changes to FW don't
@@ -16,15 +19,10 @@
 
 class Viewer;
 
+
 class Plugin {
     private:
 	void *dl;
-	struct ProdNode {
-	    Plugin *proddee;
-	    ProdNode *next;
-	};
-	static ProdNode *prodlist;
-	static XtWorkProcId workproc_id;
 	Viewer *viewer;
 
     protected:
@@ -67,10 +65,6 @@ class Plugin {
 	void start_prodding();
 	void stop_prodding();
 	static int debug_level();
-
-    private:
-	static Boolean workproc(XtPointer ud);
-	static int list_compar(const void *a, const void *b);
 };
 
 #endif

@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 
 #include "Plugin.h"
 
@@ -71,7 +72,7 @@ class Kaos : public Plugin {
 	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    if (pm->depth == 8) { 
-		pm->cmap = new Color[256];
+		pm->cmap = new FWColor[256];
 		for (int k = 0; k < 256; k++)
 		    pm->cmap[k].r = pm->cmap[k].g = pm->cmap[k].b = k;
 	    }

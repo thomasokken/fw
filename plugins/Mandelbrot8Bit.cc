@@ -22,7 +22,7 @@ class Mandelbrot8Bit : public Plugin {
 	    pm->pixels = (unsigned char *) malloc(size);
 	    for (int i = 0; i < size; i++)
 		pm->pixels[i] = 0;
-	    pm->cmap = new Color[256];
+	    pm->cmap = new FWColor[256];
 	    for (int i = 0; i < 255; i++)
 		pm->cmap[i].r = pm->cmap[i].g = pm->cmap[i].b = i;
 	    pm->depth = 8;

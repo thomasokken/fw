@@ -2128,7 +2128,7 @@ Viewer::doLoadColors3(const char *filename) {
 			    filename, strerror(errno));
 	return;
     }
-    Color *newcmap = new Color[256];
+    FWColor *newcmap = new FWColor[256];
     for (int i = 0; i < 256; i++) {
 	int r, g, b;
 	if (fscanf(file, "%d %d %d", &r, &g, &b) != 3)

@@ -1,3 +1,4 @@
+#include <X11/Intrinsic.h>
 #include <limits.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -10,11 +11,17 @@
 #include "Viewer.h"
 #include "main.h"
 
-/* private static */ Plugin::ProdNode *
-Plugin::prodlist = NULL;
 
-/* private static */ XtWorkProcId
-Plugin::workproc_id;
+struct ProdNode {
+    Plugin *proddee;
+    ProdNode *next;
+};
+static ProdNode *prodlist = NULL;
+static XtWorkProcId workproc_id;
+
+static Boolean workproc(XtPointer ud);
+static int list_compar(const void *a, const void *b);
+
 
 /* protected */
 Plugin::Plugin(void *dl) {
@@ -81,8 +88,7 @@ Plugin::list() {
     return names;
 }
 
-/* private static */ int
-Plugin::list_compar(const void *a, const void *b) {
+static int list_compar(const void *a, const void *b) {
     return strcmp(*(const char **) a, *(const char **) b);
 }
 
@@ -242,8 +248,7 @@ Plugin::debug_level() {
     return g_verbosity;
 }
 
-/* private static */ Boolean
-Plugin::workproc(XtPointer ud) {
+static Boolean workproc(XtPointer ud) {
     static int n = 0;
 
     // Just to be safe

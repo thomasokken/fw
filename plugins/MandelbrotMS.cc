@@ -109,7 +109,7 @@ class MandelbrotMS : public Plugin {
 	    pm->bytesperline = s.width + 3 & ~3;
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
-	    pm->cmap = new Color[256];
+	    pm->cmap = new FWColor[256];
 	    for (int k = 0; k < 256; k++) {
 		pm->cmap[k].r = k;
 		pm->cmap[k].g = k;
