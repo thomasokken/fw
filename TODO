@@ -3,7 +3,15 @@ Take that look using xv or xpaint -- whatever mistake I'm making (my guess
 is end-of-line padding), I'm making it in *both* the reader and the writer.
 
 The aspect ratio mainenance support is still missing. Need a notification
-mechanism, plus code in MarianiSilver to use it.
+mechanism, plus code in MarianiSilver to use it. If you feel up to it, arrow
+buttons for zooming in/out, plus a "maxpect" button, would be nice. Or, heck,
+not make WIDTH and HEIGHT come up "maxpect" automagically? I could do *that*
+for free, right now, by implementing it in MarianiSilver.
+
+The "save changes before quitting" flow should have a "no to all" button.
+Maybe also "yes to all", but that would probably be less useful (because
+you would typically still have to deal with SaveImageDialogs since typically
+most 'dirty' images will be Untitled).
 
 YesNoCancelDialog and SaveImageDialog should not be application-modal.
 How to reduce modality to one window only, and still make sure that the user
