@@ -45,7 +45,7 @@ Map::put(const char *key, const void *value) {
 	entries[0].value = value;
 	nentries = 1;
 	size = 1;
-	if (verbosity >= 2)
+	if (verbosity >= 3)
 	    dump();
 	return;
     }
@@ -63,7 +63,7 @@ Map::put(const char *key, const void *value) {
 	else {
 	    // Key found: replace value
 	    midVal->value = value;
-	    if (verbosity >= 2)
+	    if (verbosity >= 3)
 		dump();
 	    return;
 	}
@@ -79,7 +79,7 @@ Map::put(const char *key, const void *value) {
     entries[low].key = strclone(key);
     entries[low].value = value;
     nentries++;
-    if (verbosity >= 2)
+    if (verbosity >= 3)
 	dump();
 }
 
@@ -123,7 +123,7 @@ Map::remove(const char *key) {
     int res_pos = res - entries;
     memmove(res, res + 1, (nentries - res_pos - 1) * sizeof(entry));
     nentries--;
-    if (verbosity >= 2)
+    if (verbosity >= 3)
 	dump();
 }
 

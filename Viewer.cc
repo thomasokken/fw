@@ -342,6 +342,9 @@ Viewer::paint(const char *pixels, Color *cmap,
 	for (int i = 0; i < right - left; i++)
 	    dr[i] = dg[i] = db[i] = nextdr[i] = nextdg[i] = nextdb[i] = 0;
 	int dR = 0, dG = 0, dB = 0;
+	long long tot_dr = 0;
+	long long tot_dg = 0;
+	long long tot_db = 0;
 	for (int y = top; y < bottom; y++) {
 	    int dir = ((y & 1) << 1) - 1;
 	    int start, end;
@@ -424,6 +427,10 @@ Viewer::paint(const char *pixels, Color *cmap,
 		}
 		XPutPixel(image, x, y, pixel);
 
+		if (dR >= 0) tot_dr += dR; else tot_dr -= dR;
+		if (dG >= 0) tot_dg += dG; else tot_dg -= dG;
+		if (dB >= 0) tot_db += dB; else tot_db -= dB;
+		    
 		int prevx = x - dir;
 		int nextx = x + dir;
 		if (prevx >= (int) left && prevx < (int) right) {
@@ -444,6 +451,15 @@ Viewer::paint(const char *pixels, Color *cmap,
 		dB *= 7;
 	    }
 	}
+
+	if (verbosity >= 2) {
+	    long p = ((long) bottom - top) * (right - left);
+	    fprintf(stderr, "Average pixel error:\n");
+	    fprintf(stderr, "  red:   %6.2f\n", ((double) tot_dr) / p);
+	    fprintf(stderr, "  green: %6.2f\n", ((double) tot_dg) / p);
+	    fprintf(stderr, "  blue:  %6.2f\n", ((double) tot_db) / p);
+	}
+
 	delete[] dr;
 	delete[] dg;
 	delete[] db;
@@ -458,6 +474,7 @@ Viewer::paint(const char *pixels, Color *cmap,
 	for (int i = 0; i < right - left; i++)
 	    dk[i] = nextdk[i] = 0;
 	int dK = 0;
+	long long tot_dk = 0;
 	for (int y = top; y < bottom; y++) {
 	    int dir = ((y & 1) << 1) - 1;
 	    int start, end;
@@ -495,6 +512,8 @@ Viewer::paint(const char *pixels, Color *cmap,
 		unsigned long pixel = grayramp[graylevel].pixel;
 		XPutPixel(image, x, y, pixel);
 
+		if (dK >= 0) tot_dk += dK; else tot_dk -= dK;
+
 		int prevx = x - dir;
 		int nextx = x + dir;
 		if (prevx >= (int) left && prevx < (int) right)
@@ -505,6 +524,13 @@ Viewer::paint(const char *pixels, Color *cmap,
 		dK *= 7;
 	    }
 	}
+
+	if (verbosity >= 2) {
+	    long p = ((long) bottom - top) * (right - left);
+	    fprintf(stderr, "Average pixel error:\n");
+	    fprintf(stderr, "  gray:  %6.2f\n", ((double) tot_dk) / p);
+	}
+
 	delete[] dk;
 	delete[] nextdk;
     }

@@ -11,6 +11,11 @@ somehow, no?)
 On a 16-bit display, jen.jpg (blown up to 1024x768 and smoothed in xv) looks
 posterized if you view 24-bit color and 8-bit grayscale versions. Check
 Viewer::paint(): it *should* be dithering, but is it really?
+Maybe related: check the math in the dithering code, particularly rounding and
+such. Note that the average pixel error almost doubles when the round-to-
+nearest code in the computation of dR etc. is changed to round-down. Maybe
+stuff like this accounts for some other oddities as well (such as an average
+error of 2.68 in the red component in Ramp! What's that about?!?).
 
 Find a better way for SettingsDialog to access the settings.
 The current approach is based on the assumption that structs are packed,
