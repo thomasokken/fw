@@ -1945,7 +1945,7 @@ Viewer::input2(XEvent *event) {
     // TODO: xv-like use of cursor keys to move or resize the selection.
     // Also, establishing a selection by double-clicking; getting rid of a
     // selection by double-clicking inside it; moving a selection by dragging
-    // inside it, and all that.
+    // inside it; changing a selection by dragging its edges... Ugh...
     switch (event->type) {
 	case KeyPress:
 	    // event->xkey.state, event->xkey.keycode
