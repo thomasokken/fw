@@ -1,3 +1,5 @@
+Implement Paste in Colormap editor; wrap colormap "load" in an UndoableAction.
+
 The Mariani-Silver code in Mandelbrot, Newton, Julia, and Polynomial, should be
 moved to a base class, like EDPLib in FW 1.x.
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.

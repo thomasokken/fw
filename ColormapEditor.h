@@ -33,6 +33,8 @@ class ColormapEditor : public Frame {
 	Dimension imagesize;
 	XImage *image;
 	ColorPicker *colorpicker;
+	static FWColor *color_clipboard;
+	static int color_clipboard_size;
 
     public:
 	ColormapEditor(Owner *owner, FWPixmap *pm,

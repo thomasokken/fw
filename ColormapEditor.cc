@@ -288,6 +288,13 @@ static int halftone(unsigned char value, int x, int y) {
 }
 
 
+/* private static */ FWColor *
+ColormapEditor::color_clipboard = new FWColor[256];
+
+/* private static */ int
+ColormapEditor::color_clipboard_size = 0;
+
+
 /* public */
 ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm,
 			       UndoManager *undomanager, Colormap colormap)
@@ -501,12 +508,80 @@ ColormapEditor::doMix() {
 
 /* private */ void
 ColormapEditor::doCopy() {
-    //
+    if (sel_start == -1 || sel_start == sel_end)
+	XBell(g_display, 100);
+    else {
+	for (int i = sel_start; i <= sel_end; i++)
+	    color_clipboard[i - sel_start] = pm->cmap[i];
+	color_clipboard_size = sel_end - sel_start + 1;
+    }
 }
 
+#if 0
+    PROCEDURE DoPaste;
+	VAR
+	    i, selCount: INTEGER;
+	    cn, w1, w2: double;
+	    c1, c2: INTEGER;
+	    mc: RGBColor;
+	    
+	FUNCTION Blend(i1: INTEGER; w1: double; i2: INTEGER; w2: double): INTEGER;
+	    VAR
+		L1, L2: LONGINT;
+	BEGIN
+	    L1:= BAND(i1, $FFFF);
+	    L2:= BAND(i2, $FFFF);
+	    Blend:= trunc(w1 * L1 + w2 * L2)
+	END;
+	
+    BEGIN
+	SaveUndo;
+	IF (clipCount = 1) OR (s1 = 254) THEN
+	    FOR i:= s1 TO s2 DO
+		PutRGB(i, clipColors[0])
+	ELSE
+	    BEGIN
+		IF s1 = s2 THEN
+		    s2:= Min(s1 + clipCount - 1, 254);
+		selCount:= s2 - s1 + 1;
+		IF selCount = clipCount THEN
+		    FOR i:= s1 TO s2 DO
+			PutRGB(i, clipColors[i - s1])
+		ELSE
+		    IF selCount < clipCount THEN
+			FOR i:= s1 TO s2 DO
+			    PutRGB(i, clipColors[(LONGINT(i - s1)
+							* (clipCount - 1)) DIV (s2 - s1)])
+		    ELSE
+			BEGIN
+			    FOR i:= s1 TO s2 - 1 DO
+				BEGIN
+				    cn:= (LONGINT(i - s1) * (clipCount - 1)) / (s2 - s1);
+				    c1:= trunc(cn);
+				    c2:= c1 + 1;
+				    w2:= cn - c1;
+				    w1:= 1 - w2;
+				    mc.red:= Blend(clipColors[c1].red, w1,
+							    clipColors[c2].red, w2);
+				    mc.green:= Blend(clipColors[c1].green, w1,
+							    clipColors[c2].green, w2);
+				    mc.blue:= Blend(clipColors[c1].blue, w1,
+							    clipColors[c2].blue, w2);
+				    PutRGB(i, mc)
+				END;
+			    PutRGB(s2, clipColors[clipCount - 1])
+			END
+	    END;
+	Redraw;
+	UpdateButtons;
+	changed:= TRUE
+    END;
+#endif
+    
 /* private */ void
 ColormapEditor::doPaste() {
-    //
+    if (sel_start == -1 || sel_start == sel_end)
+	XBell(g_display, 100);
 }
 
 /* private */ void
