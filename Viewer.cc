@@ -1890,7 +1890,7 @@ Viewer::colormapChanged() {
 		    }
 	    for (int m = 0; m < 5; m++)
 		for (int n = 1; n < 9; n++) {
-		    int p = 13107 * m + 1456 * n;
+		    int p = 13107 * m + (4369 * n) / 3;
 		    colors[i].pixel = i;
 		    colors[i].red = p;
 		    colors[i].green = p;

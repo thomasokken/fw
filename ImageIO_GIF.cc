@@ -93,6 +93,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
     bool has_global_cmap = (info & 128) != 0;
     int bpp = (info & 7) + 1;
     int ncolors = 1 << bpp;
+    int size = 0;
 
     /* Bits 6..4 of info contain one less than the "color resolution",
      * defined as the number of significant bits per RGB component in
@@ -115,12 +116,6 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
      * slightly over 4:1 (wide), etc.
      */
 
-    pm->depth = 8;
-    pm->bytesperline = (pm->width + 3) & ~3;
-
-    int size = pm->bytesperline * pm->height;
-    pm->pixels = (unsigned char *) malloc(size);
-    memset(pm->pixels, background, size);
     pm->cmap = new FWColor[256];
     if (has_global_cmap) {
 	for (int i = 0; i < ncolors; i++) {
@@ -143,6 +138,42 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    pm->cmap[i].b = k;
 	}
     }
+
+    bool mono;
+    bool invert;
+    if (ncolors == 2) {
+	// Test for true black & white
+	if (pm->cmap[0].r == 0
+		&& pm->cmap[0].g == 0
+		&& pm->cmap[0].b == 0
+		&& pm->cmap[1].r == 255
+		&& pm->cmap[1].g == 255
+		&& pm->cmap[1].b == 255) {
+	    mono = true;
+	    invert = false;
+	} else if (pm->cmap[0].r == 255
+		&& pm->cmap[0].g == 255
+		&& pm->cmap[0].b == 255
+		&& pm->cmap[1].r == 0
+		&& pm->cmap[1].g == 0
+		&& pm->cmap[1].b == 0) {
+	    mono = true;
+	    invert = true;
+	}
+    } else
+	mono = false;
+
+    if (mono) {
+	pm->depth = 1;
+	pm->bytesperline = (pm->width + 7) >> 3;
+    } else {
+	pm->depth = 8;
+	pm->bytesperline = (pm->width + 3) & ~3;
+    }
+
+    size = pm->bytesperline * pm->height;
+    pm->pixels = (unsigned char *) malloc(size);
+    memset(pm->pixels, pm->depth == 1 ? background * 255 : background, size);
 
     while (1) {
 	int whatnext;
@@ -200,7 +231,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		    lcmap[i].g = g;
 		    lcmap[i].b = b;
 		}
-		if (pm->depth == 8) {
+		if (pm->depth != 24) {
 		    if (g_verbosity >= 1)
 			fprintf(stderr, "GIFViewer: Local colormap found, switching to 24-bit mode!\n");
 		    int newbytesperline = pm->width * 4;
@@ -208,7 +239,12 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 				malloc(newbytesperline * pm->height);
 		    for (int v = 0; v < pm->height; v++)
 			for (int h = 0; h < pm->width; h++) {
-			    unsigned char pixel = pm->pixels[pm->bytesperline * v + h];
+			    unsigned char pixel;
+			    if (pm->depth == 1)
+				pixel = (pm->pixels[pm->bytesperline * v
+						+ (h >> 3)] >> (h & 7)) & 1;
+			    else
+				pixel = pm->pixels[pm->bytesperline * v + h];
 			    unsigned char *newpixel = newpixels
 				    + (newbytesperline * v + 4 * h);
 			    newpixel[0] = 0;
@@ -323,12 +359,25 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 				    int pixel = expanded[i];
 				    if (pm->depth == 8)
 					pm->pixels[pm->bytesperline * (itop + v) + ileft + h] = pixel;
-				    else {
+				    else if (pm->depth == 24) {
 					unsigned char *rgb = pm->pixels + (pm->bytesperline * (itop + v) + 4 * (ileft + h));
 					rgb[0] = 0;
 					rgb[1] = lcmap[pixel].r;
 					rgb[2] = lcmap[pixel].g;
 					rgb[3] = lcmap[pixel].b;
+				    } else {
+					// VERY inefficient. 16 memory accesses
+					// to write one byte. Then again, 1-bit
+					// images never consume very many bytes
+					// and I'm in a hurry. Maybe TODO.
+					int x = ileft + h;
+					int index = pm->bytesperline
+						* (itop + v) + (x >> 3);
+					unsigned char mask = 1 << (x & 7);
+					if (pixel)
+					    pm->pixels[index] |= mask;
+					else
+					    pm->pixels[index] &= ~mask;
 				    }
 				    if (++h == iwidth) {
 					h = 0;
@@ -458,6 +507,13 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
     if (pm->depth == 24) {
 	delete[] pm->cmap;
 	pm->cmap = NULL;
+    }
+    if (pm->depth == 1) {
+	delete[] pm->cmap;
+	pm->cmap = NULL;
+	if (invert)
+	    for (int i = 0; i < size; i++)
+		pm->pixels[i] = ~pm->pixels[i];
     }
 
     if (buf != NULL) {

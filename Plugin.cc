@@ -145,6 +145,11 @@ Plugin::list() {
 
 /* public */ void
 Plugin::serialize(void **buf, int *nbytes) {
+    if (settings_layout == NULL || settings_base == 0) {
+	*buf = NULL;
+	*nbytes = 0;
+	return;
+    }
     if (settingshelper == NULL)
 	settingshelper = new SettingsHelper(this);
     settingshelper->serialize(buf, nbytes);
@@ -152,6 +157,8 @@ Plugin::serialize(void **buf, int *nbytes) {
 
 /* public */ void
 Plugin::deserialize(void *buf, int nbytes) {
+    if (settings_layout == NULL || settings_base == 0)
+	return;
     if (settingshelper == NULL)
 	settingshelper = new SettingsHelper(this);
     settingshelper->deserialize(buf, nbytes);

@@ -1,7 +1,3 @@
-When reading a 1 bpp GIF whose colormap contains true black and true white,
-read it in at depth = 1 (currently ImageIO_GIF always reads data in at 8 bpp,
-necessary or not).
-
 In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
 can't set focus on a text field any more). Am I doing something wrong there, or
 is this an OpenMotif 2.2.2 bug? Take a look at...
