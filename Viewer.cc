@@ -343,6 +343,9 @@ Viewer::finish_init() {
 					    NULL);
 
     clipwindow = XtNameToWidget(scroll, "ClipWindow");
+    if (clipwindow == NULL)
+	// Lesstif, I presume?
+	clipwindow = XtNameToWidget(scroll, "ScrolledWindowClipWindow");
 
     scale = 1; // get from preferences!
     int image_width, image_height;
