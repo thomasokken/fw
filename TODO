@@ -4,17 +4,6 @@ a color within an arbitrary set of colors is the problem. The current
 implementation is totally naive... Even if a brute-force search really can't be
 avoided, that code still wants some optimizing.
 
-Implement multithreading support. This should probably be a compile-time option
-(because it may be hard to make it portable, and because there may be a speed
-penalty which makes it unattractive on single-CPU systems -- depends how highly
-you value overall speed vs. UI responsiveness).
-Implementing multithreading seems like it should be a simple matter of changing
-Plugin::start_working() and Plugin::stop_working(), and make Plugin::paint() go
-through an XtWorkProc to invoke Viewer::paint() -- or rather, do everything on
-the worker thread *except* the final XPutImage() (because the dithering/scaling
-step can take a long time, and it would be good to have that not happen on the
-UI thread, because it makes the app really painful to work with).
-
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
 Maybe it's a gif2tiff bug... Then again I'd feel a lot better if I had some

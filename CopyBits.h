@@ -20,6 +20,7 @@ class CopyBits {
 	static int halftone(unsigned char value, int x, int y);
 
 	static bool is_grayscale(const FWColor *cmap);
+	static int realdepth();
 
 	static unsigned long rgb2pixel(unsigned char r,
 				       unsigned char g,

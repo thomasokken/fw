@@ -9,6 +9,7 @@
 #include <unistd.h>
 
 #include "main.h"
+#include "CopyBits.h"
 #include "Viewer.h"
 #include "util.h"
 
@@ -336,39 +337,8 @@ int main(int argc, char **argv) {
     if ((g_visual->c_class == StaticGray || g_visual->c_class == GrayScale)
 	|| (g_visual->c_class == StaticColor || g_visual->c_class == PseudoColor)
 	    && g_colorcube == NULL) {
-	int realdepth = g_depth;
-	if (realdepth > g_visual->bits_per_rgb);
-	    realdepth = g_visual->bits_per_rgb;
-	if (realdepth > 8)
-	    realdepth = 8;
 
-	if (g_visual->c_class == TrueColor || g_visual->c_class == DirectColor) {
-	    // Seems pointless, but we need to handle this to make the
-	    // -gray option work properly. Without this, you get a 64-level
-	    // gray ramp on a 16-bit TrueColor display, even though with the
-	    // usual 5-6-5 component sizes, the display is only capable of
-	    // 32 pure shades of gray.
-	    unsigned long redmask = g_visual->red_mask;
-	    unsigned long greenmask = g_visual->green_mask;
-	    unsigned long bluemask = g_visual->blue_mask;
-	    int redbits = 0, greenbits = 0, bluebits = 0;
-	    while (redmask != 0 || greenmask != 0 || bluemask != 0) {
-		redbits += redmask & 1;
-		redmask >>= 1;
-		greenbits += greenmask & 1;
-		greenmask >>= 1;
-		bluebits += bluemask & 1;
-		bluemask >>= 1;
-	    }
-	    if (realdepth > redbits)
-		realdepth = redbits;
-	    if (realdepth > greenbits)
-		realdepth = greenbits;
-	    if (realdepth > bluebits)
-		realdepth = bluebits;
-	}
-
-	g_rampsize = 1 << realdepth;
+	g_rampsize = 1 << CopyBits::realdepth();
 	while (g_grayramp == NULL) {
 	    g_grayramp = new XColor[g_rampsize];
 	    if (g_rampsize == 2) {

@@ -1187,6 +1187,42 @@ CopyBits::is_grayscale(const FWColor *cmap) {
     return true;
 }
 
+/* public static */ int
+CopyBits::realdepth() {
+    static int d = 0;
+    if (d != 0)
+	return d;
+
+    d = g_depth;
+    if (d > g_visual->bits_per_rgb);
+    d = g_visual->bits_per_rgb;
+    if (d > 8)
+	d = 8;
+
+    if (g_visual->c_class == TrueColor || g_visual->c_class == DirectColor) {
+	unsigned long redmask = g_visual->red_mask;
+	unsigned long greenmask = g_visual->green_mask;
+	unsigned long bluemask = g_visual->blue_mask;
+	int redbits = 0, greenbits = 0, bluebits = 0;
+	while (redmask != 0 || greenmask != 0 || bluemask != 0) {
+	    redbits += redmask & 1;
+	    redmask >>= 1;
+	    greenbits += greenmask & 1;
+	    greenmask >>= 1;
+	    bluebits += bluemask & 1;
+	    bluemask >>= 1;
+	}
+	if (d > redbits)
+	    d = redbits;
+	if (d > greenbits)
+	    d = greenbits;
+	if (d > bluebits)
+	    d = bluebits;
+    }
+
+    return d;
+}
+
 /* public static */ unsigned long
 CopyBits::rgb2pixel(unsigned char r, unsigned char g, unsigned char b) {
     if (g_grayramp != NULL) {
