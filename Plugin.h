@@ -54,7 +54,6 @@ class Plugin {
 	void colormapChanged();
 	void start_prodding();
 	void stop_prodding();
-	void make_graymap();
 
     private:
 	static Boolean workproc(XtPointer ud);
