@@ -10,12 +10,13 @@ class Plugin;
 class Viewer : private Frame {
     private:
 	Plugin *plugin;
-	Window drawwindow;
+	Widget drawingarea;
 	XImage *image;
 	Colormap priv_cmap;
-	bool dithering;
 	int scale;
+	bool dithering;
 	bool selection_active;
+	bool direct_copy;
 	int sel_top, sel_left, sel_bottom, sel_right;
 	Menu *optionsmenu;
 	Menu *scalemenu;
@@ -43,6 +44,7 @@ class Viewer : private Frame {
     private:
 	void init(const char *pluginname, const Viewer *src,
 		  const char *filename);
+	bool canIDoDirectCopy();
 	static void resize(Widget w, XtPointer cd, XtPointer ud);
 	void resize2();
 	static void expose(Widget w, XtPointer cd, XtPointer ud);

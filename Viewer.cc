@@ -208,7 +208,7 @@ Viewer::finish_init() {
 
     clipwindow = XtNameToWidget(scroll, "ClipWindow");
 
-    Widget draw = XtVaCreateManagedWidget("DrawingArea",
+    drawingarea = XtVaCreateManagedWidget("DrawingArea",
 					  xmDrawingAreaWidgetClass,
 					  scroll,
 					  XmNwidth, (Dimension) width,
@@ -295,10 +295,9 @@ Viewer::finish_init() {
     XtSetArg(args[1], XmNheight, sh);
     XtSetValues(scroll, args, 2);
     
-    XtAddCallback(draw, XmNresizeCallback, resize, (XtPointer) this);
-    XtAddCallback(draw, XmNexposeCallback, expose, (XtPointer) this);
+    XtAddCallback(drawingarea, XmNresizeCallback, resize, (XtPointer) this);
+    XtAddCallback(drawingarea, XmNexposeCallback, expose, (XtPointer) this);
     raise();
-    drawwindow = XtWindow(draw);
 
 
     // TODO: better preferences handling, including persistence and
@@ -307,6 +306,7 @@ Viewer::finish_init() {
     // available; scale always starts at 1.
 
     scale = 1;
+
     if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
 	dithering = true;
     else
@@ -316,17 +316,49 @@ Viewer::finish_init() {
 
     selection_active = false;
 
+    int image_width, image_height;
+    if (scale > 0) {
+	image_width = scale * width;
+	image_height = scale * height;
+    } else {
+	int s = -scale;
+	image_width = (width + s - 1) / s;
+	image_height = (height + s - 1) / s;
+    }
+
+    bool bitmap_ok = depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
 			 g_visual,
-			 g_depth,
-			 ZPixmap,
+			 bitmap_ok ? 1 : g_depth,
+			 bitmap_ok ? XYBitmap : ZPixmap,
 			 0,
 			 NULL,
-			 width,
-			 height,
-			 32,
+			 image_width,
+			 image_height,
+			 bitmap_ok ? 8 : 32,
 			 0);
-    image->data = (char *) malloc(image->bytes_per_line * height);
+
+    bool want_priv_cmap = true; // get from preferences!
+    optionsmenu->setToggleValue("Options.PrivateColormap", want_priv_cmap, false);
+    if (want_priv_cmap
+	    && g_depth == 8
+	    && g_visual->c_class == PseudoColor
+	    && (depth == 8 || (depth == 1 && scale <= -1))) {
+	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	setColormap(priv_cmap);
+	colormapChanged();
+    }
+
+    direct_copy = canIDoDirectCopy();
+    if (direct_copy)
+	image->data = (char *) pixels;
+    else
+	image->data = (char *) malloc(image->bytes_per_line * image->height);
+    if (g_verbosity >= 1)
+	if (direct_copy)
+	    fprintf(stderr, "Using direct copy.\n");
+	else
+	    fprintf(stderr, "Not using direct copy.\n");
 
     plugin->run();
 }
@@ -334,7 +366,7 @@ Viewer::finish_init() {
 /* public */
 Viewer::~Viewer() {
     if (image != NULL) {
-	if (priv_cmap == None)
+	if (!direct_copy)
 	    free(image->data);
 	XFree(image);
     }
@@ -375,18 +407,24 @@ Viewer::deleteLater2(XtPointer ud) {
 
 /* public */ void
 Viewer::paint(int top, int left, int bottom, int right) {
-    // TODO better handling of 1-bit images (is it possible to create an
-    // XImage with XYBitmap format, and point image->data directly at 'pixels',
-    // like what I do in the private-colormap case?).
-    // TODO better handling of 24-bit images (on TrueColor visuals with 8 bits
-    // per component, no dithering is ever necessary, and it may be possible to
-    // point image->data right at 'pixels'; avoiding the dithering is a big win
-    // and avoiding the intermediate image would be a nice bonus).
+    if (direct_copy)
+	goto put_the_image;
+    else if (scale == 1)
+	goto do_unscaled;
+    else if (scale > 1)
+	goto do_enlarged;
+    else
+	goto do_reduced;
+
+
+do_unscaled:
+
     if (depth == 1) {
 	// Black and white are always available, so we never have to
 	// do anything fancy to render 1-bit images, so we use this simple
 	// special-case code that does not do the error diffusion thing.
-	// TODO: 
+	// If the image's bitmap and the plugin's bitmap have matching layouts,
+	// we won't even get here (direct_copy == true).
 	unsigned long black = BlackPixel(g_display, g_screennumber);
 	unsigned long white = WhitePixel(g_display, g_screennumber);
 	for (int y = top; y < bottom; y++)
@@ -395,9 +433,13 @@ Viewer::paint(int top, int left, int bottom, int right) {
 			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white);
     } else if (priv_cmap != None) {
-	// Using private colormap: our colormap and the one on the screen
-	// contain the same values, so we have nothing to do here (except
-	// for the XPutImage at the end of this function, of course).
+	// As in the 1-bit case, in this case we know all our colors are available,
+	// so no dithering is required and all we do is copy pixels.
+	// If the image's pixmap and the plugin's pixmap have matching layouts,
+	// we won't even get here (direct_copy == true).
+	for (int y = top; y < bottom; y++)
+	    for (int x = left; x < right; x++)
+		XPutPixel(image, x, y, pixels[y * bytesperline + x]);
     } else if (g_grayramp == NULL && !dithering) {
 	for (int y = top; y < bottom; y++) {
 	    for (int x = left; x < right; x++) {
@@ -646,7 +688,448 @@ Viewer::paint(int top, int left, int bottom, int right) {
 	delete[] dk;
 	delete[] nextdk;
     }
-    XPutImage(g_display, drawwindow, g_gc, image,
+    goto put_the_image;
+
+
+do_enlarged:
+    //TODO!
+    goto put_the_image;
+
+    if (depth == 1) {
+	// Black and white are always available, so we never have to
+	// do anything fancy to render 1-bit images, so we use this simple
+	// special-case code that does not do the error diffusion thing.
+	// If the image's bitmap and the plugin's bitmap have matching layouts,
+	// we won't even get here (direct_copy == true).
+	unsigned long black = BlackPixel(g_display, g_screennumber);
+	unsigned long white = WhitePixel(g_display, g_screennumber);
+	for (int y = top; y < bottom; y++)
+	    for (int x = left; x < right; x++)
+		XPutPixel(image, x, y,
+			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
+			    == 0 ? black : white);
+    } else if (priv_cmap != None) {
+	// As in the 1-bit case, in this case we know all our colors are available,
+	// so no dithering is required and all we do is copy pixels.
+	// If the image's pixmap and the plugin's pixmap have matching layouts,
+	// we won't even get here (direct_copy == true).
+	for (int y = top; y < bottom; y++)
+	    for (int x = left; x < right; x++)
+		XPutPixel(image, x, y, pixels[y * bytesperline + x]);
+    } else if (g_grayramp == NULL && !dithering) {
+	for (int y = top; y < bottom; y++) {
+	    for (int x = left; x < right; x++) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		unsigned long pixel;
+		if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    pixel = g_colorcube[index].pixel;
+		} else {
+		    static bool inited = false;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
+		    if (!inited) {
+			rmax = g_visual->red_mask;
+			rmult = 0;
+			while ((rmax & 1) == 0) {
+			    rmax >>= 1;
+			    rmult++;
+			}
+			gmax = g_visual->green_mask;
+			gmult = 0;
+			while ((gmax & 1) == 0) {
+			    gmax >>= 1;
+			    gmult++;
+			}
+			bmax = g_visual->blue_mask;
+			bmult = 0;
+			while ((bmax & 1) == 0) {
+			    bmax >>= 1;
+			    bmult++;
+			}
+			inited = true;
+		    }
+
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
+		}
+		XPutPixel(image, x, y, pixel);
+	    }
+	}
+    } else if (g_grayramp == NULL && dithering) {
+	int *dr = new int[right - left];
+	int *dg = new int[right - left];
+	int *db = new int[right - left];
+	int *nextdr = new int[right - left];
+	int *nextdg = new int[right - left];
+	int *nextdb = new int[right - left];
+	for (int i = 0; i < right - left; i++)
+	    dr[i] = dg[i] = db[i] = nextdr[i] = nextdg[i] = nextdb[i] = 0;
+	int dR = 0, dG = 0, dB = 0;
+	for (int y = top; y < bottom; y++) {
+	    int dir = ((y & 1) << 1) - 1;
+	    int start, end;
+	    if (dir == 1) {
+		start = left;
+		end = right;
+	    } else {
+		start = right - 1;
+		end = left - 1;
+	    }
+	    int *temp;
+	    temp = nextdr; nextdr = dr; dr = temp;
+	    temp = nextdg; nextdg = dg; dg = temp;
+	    temp = nextdb; nextdb = db; db = temp;
+	    dR = dG = dB = 0;
+	    for (int x = start; x != end; x += dir) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		r += (dr[x - left] + dR) >> 4;
+		if (r < 0) r = 0; else if (r > 255) r = 255;
+		dr[x - left] = 0;
+		g += (dg[x - left] + dG) >> 4;
+		if (g < 0) g = 0; else if (g > 255) g = 255;
+		dg[x - left] = 0;
+		b += (db[x - left] + dB) >> 4;
+		if (b < 0) b = 0; else if (b > 255) b = 255;
+		db[x - left] = 0;
+		unsigned long pixel;
+		if (g_colorcube != NULL) {
+		    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+			    * g_cubesize
+			    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+			    * g_cubesize
+			    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+		    dR = r - (g_colorcube[index].red >> 8);
+		    dG = g - (g_colorcube[index].green >> 8);
+		    dB = b - (g_colorcube[index].blue >> 8);
+		    pixel = g_colorcube[index].pixel;
+		} else {
+		    static bool inited = false;
+		    static int rmax, rmult, bmax, bmult, gmax, gmult;
+		    if (!inited) {
+			rmax = g_visual->red_mask;
+			rmult = 0;
+			while ((rmax & 1) == 0) {
+			    rmax >>= 1;
+			    rmult++;
+			}
+			gmax = g_visual->green_mask;
+			gmult = 0;
+			while ((gmax & 1) == 0) {
+			    gmax >>= 1;
+			    gmult++;
+			}
+			bmax = g_visual->blue_mask;
+			bmult = 0;
+			while ((bmax & 1) == 0) {
+			    bmax >>= 1;
+			    bmult++;
+			}
+			inited = true;
+		    }
+
+		    pixel = ((r * rmax / 255) << rmult)
+			    + ((g * gmax / 255) << gmult)
+			    + ((b * bmax / 255) << bmult);
+		    dR = r - (int) (r * rmax / 255.0 + 0.5) * 255 / rmax;
+		    dG = g - (int) (g * gmax / 255.0 + 0.5) * 255 / gmax;
+		    dB = b - (int) (b * bmax / 255.0 + 0.5) * 255 / bmax;
+		}
+		XPutPixel(image, x, y, pixel);
+		int prevx = x - dir;
+		int nextx = x + dir;
+		if (prevx >= (int) left && prevx < (int) right) {
+		    nextdr[prevx - left] += dR * 3;
+		    nextdg[prevx - left] += dG * 3;
+		    nextdb[prevx - left] += dB * 3;
+		}
+		nextdr[x - left] += dR * 5;
+		nextdg[x - left] += dG * 5;
+		nextdb[x - left] += dB * 5;
+		if (nextx >= (int) left && nextx < (int) right) {
+		    nextdr[nextx - left] += dR;
+		    nextdg[nextx - left] += dG;
+		    nextdb[nextx - left] += dB;
+		}
+		dR *= 7;
+		dG *= 7;
+		dB *= 7;
+	    }
+	}
+	delete[] dr;
+	delete[] dg;
+	delete[] db;
+	delete[] nextdr;
+	delete[] nextdg;
+	delete[] nextdb;
+    } else if (!dithering) {
+	for (int y = top; y < bottom; y++) {
+	    for (int x = left; x < right; x++) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		int graylevel = 
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		unsigned long pixel = g_grayramp[graylevel].pixel;
+		XPutPixel(image, x, y, pixel);
+	    }
+	}
+    } else {
+	int *dk = new int[right - left];
+	int *nextdk = new int[right - left];
+	for (int i = 0; i < right - left; i++)
+	    dk[i] = nextdk[i] = 0;
+	int dK = 0;
+	for (int y = top; y < bottom; y++) {
+	    int dir = ((y & 1) << 1) - 1;
+	    int start, end;
+	    if (dir == 1) {
+		start = left;
+		end = right;
+	    } else {
+		start = right - 1;
+		end = left - 1;
+	    }
+	    int *temp;
+	    temp = nextdk; nextdk = dk; dk = temp;
+	    dK = 0;
+	    for (int x = start; x != end; x += dir) {
+		int r, g, b;
+		if (depth == 8) {
+		    unsigned char index = pixels[y * bytesperline + x];
+		    r = cmap[index].r;
+		    g = cmap[index].g;
+		    b = cmap[index].b;
+		} else /* depth == 24 */ {
+		    r = pixels[y * bytesperline + (x << 2) + 1];
+		    g = pixels[y * bytesperline + (x << 2) + 2];
+		    b = pixels[y * bytesperline + (x << 2) + 3];
+		}
+		int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+		k += (dk[x - left] + dK) >> 4;
+		if (k < 0) k = 0; else if (k > 255) k = 255;
+		dk[x - left] = 0;
+		int graylevel = 
+		    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+		if (graylevel >= g_rampsize)
+		    graylevel = g_rampsize - 1;
+		dK = k - (g_grayramp[graylevel].red >> 8);
+		unsigned long pixel = g_grayramp[graylevel].pixel;
+		XPutPixel(image, x, y, pixel);
+		int prevx = x - dir;
+		int nextx = x + dir;
+		if (prevx >= (int) left && prevx < (int) right)
+		    nextdk[prevx - left] += dK * 3;
+		nextdk[x - left] += dK * 5;
+		if (nextx >= (int) left && nextx < (int) right)
+		    nextdk[nextx - left] += dK;
+		dK *= 7;
+	    }
+	}
+	delete[] dk;
+	delete[] nextdk;
+    }
+    goto put_the_image;
+
+
+do_reduced:
+
+    if (true /*!dithering*/) {
+	int s = -scale;
+
+	int TOP = top / s;
+	int BOTTOM = (bottom + s - 1) / s;
+	if (BOTTOM > image->height)
+	    BOTTOM = image->height;
+	int LEFT = left / s;
+	int RIGHT = (right + s - 1) / s;
+	if (RIGHT > image->width)
+	    RIGHT = image->width;
+
+	// Normalize source coordinates
+	top = TOP * s;
+	bottom = BOTTOM * s;
+	if (bottom > height)
+	    bottom = height;
+	left = LEFT * s;
+	right = RIGHT * s;
+	if (right > width)
+	    right = width;
+
+	int R[RIGHT - LEFT];
+	int G[RIGHT - LEFT];
+	int B[RIGHT - LEFT];
+	int W[RIGHT - LEFT];
+	for (int i = 0; i < RIGHT - LEFT; i++)
+	    R[i] = G[i] = B[i] = W[i] = 0;
+
+	int Y = TOP;
+	int YY = 0;
+	for (int y = top; y < bottom; y++) {
+	    int X = 0;
+	    int XX = 0;
+	    for (int x = left; x < right; x++) {
+		if (depth == 1) {
+		    int p = ((pixels[y * bytesperline + (x >> 3)] >> (x & 7)) & 1)
+				* 255;
+		    R[X] += p;
+		    G[X] += p;
+		    B[X] += p;
+		} else if (depth == 8) {
+		    int p = pixels[y * bytesperline + x];
+		    R[X] += cmap[p].r;
+		    G[X] += cmap[p].g;
+		    B[X] += cmap[p].b;
+		} else {
+		    unsigned char *p = pixels + (y * bytesperline + x * 4 + 1);
+		    R[X] += *p++;
+		    G[X] += *p++;
+		    B[X] += *p;
+		}
+		W[X]++;
+		if (++XX == s) {
+		    XX = 0;
+		    X++;
+		}
+	    }
+
+	    if (YY == s - 1 || Y == BOTTOM - 1) {
+		for (X = 0; X < RIGHT - LEFT; X++) {
+		    int w = W[X];
+		    int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
+		    int g = (G[X] + w / 2) / w; if (g > 255) g = 255;
+		    int b = (B[X] + w / 2) / w; if (b > 255) b = 255;
+		    R[X] = G[X] = B[X] = W[X] = 0;
+
+		    if (priv_cmap) {
+			// Find the closest match to (R, G, B) in the colormap...
+			if (depth == 1) {
+			    int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			    if (k > 255)
+				k = 255;
+			    XPutPixel(image, X, Y, k);
+			} else {
+			    // TODO -- this is pathetic, of course
+			    int best_pixel;
+			    int best_error = 1000;
+			    for (int i = 0; i < 256; i++) {
+				int dr = r - (char) cmap[i].r;
+				int dg = g - (char) cmap[i].g;
+				int db = b - (char) cmap[i].b;
+				if (dr < 0) dr = -dr;
+				if (dg < 0) dg = -dg;
+				if (db < 0) db = -db;
+				int err = dr;
+				if (err < dg)
+				    err = dg;
+				if (err < db)
+				    err = db;
+				if (err < best_error) {
+				    best_pixel = i;
+				    best_error = err;
+				}
+			    }
+			    XPutPixel(image, X, Y, best_pixel);
+			}
+		    } else if (g_grayramp == NULL) {
+			unsigned long pixel;
+			if (g_colorcube != NULL) {
+			    int index = ((int) (r * (g_cubesize - 1) / 255.0 + 0.5)
+				    * g_cubesize
+				    + (int) (g * (g_cubesize - 1) / 255.0 + 0.5))
+				    * g_cubesize
+				    + (int) (b * (g_cubesize - 1) / 255.0 + 0.5);
+			    pixel = g_colorcube[index].pixel;
+			} else {
+			    static bool inited = false;
+			    static int rmax, rmult, bmax, bmult, gmax, gmult;
+			    if (!inited) {
+				rmax = g_visual->red_mask;
+				rmult = 0;
+				while ((rmax & 1) == 0) {
+				    rmax >>= 1;
+				    rmult++;
+				}
+				gmax = g_visual->green_mask;
+				gmult = 0;
+				while ((gmax & 1) == 0) {
+				    gmax >>= 1;
+				    gmult++;
+				}
+				bmax = g_visual->blue_mask;
+				bmult = 0;
+				while ((bmax & 1) == 0) {
+				    bmax >>= 1;
+				    bmult++;
+				}
+				inited = true;
+			    }
+
+			    pixel = ((r * rmax / 255) << rmult)
+				    + ((g * gmax / 255) << gmult)
+				    + ((b * bmax / 255) << bmult);
+			}
+			XPutPixel(image, X, Y, pixel);
+		    } else {
+			int k = (int) (r * 0.299 + g * 0.587 + b * 0.114);
+			int graylevel = 
+			    (int) (k * (g_rampsize - 1) / 255.0 + 0.5);
+			if (graylevel >= g_rampsize)
+			    graylevel = g_rampsize - 1;
+			unsigned long pixel = g_grayramp[graylevel].pixel;
+			XPutPixel(image, X, Y, pixel);
+		    }
+		}
+	    }
+
+	    if (++YY == s) {
+		YY = 0;
+		Y++;
+	    }
+	}
+    } else {
+	// Dithering not yet implemented.
+    }
+
+
+put_the_image:
+
+    XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 	      left, top, left, top,
 	      right - left, bottom - top);
 }
@@ -659,13 +1142,44 @@ Viewer::colormapChanged() {
 	XColor colors[256];
 	for (int i = 0; i < 256; i++) {
 	    colors[i].pixel = i;
-	    colors[i].red = 257 * cmap[i].r;
-	    colors[i].green = 257 * cmap[i].g;
-	    colors[i].blue = 257 * cmap[i].b;
+	    if (depth == 1) {
+		colors[i].red = 257 * i;
+		colors[i].green = 257 * i;
+		colors[i].blue = 257 * i;
+	    } else {
+		colors[i].red = 257 * cmap[i].r;
+		colors[i].green = 257 * cmap[i].g;
+		colors[i].blue = 257 * cmap[i].b;
+	    }
 	    colors[i].flags = DoRed | DoGreen | DoBlue;
 	}
 	XStoreColors(g_display, priv_cmap, colors, 256);
     }
+}
+
+/* private */ bool
+Viewer::canIDoDirectCopy() {
+    if (scale != 1)
+	return false;
+    if (depth == 1)
+	return image->bytes_per_line == bytesperline
+		&& image->byte_order == LSBFirst
+		&& image->bitmap_bit_order == LSBFirst;
+    if (depth == 8)
+	return priv_cmap != None // implies 8-bit PseudoColor visual
+		&& image->bytes_per_line == bytesperline
+		&& image->byte_order == LSBFirst;
+    // depth == 24
+    return image->depth == 32
+		&& image->bytes_per_line == bytesperline
+		&& ((image->byte_order == LSBFirst
+			&& image->red_mask == 0x00FF0000
+			&& image->green_mask == 0x0000FF00
+			&& image->blue_mask == 0x000000FF)
+		    || (image->byte_order == MSBFirst
+			&& image->red_mask == 0x0000FF00
+			&& image->green_mask == 0x00FF0000
+			&& image->blue_mask == 0xFF000000));
 }
 
 /* private static */ void
@@ -692,7 +1206,7 @@ Viewer::expose(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 Viewer::expose2(int x, int y, int w, int h) {
-    XPutImage(g_display, drawwindow, g_gc, image, x, y, x, y, w, h);
+    XPutImage(g_display, XtWindow(drawingarea), g_gc, image, x, y, x, y, w, h);
 }
 
 /* private virtual */ void
@@ -988,38 +1502,36 @@ Viewer::doUpdateNow() {
 
 /* private */ void
 Viewer::doPrivateColormap(bool value) {
-    if (depth != 8 || g_depth != 8 || g_visual->c_class != PseudoColor) {
-	if (value) {
-	    doBeep();
-	    optionsmenu->setToggleValue("Options.PrivateColormap", false, false);
-	}
+    if (!(g_depth == 8
+		&& g_visual->c_class == PseudoColor
+		&& (depth == 8 || (depth == 1 && scale <= -1))))
 	return;
-    }
 
     if (value) {
 	priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
 	setColormap(priv_cmap);
-	delete image->data;
-	// NOTE: I'm relying on the fact that the layout that image->data
-	// expects matches the one Viewer uses internally for 8-bit images.
-	// As far as bytesperline, that should be no problem; when I call
-	// XCreateImage, I specify ZPixmap with 32-bit padding, which is
-	// exactly the convention followed by the plugins. The one thing I am
-	// not sure about is byte order... Does this code work on big-endian
-	// platforms? (Viewer and the plugins store bytes in increasing
-	// addresses, which, within a long, means that the leftmost pixel is
-	// the least significant byte, on an x86 box like I'm using, anyway.
-	// Is this true on bigendian machines, is what I'm asking.)
-	image->data = (char *) pixels;
+	if (canIDoDirectCopy()) {
+	    free(image->data);
+	    image->data = (char *) pixels;
+	    direct_copy = true;
+	    if (g_verbosity >= 1)
+		fprintf(stderr, "Using direct copy.\n");
+	}
 	colormapChanged();
 	paint(0, 0, height, width);
     } else {
 	XFreeColormap(g_display, priv_cmap);
 	priv_cmap = None;
-	image->data = (char *) malloc(image->bytes_per_line * height);
 	setColormap(g_colormap);
+	if (direct_copy) {
+	    image->data = (char *) malloc(image->bytes_per_line * image->height);
+	    if (g_verbosity >= 1 && direct_copy)
+		fprintf(stderr, "Not using direct copy.\n");
+	    direct_copy = false;
+	}
 	colormapChanged();
     }
+
 }
 
 /* private */ void
@@ -1086,10 +1598,58 @@ Viewer::doScale(const char *value) {
 	h = (height + s - 1) / s;
     }
 
+    // Resize the DrawingArea
+    XtSetArg(args[0], XmNwidth, w);
+    XtSetArg(args[1], XmNheight, h);
+    XtSetValues(drawingarea, args, 2);
+
     // Resize top-level window to fit
     setSize(w + extra_h, h + extra_v);
 
-    // TODO - handle scale change
+    if (!direct_copy)
+	free(image->data);
+    XFree(image);
+    bool bitmap_ok = depth == 1 && scale >= 1;
+    image = XCreateImage(g_display,
+			 g_visual,
+			 bitmap_ok ? 1 : g_depth,
+			 bitmap_ok ? XYBitmap : ZPixmap,
+			 0,
+			 NULL,
+			 w,
+			 h,
+			 bitmap_ok ? 8 : 32,
+			 0);
+
+    if (depth == 1) {
+	bool want_priv_cmap = scale <= -1
+		&& optionsmenu->getToggleValue("Options.PrivateColormap");
+	bool have_priv_cmap = priv_cmap != None;
+	
+	if (want_priv_cmap && !have_priv_cmap) {
+	    priv_cmap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+	    setColormap(priv_cmap);
+	    colormapChanged();
+	} else if (!want_priv_cmap && have_priv_cmap) {
+	    XFreeColormap(g_display, priv_cmap);
+	    priv_cmap = None;
+	    setColormap(g_colormap);
+	}
+    }
+    
+    bool old_direct_copy = direct_copy;
+    direct_copy = canIDoDirectCopy();
+    if (direct_copy)
+	image->data = (char *) pixels;
+    else
+	image->data = (char *) malloc(image->bytes_per_line * image->height);
+    if (g_verbosity >= 1 && old_direct_copy != direct_copy)
+	if (direct_copy)
+	    fprintf(stderr, "Using direct copy.\n");
+	else
+	    fprintf(stderr, "Not using direct copy.\n");
+
+    paint(0, 0, height, width);
 }
 
 /* private */ void

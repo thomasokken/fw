@@ -290,8 +290,7 @@ Menu::radioCB(Widget w, XtPointer ud, XtPointer cd) {
     Menu *menu = item->owner;
     bool state = XmToggleButtonGetState(w) == True;
     if (!state) {
-	fprintf(stderr, "Menu::radioCB: deselection of \"%s\" ignored.\n",
-		    item->id);
+	XmToggleButtonSetState(w, True, False);
 	return;
     }
     char *groupid = strclone(item->id);
