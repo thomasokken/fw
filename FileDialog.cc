@@ -4,7 +4,6 @@
 #include <stdlib.h>
 
 #include "FileDialog.h"
-#include "Viewer.h"
 #include "main.h"
 #include "util.h"
 

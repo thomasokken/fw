@@ -109,6 +109,7 @@ class Viewer : private Frame {
 	void doPrint();
 	void doQuit();
 	void doUndo();
+	void doRedo();
 	void doCut();
 	void doCopy();
 	void doPaste();

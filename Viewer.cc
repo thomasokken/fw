@@ -186,6 +186,7 @@ Viewer::finish_init() {
 
     Menu *editmenu = new Menu;
     editmenu->addCommand("Undo", NULL, "Ctrl+Z", "Edit.Undo");
+    editmenu->addCommand("Redo", NULL, "Ctrl+Y", "Edit.Redo");
     editmenu->addSeparator();
     editmenu->addCommand("Cut", NULL, "Ctrl+X", "Edit.Cut");
     editmenu->addCommand("Copy", NULL, "Ctrl+C", "Edit.Copy");
@@ -1118,6 +1119,8 @@ Viewer::menucallback2(const char *id) {
 	doQuit();
     else if (strcmp(id, "Edit.Undo") == 0)
 	doUndo();
+    else if (strcmp(id, "Edit.Redo") == 0)
+	doRedo();
     else if (strcmp(id, "Edit.Cut") == 0)
 	doCut();
     else if (strcmp(id, "Edit.Copy") == 0)
@@ -1395,6 +1398,11 @@ Viewer::doQuit() {
 
 /* private */ void
 Viewer::doUndo() {
+    doBeep();
+}
+
+/* private */ void
+Viewer::doRedo() {
     doBeep();
 }
 
