@@ -78,6 +78,33 @@ bool is_grayscale(const FWColor *cmap) {
     return true;
 }
 
+static bool inited = false;
+static int rmax, rmult, bmax, bmult, gmax, gmult;
+
+static void calc_rgb_masks() {
+    if (inited)
+	return;
+    rmax = g_visual->red_mask;
+    rmult = 0;
+    while ((rmax & 1) == 0) {
+	rmax >>= 1;
+	rmult++;
+    }
+    gmax = g_visual->green_mask;
+    gmult = 0;
+    while ((gmax & 1) == 0) {
+	gmax >>= 1;
+	gmult++;
+    }
+    bmax = g_visual->blue_mask;
+    bmult = 0;
+    while ((bmax & 1) == 0) {
+	bmax >>= 1;
+	bmult++;
+    }
+    inited = true;
+}
+
 unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b) {
     if (g_grayramp != NULL) {
 	int p = ((306 * r + 601 * g + 117 * b)
@@ -91,32 +118,212 @@ unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b) {
 		    + ((b * (g_cubesize - 1) + 127) / 255);
 	return g_colorcube[index].pixel;
     } else {
-	static bool inited = false;
-	static int rmax, rmult, bmax, bmult, gmax, gmult;
-	if (!inited) {
-	    rmax = g_visual->red_mask;
-	    rmult = 0;
-	    while ((rmax & 1) == 0) {
-		rmax >>= 1;
-		rmult++;
-	    }
-	    gmax = g_visual->green_mask;
-	    gmult = 0;
-	    while ((gmax & 1) == 0) {
-		gmax >>= 1;
-		gmult++;
-	    }
-	    bmax = g_visual->blue_mask;
-	    bmult = 0;
-	    while ((bmax & 1) == 0) {
-		bmax >>= 1;
-		bmult++;
-	    }
-	    inited = true;
-	}
+	calc_rgb_masks();
 	return  (((r * rmax + 127) / 255) << rmult)
 	      + (((g * gmax + 127) / 255) << gmult)
 	      + (((b * bmax + 127) / 255) << bmult);
+    }
+}
+
+// rgb2nearestgrays and rgb2nearestcolors are helpers for halftoning; they
+// return the 2 grays or the 8 colors that the halftone pattern should be
+// built from. The r, g, and b parameters are two-way: when these functions
+// return, they contain the color remainder. For example, if a color has r=80,
+// and the destination has a 6x6x6 color cube, the nearest colors in the color
+// cube will have r=51 and r=102, and the remainder will be 145 (out of a range
+// of 0..255, as for the input values). This means that the halftone pattern
+// should contain a fraction of (255-145)/255 of r=51, and 145/255 of r=102.
+// If the remainder is zero, that means that the returned colors are exact in
+// that component, so the halftone pattern lookup can be skipped (for that
+// component).
+
+void rgb2nearestgrays(unsigned char *r, unsigned char *g, unsigned char *b,
+		      unsigned long *pixels) {
+    int V = 306 * *r + 601 * *g + 117 * *b;
+    unsigned char v = (V * 255 + 130560) / 261120;
+
+    int p = (V * (g_rampsize - 1) + 130560) / 261120;
+    unsigned char k = g_grayramp[p].red / 257;
+    if (k == v) {
+	// Exact match
+	pixels[0] = pixels[1] = g_grayramp[p].pixel;
+	*r = *g = *b = 0;
+    } else {
+	int p2;
+	int k2;
+	if (k < v) {
+	    p2 = p + 1;
+	    k2 = g_grayramp[p2].red;
+	} else {
+	    p2 = p;
+	    k2 = k;
+	    p = p - 1;
+	    k = g_grayramp[p].red;
+	}
+	pixels[0] = g_grayramp[p].pixel;
+	pixels[1] = g_grayramp[p2].pixel;
+	int dk = k2 - k;
+	*r = *g = *b = ((v - k) * 255 + dk / 2) / dk;
+    }
+}
+
+void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
+		       unsigned long *pixels) {
+    int rp, rp2, gp, gp2, bp, bp2;
+    unsigned char rk, rk2, gk, gk2, bk, bk2;
+
+    if (g_colorcube != NULL) {
+
+	int cs = g_cubesize;
+	int cs2 = g_cubesize * g_cubesize;
+	rp = (*r * (g_cubesize - 1) + 127) / 255;
+	rk = g_colorcube[rp * cs2].red / 257;
+	if (rk == *r) {
+	    rp2 = rp;
+	    rk2 = rk;
+	    *r = 0;
+	} else {
+	    if (rk < *r) {
+		rp2 = rp + 1;
+		rk2 = g_colorcube[rp2 * cs2].red / 257;
+	    } else {
+		rp2 = rp;
+		rk2 = rk;
+		rp = rp - 1;
+		rk = g_colorcube[rp * cs2].red / 257;
+	    }
+	    int dk = rk2 - rk;
+	    *r = ((*r - rk) * 255 + dk / 2) / dk;
+	}
+
+	gp = (*g * (g_cubesize - 1) + 127) / 255;
+	gk = g_colorcube[gp * cs].green / 257;
+	if (gk == *g) {
+	    gp2 = gp;
+	    gk2 = gk;
+	    *g = 0;
+	} else {
+	    if (gk < *g) {
+		gp2 = gp + 1;
+		gk2 = g_colorcube[gp2 * cs].green / 257;
+	    } else {
+		gp2 = gp;
+		gk2 = gk;
+		gp = gp - 1;
+		gk = g_colorcube[gp * cs].green / 257;
+	    }
+	    int dk = gk2 - gk;
+	    *g = ((*g - gk) * 255 + dk / 2) / dk;
+	}
+
+	bp = (*b * (g_cubesize - 1) + 127) / 255;
+	bk = g_colorcube[bp].blue / 257;
+	if (bk == *b) {
+	    bp2 = bp;
+	    bk2 = bk;
+	    *b = 0;
+	} else {
+	    if (bk < *b) {
+		bp2 = bp + 1;
+		bk2 = g_colorcube[bp2].blue / 257;
+	    } else {
+		bp2 = bp;
+		bk2 = bk;
+		bp = bp - 1;
+		bk = g_colorcube[bp].blue / 257;
+	    }
+	    int dk = bk2 - bk;
+	    *b = ((*b - bk) * 255 + dk / 2) / dk;
+	}
+
+	int ro = (rp2 - rp) * cs2;
+	int go = (gp2 - gp) * cs;
+	int bo = bp2 - bp;
+	int p = rp * cs2 + gp * cs + bp;
+	pixels[0] = g_colorcube[p               ].pixel;
+	pixels[1] = g_colorcube[p           + bo].pixel;
+	pixels[2] = g_colorcube[p      + go     ].pixel;
+	pixels[3] = g_colorcube[p      + go + bo].pixel;
+	pixels[4] = g_colorcube[p + ro          ].pixel;
+	pixels[5] = g_colorcube[p + ro      + bo].pixel;
+	pixels[6] = g_colorcube[p + ro + go     ].pixel;
+	pixels[7] = g_colorcube[p + ro + go + bo].pixel;
+
+    } else {
+
+	calc_rgb_masks();
+	rp = (*r * rmax + 127) / 255;
+	rk = rp * 255 / rmax;
+	if (rk == *r) {
+	    rp2 = rp;
+	    rk2 = rk;
+	    *r = 0;
+	} else {
+	    if (rk < *r) {
+		rp2 = rp + 1;
+		rk2 = rp2 * 255 / rmax;
+	    } else {
+		rp2 = rp;
+		rk2 = rk;
+		rp = rp - 1;
+		rk = rp * 255 / rmax;
+	    }
+	    int dk = rk2 - rk;
+	    *r = ((*r - rk) * 255 + dk / 2) / dk;
+	}
+
+	gp = (*g * gmax + 127) / 255;
+	gk = rp * gmax / 255;
+	if (gk == *g) {
+	    gp2 = gp;
+	    gk2 = gk;
+	    *g = 0;
+	} else {
+	    if (gk < *g) {
+		gp2 = gp + 1;
+		gk2 = gp2 * 255 / gmax;
+	    } else {
+		gp2 = gp;
+		gk2 = gk;
+		gp = gp - 1;
+		gk = gp * 255 / gmax;
+	    }
+	    int dk = gk2 - gk;
+	    *g = ((*g - gk) * 255 + dk / 2) / dk;
+	}
+
+	bp = (*b * bmax + 127) / 255;
+	bk = bp * bmax / 255;
+	if (bk == *b) {
+	    bp2 = bp;
+	    bk2 = bk;
+	    *b = 0;
+	} else {
+	    if (bk < *b) {
+		bp2 = bp + 1;
+		bk2 = bp2 * 255 / bmax;
+	    } else {
+		bp2 = bp;
+		bk2 = bk;
+		bp = bp - 1;
+		bk = bp * 255 / bmax;
+	    }
+	    int dk = bk2 - bk;
+	    *b = ((*b - bk) * 255 + dk / 2) / dk;
+	}
+
+	int ro = (rp2 - rp) << rmult;
+	int go = (gp2 - gp) << gmult;
+	int bo = (bp2 - bp) << bmult;
+	int p = (rp << rmult) | (bp << bmult) | (gp << gmult);
+	pixels[0] = g_colorcube[p               ].pixel;
+	pixels[1] = g_colorcube[p           + bo].pixel;
+	pixels[2] = g_colorcube[p      + go     ].pixel;
+	pixels[3] = g_colorcube[p      + go + bo].pixel;
+	pixels[4] = g_colorcube[p + ro          ].pixel;
+	pixels[5] = g_colorcube[p + ro      + bo].pixel;
+	pixels[6] = g_colorcube[p + ro + go     ].pixel;
+	pixels[7] = g_colorcube[p + ro + go + bo].pixel;
     }
 }
 

@@ -184,6 +184,57 @@ class MixAction : public ChangeRangeAction {
 	}
 };
 
+
+static bool halftone_inited = false;
+static unsigned char halftone_pattern[256][16][2];
+
+static void halftone_initialize() {
+    if (halftone_inited)
+	return;
+
+    for (int i = 0; i < 16; i++)
+	for (int j = 0; j < 2; j++)
+	    halftone_pattern[0][i][j] = 0;
+
+    for (int i = 1; i < 256; i++) {
+	int x = 0;
+	int y = 0;
+	int v = i;
+	for (int j = 0; j < 4; j++) {
+	    x = (x << 1) | (v & 1); v >>= 1;
+	    y = (y << 1) | (v & 1); v >>= 1;
+	}
+	for (int j = 0; j < 16; j++)
+	    for (int k = 0; k < 2; k++)
+		halftone_pattern[i][j][k] = halftone_pattern[i - 1][j][k];
+	halftone_pattern[i][y][x >> 3] |= 1 << (x & 7);
+    }
+
+    halftone_inited = true;
+}
+
+static int halftone(unsigned char value, int x, int y) {
+    // A little hack: since halftone_pattern[255] has one pixel off (in a 16x16
+    // pattern, you have 257 possible levels of brightness, and our table only
+    // has 256 entries), we couldn't represent 'white' exactly. We fudge that
+    // by handling white directly...
+
+    if (value == 255)
+	return 1;
+    else if (value > 128)
+	// This means halftone_pattern[129] is never used. Hopefully no one
+	// will notice. It should be less apparent than an inaccuracy at pure
+	// white or pure black!
+	value++;
+
+    halftone_initialize();
+    x &= 15;
+    y &= 15;
+    unsigned char c = halftone_pattern[value][y][x >> 3];
+    return (c >> (x & 7)) & 1;
+}
+
+
 /* public */
 ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm, Colormap colormap)
 				    : Frame(false, true, false) {
@@ -499,16 +550,32 @@ ColormapEditor::update_cell(int c) {
 	for (int xx = x; xx < x + CELL_SIZE; xx++)
 	    for (int yy = y; yy < y + CELL_SIZE; yy++)
 		XPutPixel(image, xx, yy, c);
-    } else {
-	// TODO: Generate halftone patterns (1 for grayscale, 3 for RGB,
-	// yada yada yada...)
-	// Just picking closest match for now.
-	unsigned long pixel = rgb2pixel(pm->cmap[c].r,
-					pm->cmap[c].g,
-					pm->cmap[c].b);
+    } else if (g_grayramp != NULL) {
+	// Greyscale halftoning
+	unsigned char r = pm->cmap[c].r;
+	unsigned char g = pm->cmap[c].g;
+	unsigned char b = pm->cmap[c].b;
+	unsigned long pixels[2];
+	rgb2nearestgrays(&r, &g, &b, pixels);
 	for (int xx = x; xx < x + CELL_SIZE; xx++)
-	    for (int yy = y; yy < y + CELL_SIZE; yy++)
-		XPutPixel(image, xx, yy, pixel);
+	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
+		int index = halftone(r, xx - x, yy - y);
+		XPutPixel(image, xx, yy, pixels[index]);
+	    }
+    } else {
+	// Color halftoning
+	unsigned char r = pm->cmap[c].r;
+	unsigned char g = pm->cmap[c].g;
+	unsigned char b = pm->cmap[c].b;
+	unsigned long pixels[8];
+	rgb2nearestcolors(&r, &g, &b, pixels);
+	for (int xx = x; xx < x + CELL_SIZE; xx++)
+	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
+		int index = (halftone(r, xx - x, yy - y) << 2)
+			    | (halftone(g, xx - x, yy - y) << 1)
+			    | halftone(b, xx - x, yy - y);
+		XPutPixel(image, xx, yy, pixels[index]);
+	    }
     }
     if (sel_start != -1 && c >= sel_start && c <= sel_end)
 	select_cell(c);

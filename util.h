@@ -9,6 +9,10 @@ bool isDirectory(const char *name);
 bool isFile(const char *name);
 bool is_grayscale(const FWColor *cmap);
 unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b);
+void rgb2nearestgrays(unsigned char *r, unsigned char *g, unsigned char *b,
+		      unsigned long *pixels);
+void rgb2nearestcolors(unsigned char *r, unsigned char *g, unsigned char *b,
+		       unsigned long *pixels);
 void hsl2rgb(float h, float s, float l,
 	     unsigned char *r, unsigned char *g, unsigned char *b);
 void rgb2hsl(unsigned char r, unsigned char g, unsigned char b,
