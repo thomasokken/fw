@@ -2141,6 +2141,10 @@ Viewer::doOpen2(const char *filename, void *closure) {
 	Viewer *viewer = new Viewer(plugin_name, plugin_data,
 				    plugin_data_length, &pm);
 	viewer->setFile(filename, type);
+	if (message != NULL) {
+	    fprintf(stderr, "%s\n", message);
+	    doBeep();
+	}
     } else {
 	// TODO: nicer error reporting
 	fprintf(stderr, "Can't open \"%s\" (%s).\n", filename, message);

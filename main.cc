@@ -435,6 +435,9 @@ int main(int argc, char **argv) {
 				       plugin_data_length, &pm);
 	    viewer->setFile(argv[i], type);
 	    nothingOpened = false;
+	    if (message != NULL)
+		// TODO: nicer warning reporting
+		fprintf(stderr, "Re: \"%s\": %s\n", argv[i], message);
 	} else {
 	    // TODO: nicer error reporting
 	    fprintf(stderr, "Can't open \"%s\" (%s).\n", argv[i], message);

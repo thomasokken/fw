@@ -47,19 +47,24 @@ ImageIO_GIF::can_read(const char *filename) {
 /* public virtual */ bool
 ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		  int *plugin_data_length, FWPixmap *pm, char **message) {
+    char msgbuf[MSGLEN];
+
     unsigned char *buf = NULL;
     int bufsize = 0;
     int bufpos = 0;
+    FWColor *lcmap = NULL;
 
     FILE *gif = fopen(filename, "r");
     if (gif == NULL) {
-	fprintf(stderr, "GIFViewer: Can't open \"%s\".\n", filename);
+	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).", filename, strerror(errno));
+	*message = strclone(msgbuf);
 	return false;
     }
 
     char sig[7];
     if (fread(sig, 1, 6, gif) != 6) {
-	fprintf(stderr, "GIFViewer: GIF signature not found.\n");
+	snprintf(msgbuf, MSGLEN, "GIF signature not found.");
+	*message = strclone(msgbuf);
 	fclose(gif);
 	return false;
     }
@@ -70,7 +75,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
     else if (strcmp(sig, "GIF89a") == 0)
 	gif89a = true;
     else {
-	fprintf(stderr, "GIFViewer: GIF87a or GIF89a signature not found.\n");
+	snprintf(msgbuf, MSGLEN, "GIF87a or GIF89a signature not found.");
+	*message = strclone(msgbuf);
 	fclose(gif);
 	return false;
     }
@@ -85,7 +91,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    || !read_byte(gif, &background)
 	    || !read_byte(gif, &zero)
 	    || zero != 0) {
-	fprintf(stderr, "GIFViewer: fatally premature EOF.\n");
+	snprintf(msgbuf, MSGLEN, "Fatally premature EOF.");
+	*message = strclone(msgbuf);
 	fclose(gif);
 	return false;
     }
@@ -123,7 +130,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    if (!read_byte(gif, &r)
 		    || !read_byte(gif, &g)
 		    || !read_byte(gif, &b)) {
-		fprintf(stderr, "GIFViewer: fatally premature EOF.\n");
+		snprintf(msgbuf, MSGLEN, "Fatally premature EOF.");
+		*message = strclone(msgbuf);
 		goto failed;
 	    }
 	    pm->cmap[i].r = r;
@@ -193,21 +201,21 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    
 	    if (itop + iheight > pm->height
 		    || ileft + iwidth > pm->width) {
-		fprintf(stderr, "Image position and size not contained within screen size!\n");
+		snprintf(msgbuf, MSGLEN, "Image position and size not contained within screen size!");
+		*message = strclone(msgbuf);
 		goto failed;
 	    }
 
 	    /* Bit 3 of info must be zero in GIF87a; in GIF89a, if it
-		* is set, it indicates that the local colormap is sorted,
-		* the most important entries being first. In PseudoColor
-		* environments this can be used to make sure to get the
-		* most important colors from the X server first, to
-		* optimize the image's appearance in the event that not
-		* all the colors from the colormap can actually be
-		* obtained at the same time.
-		*/
+	     * is set, it indicates that the local colormap is sorted,
+	     * the most important entries being first. In PseudoColor
+	     * environments this can be used to make sure to get the
+	     * most important colors from the X server first, to
+	     * optimize the image's appearance in the event that not
+	     * all the colors from the colormap can actually be
+	     * obtained at the same time.
+	     */
 
-	    FWColor *lcmap;
 	    int lbpp;
 	    int lncolors;
 	    if ((info & 128) == 0) {
@@ -224,10 +232,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 		    int r, g, b;
 		    if (!read_byte(gif, &r)
 			    || !read_byte(gif, &g)
-			    || !read_byte(gif, &b)) {
-			delete[] lcmap;
+			    || !read_byte(gif, &b))
 			goto unexp_eof;
-		    }
 		    lcmap[i].r = r;
 		    lcmap[i].g = g;
 		    lcmap[i].b = b;
@@ -288,11 +294,8 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    while (bytecount != 0) {
 		for (int i = 0; i < bytecount; i++) {
 		    int currbyte;
-		    if (!read_byte(gif, &currbyte)) {
-			if (lcmap != pm->cmap)
-			    delete[] lcmap;
+		    if (!read_byte(gif, &currbyte))
 			goto unexp_eof;
-		    }
 		    if (end_code_seen)
 			continue;
 
@@ -332,6 +335,11 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 				    // any more, because we refuse to raise
 				    // curr_code_size above 12 -- so we can
 				    // never read a bigger code than 4095.
+				    if (old_code == -1) {
+					snprintf(msgbuf, MSGLEN, "Out-of-sequence code in compressed data.");
+					*message = strclone(msgbuf);
+					goto done;
+				    }
 				    int c = old_code;
 				    while (prefix_table[c] != -1)
 					c = prefix_table[c];
@@ -343,8 +351,9 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 					    && curr_code_size < 12)
 					curr_code_size++;
 				} else {
-				    fprintf(stderr, "GIFViewer: currcode > maxcode!\n");
-				    end_code_seen = true;
+				    snprintf(msgbuf, MSGLEN, "Out-of-sequence code in compressed data.");
+				    *message = strclone(msgbuf);
+				    goto done;
 				}
 
 				old_code = curr_code;
@@ -388,12 +397,14 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 						    v += 8;
 						    if (v < iheight)
 							break;
-						    /* Some GIF en/decoders go straight
-							* from the '0' pass to the '4'
-							* pass without checking the height,
-							* and blow up on 2/3/4 pixel high
-							* interlaced images.
-							*/
+						    /* Some GIF en/decoders go
+						     * straight from the '0'
+						     * pass to the '4' pass
+						     * without checking the
+						     * height, and blow up on
+						     * 2/3/4 pixel high
+						     * interlaced images.
+						     */
 						    if (iheight > 4)
 							v = 4;
 						    else if (iheight > 2)
@@ -439,15 +450,14 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 			}
 		    }
 		}
-		if (!read_byte(gif, &bytecount)) {
-		    if (lcmap != pm->cmap)
-			delete[] lcmap;
+		if (!read_byte(gif, &bytecount))
 		    goto unexp_eof;
-		}
 	    }
 
 	    if (lcmap != pm->cmap)
 		delete[] lcmap;
+	    lcmap = NULL;
+
 	} else if (whatnext == '!') {
 	    // Extension block
 	    int function_code, byte_count;
@@ -510,13 +520,16 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 	    // Terminator
 	    break;
 	} else {
-	    fprintf(stderr, "GIFViewer: unrecognized tag '%c' (0x%02x).\n",
+	    snprintf(msgbuf, MSGLEN, "Unrecognized tag '%c' (0x%02x).",
 		    whatnext, whatnext);
+	    *message = strclone(msgbuf);
 	    goto failed;
 	}
     }
 
     done:
+    if (lcmap != NULL && lcmap != pm->cmap)
+	delete[] lcmap;
     if (pm->depth == 24) {
 	delete[] pm->cmap;
 	pm->cmap = NULL;
@@ -566,11 +579,16 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
     fclose(gif);
     return true;
 
+
     unexp_eof:
-    fprintf(stderr, "GIFViewer: unexpected EOF.\n");
+    snprintf(msgbuf, MSGLEN, "Unexpected EOF.");
+    *message = strclone(msgbuf);
     goto done;
 
+
     failed:
+    if (lcmap != NULL && lcmap != pm->cmap)
+	delete[] lcmap;
     if (pm->cmap != NULL) {
 	delete[] pm->cmap;
 	pm->cmap = NULL;
