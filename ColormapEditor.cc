@@ -32,17 +32,17 @@
 
 class PickAction : public UndoableAction {
     private:
-	ColormapEditor::Owner *owner;
+	ColormapEditor::Listener *listener;
 	FWPixmap *pm;
 	int index;
 	unsigned char old_r, old_g, old_b;
 	unsigned char new_r, new_g, new_b;
     public:
-	PickAction(ColormapEditor::Owner *owner, FWPixmap *pm, int index,
+	PickAction(ColormapEditor::Listener *listener, FWPixmap *pm, int index,
 		   unsigned char new_r,
 		   unsigned char new_g,
 		   unsigned char new_b) {
-	    this->owner = owner;
+	    this->listener = listener;
 	    this->pm = pm;
 	    this->index = index;
 	    old_r = pm->cmap[index].r;
@@ -56,23 +56,19 @@ class PickAction : public UndoableAction {
 	    pm->cmap[index].r = old_r;
 	    pm->cmap[index].g = old_g;
 	    pm->cmap[index].b = old_b;
-	    ColormapEditor *cme = owner->getCME();
-	    if (cme != NULL) {
-		cme->update_cell(index);
-		cme->redraw_cells(index, index);
-	    }
-	    owner->colormapChanged();
+	    ColormapEditor *cme = listener->getCME();
+	    if (cme != NULL)
+		cme->colorsChanged(index, index);
+	    listener->colormapChanged();
 	}
 	virtual void redo() {
 	    pm->cmap[index].r = new_r;
 	    pm->cmap[index].g = new_g;
 	    pm->cmap[index].b = new_b;
-	    ColormapEditor *cme = owner->getCME();
-	    if (cme != NULL) {
-		cme->update_cell(index);
-		cme->redraw_cells(index, index);
-	    }
-	    owner->colormapChanged();
+	    ColormapEditor *cme = listener->getCME();
+	    if (cme != NULL)
+		cme->colorsChanged(index, index);
+	    listener->colormapChanged();
 	}
 	virtual const char *getUndoTitle() {
 	    return "Undo Pick Color";
@@ -84,17 +80,17 @@ class PickAction : public UndoableAction {
 
 class ChangeRangeAction : public UndoableAction {
     private:
-	ColormapEditor::Owner *owner;
+	ColormapEditor::Listener *listener;
 	FWPixmap *pm;
 	int startindex, endindex;
 	FWColor *oldcolors;
     protected:
 	FWColor *newcolors;
     public:
-	ChangeRangeAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+	ChangeRangeAction(ColormapEditor::Listener *listener, FWPixmap *pm,
 			  int startindex,
 			  int endindex) {
-	    this->owner = owner;
+	    this->listener = listener;
 	    this->pm = pm;
 	    this->startindex = startindex;
 	    this->endindex = endindex;
@@ -108,34 +104,28 @@ class ChangeRangeAction : public UndoableAction {
 	    delete[] newcolors;
 	}
 	virtual void undo() {
-	    ColormapEditor *cme = owner->getCME();
-	    for (int i = startindex; i <= endindex; i++) {
+	    for (int i = startindex; i <= endindex; i++)
 		pm->cmap[i] = oldcolors[i - startindex];
-		if (cme != NULL)
-		    cme->update_cell(i);
-	    }
+	    ColormapEditor *cme = listener->getCME();
 	    if (cme != NULL)
-		cme->redraw_cells(startindex, endindex);
-	    owner->colormapChanged();
+		cme->colorsChanged(startindex, endindex);
+	    listener->colormapChanged();
 	}
 	virtual void redo() {
-	    ColormapEditor *cme = owner->getCME();
-	    for (int i = startindex; i <= endindex; i++) {
+	    for (int i = startindex; i <= endindex; i++)
 		pm->cmap[i] = newcolors[i - startindex];
-		if (cme != NULL)
-		    cme->update_cell(i);
-	    }
+	    ColormapEditor *cme = listener->getCME();
 	    if (cme != NULL)
-		cme->redraw_cells(startindex, endindex);
-	    owner->colormapChanged();
+		cme->colorsChanged(startindex, endindex);
+	    listener->colormapChanged();
 	}
 };
 
 class BlendAction : public ChangeRangeAction {
     public:
-	BlendAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+	BlendAction(ColormapEditor::Listener *listener, FWPixmap *pm,
 		    int startindex, int endindex)
-		: ChangeRangeAction(owner, pm, startindex, endindex) {
+		: ChangeRangeAction(listener, pm, startindex, endindex) {
 	    int rstart, gstart, bstart, rend, gend, bend;
 	    rstart = pm->cmap[startindex].r;
 	    gstart = pm->cmap[startindex].g;
@@ -165,9 +155,9 @@ class BlendAction : public ChangeRangeAction {
 
 class SwapAction : public ChangeRangeAction {
     public:
-	SwapAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+	SwapAction(ColormapEditor::Listener *listener, FWPixmap *pm,
 		   int startindex, int endindex)
-		: ChangeRangeAction(owner, pm, startindex, endindex) {
+		: ChangeRangeAction(listener, pm, startindex, endindex) {
 	    for (int i = startindex; i <= endindex; i++)
 		newcolors[i - startindex] =
 			pm->cmap[startindex + endindex - i];
@@ -182,9 +172,9 @@ class SwapAction : public ChangeRangeAction {
 
 class MixAction : public ChangeRangeAction {
     public:
-	MixAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+	MixAction(ColormapEditor::Listener *listener, FWPixmap *pm,
 		  int startindex, int endindex)
-		: ChangeRangeAction(owner, pm, startindex, endindex) {
+		: ChangeRangeAction(listener, pm, startindex, endindex) {
 	    int k = (endindex - startindex + 1) / 2;
 	    for (int i = 0; i < k; i++) {
 		newcolors[2 * i] =
@@ -203,11 +193,58 @@ class MixAction : public ChangeRangeAction {
 	}
 };
 
+class PasteAction : public ChangeRangeAction {
+    public:
+	PasteAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+		    int startindex, int endindex, int color_clipboard_size,
+		    FWColor *color_clipboard)
+		: ChangeRangeAction(listener, pm, startindex, endindex) {
+
+	    if (color_clipboard_size == 1 || startindex == 255) {
+		for (int i = startindex; i <= endindex; i++)
+		    newcolors[i - startindex] = color_clipboard[0];
+	    } else if (endindex - startindex + 1 == color_clipboard_size) {
+		for (int i = 0; i <= endindex - startindex; i++)
+		    newcolors[i] = color_clipboard[i];
+	    } else if (endindex - startindex + 1 < color_clipboard_size) {
+		for (int i = startindex; i <= endindex; i++)
+		    newcolors[i - startindex] = color_clipboard[
+				(i - startindex) * (color_clipboard_size - 1)
+				    / (endindex - startindex)];
+	    } else {
+		for (int i = startindex; i < endindex; i++) {
+		    float cn = (i - startindex) * (color_clipboard_size - 1)
+				    / ((float) (endindex - startindex));
+		    int c1 = (int) cn;
+		    int c2 = c1 + 1;
+		    float w2 = cn - c1;
+		    float w1 = 1 - w2;
+		    FWColor mc;
+		    mc.r = (unsigned char) (w1 * color_clipboard[c1].r
+					  + w2 * color_clipboard[c2].r);
+		    mc.g = (unsigned char) (w1 * color_clipboard[c1].g
+					  + w2 * color_clipboard[c2].g);
+		    mc.b = (unsigned char) (w1 * color_clipboard[c1].b
+					  + w2 * color_clipboard[c2].b);
+		    newcolors[i - startindex] = mc;
+		}
+		newcolors[endindex - startindex] = color_clipboard[
+						color_clipboard_size - 1];
+	    }
+	}
+	virtual const char *getUndoTitle() {
+	    return "Undo Paste Colors";
+	}
+	virtual const char *getRedoTitle() {
+	    return "Redo Paste Colors";
+	}
+};
+    
 class CancelAction : public ChangeRangeAction {
     public:
-	CancelAction(ColormapEditor::Owner *owner, FWPixmap *pm,
+	CancelAction(ColormapEditor::Listener *listener, FWPixmap *pm,
 		     FWColor *restore_cmap)
-		: ChangeRangeAction(owner, pm, 0, 255) {
+		: ChangeRangeAction(listener, pm, 0, 255) {
 	    for (int i = 0; i <= 255; i++)
 		newcolors[i] = restore_cmap[i];
 	}
@@ -296,13 +333,13 @@ ColormapEditor::color_clipboard_size = 0;
 
 
 /* public */
-ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm,
+ColormapEditor::ColormapEditor(Listener *listener, FWPixmap *pm,
 			       UndoManager *undomanager, Colormap colormap)
 				    : Frame(false, true, false) {
     setTitle("Colormap Editor");
     setIconTitle("Colormap Editor");
 
-    this->owner = owner;
+    this->listener = listener;
     this->pm = pm;
 
     undomgr = undomanager;
@@ -385,7 +422,7 @@ ColormapEditor::ColormapEditor(Owner *owner, FWPixmap *pm,
 
 /* public virtual */
 ColormapEditor::~ColormapEditor() {
-    owner->cmeClosed();
+    listener->cmeClosed();
     delete[] initial_cmap;
     free(image->data);
     XFree(image);
@@ -393,7 +430,7 @@ ColormapEditor::~ColormapEditor() {
 	colorpicker->close();
 }
 
-/* public virtual */ void
+/* public */ void
 ColormapEditor::colormapChanged(Colormap colormap) {
     Colormap prevcolormap = this->colormap;
     this->colormap = colormap;
@@ -408,6 +445,41 @@ ColormapEditor::colormapChanged(Colormap colormap) {
     // NOTE: we don't assume responsibility for this colormap. When our
     // owning Viewer is destroyed, it should make sure we are destroyed
     // also, and then free the private colormap.
+}
+
+/* public */ void
+ColormapEditor::colorsChanged(int startindex, int endindex) {
+    // This method is meant to be called by Actions that change the colormap.
+    // It tells the CME to update the color grid.
+    // Notification of the Viewer is *not* handled here; the action should do
+    // that itself (remember, the action can depend on the Viewer existing;
+    // it cannot depend on a Colormap Editor existing).
+
+    // First, get rid of selection, if it exists
+    sel_in_progress = false;
+    if (sel_start != -1) {
+	// A selection existed already; it needs to be erased
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	sel_start = -1;
+	for (int i = start; i <= end; i++)
+	    update_cell(i);
+	redraw_cells(start, end);
+    }
+
+    // Now fix color grid. Note that this is a no-op if we're using a private
+    // colormap.
+    if (colormap != g_colormap) {
+	for (int i = startindex; i <= endindex; i++)
+	    update_cell(i);
+	redraw_cells(startindex, endindex);
+    }
 }
 
 class CPListener : public ColorPicker::Listener {
@@ -425,7 +497,7 @@ class CPListener : public ColorPicker::Listener {
 	virtual void colorPicked(unsigned char r,
 				 unsigned char g,
 				 unsigned char b) {
-	    PickAction *action = new PickAction(cme->owner, cme->pm,
+	    PickAction *action = new PickAction(cme->listener, cme->pm,
 						index, r, g, b);
 	    cme->undomgr->addAction(action);
 	    action->redo();
@@ -462,7 +534,7 @@ ColormapEditor::doBlend() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	BlendAction *action = new BlendAction(owner, pm, start, end);
+	BlendAction *action = new BlendAction(listener, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -481,7 +553,7 @@ ColormapEditor::doSwap() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	SwapAction *action = new SwapAction(owner, pm, start, end);
+	SwapAction *action = new SwapAction(listener, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -500,7 +572,7 @@ ColormapEditor::doMix() {
 	    start = sel_end;
 	    end = sel_start;
 	}
-	MixAction *action = new MixAction(owner, pm, start, end);
+	MixAction *action = new MixAction(listener, pm, start, end);
 	undomgr->addAction(action);
 	action->redo();
     }
@@ -517,81 +589,48 @@ ColormapEditor::doCopy() {
     }
 }
 
-#if 0
-    PROCEDURE DoPaste;
-	VAR
-	    i, selCount: INTEGER;
-	    cn, w1, w2: double;
-	    c1, c2: INTEGER;
-	    mc: RGBColor;
-	    
-	FUNCTION Blend(i1: INTEGER; w1: double; i2: INTEGER; w2: double): INTEGER;
-	    VAR
-		L1, L2: LONGINT;
-	BEGIN
-	    L1:= BAND(i1, $FFFF);
-	    L2:= BAND(i2, $FFFF);
-	    Blend:= trunc(w1 * L1 + w2 * L2)
-	END;
-	
-    BEGIN
-	SaveUndo;
-	IF (clipCount = 1) OR (s1 = 254) THEN
-	    FOR i:= s1 TO s2 DO
-		PutRGB(i, clipColors[0])
-	ELSE
-	    BEGIN
-		IF s1 = s2 THEN
-		    s2:= Min(s1 + clipCount - 1, 254);
-		selCount:= s2 - s1 + 1;
-		IF selCount = clipCount THEN
-		    FOR i:= s1 TO s2 DO
-			PutRGB(i, clipColors[i - s1])
-		ELSE
-		    IF selCount < clipCount THEN
-			FOR i:= s1 TO s2 DO
-			    PutRGB(i, clipColors[(LONGINT(i - s1)
-							* (clipCount - 1)) DIV (s2 - s1)])
-		    ELSE
-			BEGIN
-			    FOR i:= s1 TO s2 - 1 DO
-				BEGIN
-				    cn:= (LONGINT(i - s1) * (clipCount - 1)) / (s2 - s1);
-				    c1:= trunc(cn);
-				    c2:= c1 + 1;
-				    w2:= cn - c1;
-				    w1:= 1 - w2;
-				    mc.red:= Blend(clipColors[c1].red, w1,
-							    clipColors[c2].red, w2);
-				    mc.green:= Blend(clipColors[c1].green, w1,
-							    clipColors[c2].green, w2);
-				    mc.blue:= Blend(clipColors[c1].blue, w1,
-							    clipColors[c2].blue, w2);
-				    PutRGB(i, mc)
-				END;
-			    PutRGB(s2, clipColors[clipCount - 1])
-			END
-	    END;
-	Redraw;
-	UpdateButtons;
-	changed:= TRUE
-    END;
-#endif
-    
 /* private */ void
 ColormapEditor::doPaste() {
-    if (sel_start == -1 || sel_start == sel_end)
+    if (sel_start == -1 || color_clipboard_size == 0)
 	XBell(g_display, 100);
+    else {
+	int start, end;
+	if (sel_start < sel_end) {
+	    start = sel_start;
+	    end = sel_end;
+	} else {
+	    start = sel_end;
+	    end = sel_start;
+	}
+	if (sel_start == sel_end) {
+	    // If exactly one cell is selected, while the color clipboard
+	    // contains more than one color, we paste the entire range from
+	    // the color clipboard, starting at the selected cell, and
+	    // continuing for as many colors as are in the color clipboard
+	    // (or until index 255, whichever comes first). The idea is to
+	    // mimic the behavior of an "insertion point" in a word processor,
+	    // kind of. Only it's more like an "overwriting point" here since
+	    // I don't move anything out of the way first.
+	    sel_end = sel_start + color_clipboard_size - 1;
+	    if (sel_end > 255)
+		sel_end = 255;
+	}
+	PasteAction *action = new PasteAction(listener, pm, start, end,
+					ColormapEditor::color_clipboard_size,
+					ColormapEditor::color_clipboard);
+	undomgr->addAction(action);
+	action->redo();
+    }
 }
 
 /* private */ void
 ColormapEditor::doLoad() {
-    owner->loadColors();
+    listener->loadColors();
 }
 
 /* private */ void
 ColormapEditor::doSave() {
-    owner->saveColors();
+    listener->saveColors();
 }
 
 /* private */ void
@@ -612,7 +651,7 @@ ColormapEditor::doOK() {
 /* private */ void
 ColormapEditor::doCancel() {
     if (undomgr->getCurrentId() != initial_undo_id) {
-	CancelAction *action = new CancelAction(owner, pm, initial_cmap);
+	CancelAction *action = new CancelAction(listener, pm, initial_cmap);
 	undomgr->addAction(action);
 	action->redo();
     }

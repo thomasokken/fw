@@ -9,10 +9,10 @@ class UndoManager;
 
 class ColormapEditor : public Frame {
     public:
-	class Owner {
+	class Listener {
 	    public:
-		Owner() {}
-		virtual ~Owner() {}
+		Listener() {}
+		virtual ~Listener() {}
 		virtual void cmeClosed() = 0;
 		virtual void colormapChanged() = 0;
 		virtual void loadColors() = 0;
@@ -21,7 +21,7 @@ class ColormapEditor : public Frame {
 	};
 
     private:
-	Owner *owner;
+	Listener *listener;
 	FWPixmap *pm;
 	FWColor *initial_cmap;
 	int initial_undo_id;
@@ -37,10 +37,11 @@ class ColormapEditor : public Frame {
 	static int color_clipboard_size;
 
     public:
-	ColormapEditor(Owner *owner, FWPixmap *pm,
+	ColormapEditor(Listener *listener, FWPixmap *pm,
 		       UndoManager *undomanager, Colormap colormap);
 	virtual ~ColormapEditor();
 	void colormapChanged(Colormap colormap);
+	void colorsChanged(int startindex, int endindex);
 
     private:
 	void doPick();
@@ -70,9 +71,4 @@ class ColormapEditor : public Frame {
 	static void activate(Widget w, XtPointer ud, XtPointer cd);
 
 	friend class CPListener;
-	friend class PickAction;
-	friend class ChangeRangeAction;
-	friend class BlendAction;
-	friend class SwapAction;
-	friend class MixAction;
 };

@@ -5,7 +5,7 @@
 
 class Menu;
 
-class SaveImageDialog : public FileDialog {
+class SaveImageDialog : public FileDialog, private FileDialog::Listener {
     public:
 	class Listener {
 	    public:
@@ -28,8 +28,9 @@ class SaveImageDialog : public FileDialog {
 
     private:
 	static void typeMenuCB(void *closure, const char *id);
-	static void privateFileSelectedCallback(const char *fn, void *cl);
-	static void privateCancelledCallback(void *cl);
+	// FileDialog::Listener methods
+	void fileSelected(const char *filename);
+	void cancelled();
 };
 
 #endif

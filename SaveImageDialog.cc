@@ -21,7 +21,7 @@ SaveImageDialog::Listener::~Listener() {
 
 /* public */
 SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
-	    const char *filetype, Listener *listener) : FileDialog(parent) {
+	const char *filetype, Listener *listener) : FileDialog(parent, this) {
 
     this->listener = listener;
 
@@ -57,9 +57,6 @@ SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
     delete iter;
     typeMenu->setCommandListener(typeMenuCB, this);
     typeMenu->makeWidgets(pulldown);
-
-    setFileSelectedCB(privateFileSelectedCallback, this);
-    setCancelledCB(privateCancelledCallback, this);
 
     if (filename != NULL) {
 	char *dirname;
@@ -104,14 +101,12 @@ SaveImageDialog::typeMenuCB(void *closure, const char *id) {
     This->type = id;
 }
 
-/* private static */ void
-SaveImageDialog::privateFileSelectedCallback(const char *fn, void *cl) {
-    SaveImageDialog *This = (SaveImageDialog *) cl;
-    This->listener->save(fn, This->type);
+/* private */ void
+SaveImageDialog::fileSelected(const char *filename) {
+    listener->save(filename, type);
 }
 
-/* private static */ void
-SaveImageDialog::privateCancelledCallback(void *cl) {
-    SaveImageDialog *This = (SaveImageDialog *) cl;
-    This->listener->cancel();
+/* private */ void
+SaveImageDialog::cancelled() {
+    listener->cancel();
 }

@@ -6,7 +6,7 @@
 #include "Frame.h"
 #include "FWPixmap.h"
 
-class CMEOwner;
+class ColormapEditorListener;
 class ColormapEditor;
 class List;
 class Plugin;
@@ -24,7 +24,7 @@ class Viewer : private Frame {
 	UndoManager *undomanager;
 	int saved_undo_id;
 	ColormapEditor *cme;
-	CMEOwner *cmeproxy;
+	ColormapEditorListener *cmelistener;
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
@@ -94,15 +94,9 @@ class Viewer : private Frame {
 	void radiocallback2(const char *id, const char *value);
 
 	static Boolean deleteLater2(XtPointer ud);
-	static void doOpen2(const char *fn, void *cl);
 	bool save(const char *filename, const char *filetype);
-	static void doLoadColors2(const char *fn, void *cl);
-	void doLoadColors3(const char *fn);
-	static void doSaveColors2(const char *fn, void *cl);
-	void doSaveColors3(const char *fn);
 	static void doQuit2();
 
-	static void doBeep();
 	void doNew(const char *plugin);
 	void doClone();
 	void doOpen();
@@ -137,13 +131,16 @@ class Viewer : private Frame {
 	void doGeneral();
 	void doHelp(const char *plugin);
 
-	friend class CMEOwner;
-	friend class UMListener;
-	friend class YNCListener;
-	friend class YNCListener2;
-	friend class SIDListener;
-	friend class SIDListener2;
-	friend class SIDListener3;
+	friend class ColormapEditorListener;
+	friend class UndoManagerListener;
+	friend class OpenListener;
+	friend class LoadColorsListener;
+	friend class SaveColorsListener;
+	friend class YesNoCancelBeforeClosingListener;
+	friend class YesNoCancelBeforeQuittingListener;
+	friend class SaveAsListener;
+	friend class SaveBeforeClosingListener;
+	friend class SaveBeforeQuittingListener;
 };
 
 #endif

@@ -1,8 +1,3 @@
-Implement Paste in Colormap editor; wrap colormap "load" in an UndoableAction.
-
-Update window title & windows menu item when the user saves a file under a new
-name.
-
 The Mariani-Silver code in Mandelbrot, Newton, Julia, and Polynomial, should be
 moved to a base class, like EDPLib in FW 1.x.
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.
@@ -22,12 +17,6 @@ Besides, while modal dialogs are a nice feature, a robust app should protect
 itself agains WMs that don't enforce modality. And application-modality is
 kinda evil if it does not prevent the modal dialog from being hidden behind
 other windows. I mean, really.
-
-Take another careful look at the colormap editor. It needs a tidy API for
-the *Actions to control it by: changing the selection, changing color cell
-values; CME should repaint as necessary (which it may not be; if using a
-private colormap, repainting is only needed when the selection changes)
-and select_cell() etc. should not appear in the Actions.
 
 Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
 giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.

@@ -4,25 +4,27 @@
 #include "Frame.h"
 
 class FileDialog : public Frame {
+    public:
+	class Listener {
+	    public:
+		Listener();
+		virtual ~Listener();
+		virtual void fileSelected(const char *filename) = 0;
+		virtual void cancelled() = 0;
+	};
+
     private:
 	char **directory;
-	void (*fileSelectedCB)(const char *filename, void *closure);
-	void *fileSelectedClosure;
-	void (*cancelledCB)(void *closure);
-	void *cancelledClosure;
+	Listener *listener;
 
     protected:
 	Widget fsb;
 
     public:
-	FileDialog(Frame *parent);
+	FileDialog(Frame *parent, Listener *listener);
 	virtual ~FileDialog();
 	virtual void close();
 	void setDirectory(char **dir);
-	void setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),
-			       void *fileSelectedClosure);
-	void setCancelledCB(void (*cancelledCB)(void *cl),
-			    void *cancelledClosure);
 
     private:
 	static void okOrCancel(Widget w, XtPointer cd, XtPointer ud);

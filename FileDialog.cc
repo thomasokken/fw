@@ -7,8 +7,20 @@
 #include "main.h"
 #include "util.h"
 
+
+/* public::public */
+FileDialog::Listener::Listener() {
+    //
+}
+
+/* public::public */
+FileDialog::Listener::~Listener() {
+    //
+}
+
+
 /* public */
-FileDialog::FileDialog(Frame *parent)
+FileDialog::FileDialog(Frame *parent, Listener *listener)
 	    : Frame(parent, true, false, true, false) {
     // I'm using the protected frame-or-dialog constructor from Frame,
     // so the FileDialog will be a modal dialog if 'parent' is non-null,
@@ -18,10 +30,7 @@ FileDialog::FileDialog(Frame *parent)
     XtAddCallback(fsb, XmNcancelCallback, okOrCancel, (XtPointer) this);
     XtManageChild(fsb);
     directory = NULL;
-    fileSelectedCB = NULL;
-    fileSelectedClosure = NULL;
-    cancelledCB = NULL;
-    cancelledClosure = NULL;
+    this->listener = listener;
 }
 
 /* public virtual */
@@ -31,8 +40,7 @@ FileDialog::~FileDialog() {
 
 /* public virtual */ void
 FileDialog::close() {
-    if (cancelledCB != NULL)
-	cancelledCB(cancelledClosure);
+    listener->cancelled();
 }
 
 /* public */ void
@@ -45,20 +53,6 @@ FileDialog::setDirectory(char **directory) {
 	XtSetValues(fsb, &arg, 1);
 	XmStringFree(s);
     }
-}
-
-/* public */ void
-FileDialog::setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),
-			      void *fileSelectedClosure) {
-    this->fileSelectedCB = fileSelectedCB;
-    this->fileSelectedClosure = fileSelectedClosure;
-}
-
-/* public */ void
-FileDialog::setCancelledCB(void (*cancelledCB)(void *cl),
-			   void *cancelledClosure) {
-    this->cancelledCB = cancelledCB;
-    this->cancelledClosure = cancelledClosure;
 }
 
 /* private static */ void
@@ -82,12 +76,10 @@ FileDialog::okOrCancel(Widget w, XtPointer ud, XtPointer cd) {
 	}
 	char *filename;
 	if (XmStringGetLtoR(cbs->value, XmFONTLIST_DEFAULT_TAG, &filename)) {
-	    if (This->fileSelectedCB != NULL)
-		This->fileSelectedCB(filename, This->fileSelectedClosure);
+	    This->listener->fileSelected(filename);
 	    XtFree(filename);
 	}
     } else if (cbs->reason == XmCR_CANCEL) {
-	if (This->cancelledCB != NULL)
-	    This->cancelledCB(This->cancelledClosure);
+	This->listener->cancelled();
     }
 }

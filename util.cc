@@ -3,6 +3,8 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <limits.h>
+#include <stdlib.h>
 #include <signal.h>
 #include <unistd.h>
 
@@ -80,6 +82,27 @@ char *basename(const char *fullname) {
 }
 
 char *canonical_pathname(const char *fullname) {
+    char buf[PATH_MAX];
+    if (realpath(fullname, buf) == NULL)
+	return strclone(fullname);
+    else
+	return strclone(buf);
+
+#if 0
+    // This does what realpath(3) does, except for resolving symlinks.
+    // According to the realpath(3) manpage, on Solaris you may actually
+    // be better off with my code since it always turns relative pathnames
+    // into absolute ones, and apparently the Solaris realpath() does not:
+    // Quote (this is from the man-pages-1.48-2 package from Red Hat 7.3):
+    //
+    // > The  BSD  4.4,  Linux  and SUSv2 versions always return an
+    // > absolute path name. Solaris may  return  a  relative  path
+    // > name when the path argument is relative.  [...]
+    //
+    // "May" return a relative path? What does that mean?
+    // I guess I should write my own version. All that's missing from my code
+    // now is the symlinks bit... That shouldn't be too hard...
+
     char buf[10000];
     buf[0] = 0;
 
@@ -110,6 +133,7 @@ char *canonical_pathname(const char *fullname) {
     }
 	
     return strclone(buf);
+#endif
 }
 
 bool is_grayscale(const FWColor *cmap) {
@@ -597,6 +621,10 @@ int char_array_alignment() {
 	char b[13];
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
+}
+
+void beep() {
+     XBell(g_display, 100);
 }
 
 void crash() {

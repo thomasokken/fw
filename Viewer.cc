@@ -85,11 +85,11 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
     init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
 
-class UMListener : public UndoManager::Listener {
+class UndoManagerListener : public UndoManager::Listener {
     private:
 	Viewer *viewer;
     public:
-	UMListener(Viewer *viewer) {
+	UndoManagerListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	virtual void titleChanged(const char *undo, const char *redo) {
@@ -98,11 +98,11 @@ class UMListener : public UndoManager::Listener {
 	}
 };
 
-class CMEOwner : public ColormapEditor::Owner {
+class ColormapEditorListener : public ColormapEditor::Listener {
     private:
 	Viewer *viewer;
     public:
-	CMEOwner(Viewer *viewer) {
+	ColormapEditorListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	virtual void cmeClosed() {
@@ -132,9 +132,9 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     finished = false;
     untitled = true;
     undomanager = new UndoManager;
-    undomanager->addListener(new UMListener(this));
+    undomanager->addListener(new UndoManagerListener(this));
     saved_undo_id = undomanager->getCurrentId();
-    cmeproxy = NULL;
+    cmelistener = NULL;
 
     // The 'dirty' flag is used to track changes made by the plugin. Viewer
     // sets this flag whenever it calls plugin->start() or plugin->restart()
@@ -602,8 +602,8 @@ Viewer::~Viewer() {
 	plugin = NULL;
     }
     delete undomanager;
-    if (cmeproxy != NULL)
-	delete cmeproxy;
+    if (cmelistener != NULL)
+	delete cmelistener;
     if (colormap != g_colormap) {
 	XFreeColormap(g_display, colormap);
 	setColormap(g_colormap);
@@ -695,7 +695,7 @@ Viewer::pluginFinished(bool notify) {
 	snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), filename == NULL ? "(null)" : filename);
 	TextViewer *tv = new TextViewer(buf);
 	tv->raise();
-	doBeep();
+	beep();
     }
 }
 
@@ -1009,13 +1009,12 @@ Viewer::colormapChanged() {
     }
 }
 
-// SIDListener for use after "Close" or closing the window thru the WM.
-class SIDListener2 : public SaveImageDialog::Listener {
+class SaveBeforeClosingListener : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
 	SaveImageDialog *sid;
     public:
-	SIDListener2(Viewer *viewer) {
+	SaveBeforeClosingListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	void setSID(SaveImageDialog *sid) {
@@ -1034,12 +1033,12 @@ class SIDListener2 : public SaveImageDialog::Listener {
 	}
 };
 		
-class YNCListener : public YesNoCancelDialog::Listener {
+class YesNoCancelBeforeClosingListener : public YesNoCancelDialog::Listener {
     private:
 	Viewer *viewer;
 	YesNoCancelDialog *ync;
     public:
-	YNCListener(Viewer *viewer) {
+	YesNoCancelBeforeClosingListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	void setYNC(YesNoCancelDialog *ync) {
@@ -1048,7 +1047,7 @@ class YNCListener : public YesNoCancelDialog::Listener {
 	virtual void yes() {
 	    delete ync;
 	    if (viewer->filename == NULL) {
-		SIDListener2 *sidlistener = new SIDListener2(viewer);
+		SaveBeforeClosingListener *sidlistener = new SaveBeforeClosingListener(viewer);
 		SaveImageDialog *sid = new SaveImageDialog(
 			viewer,
 			viewer->filename,
@@ -1081,7 +1080,7 @@ Viewer::close() {
 	delete this;
 	return;
     }
-    YNCListener *ynclistener = new YNCListener(this);
+    YesNoCancelBeforeClosingListener *ynclistener = new YesNoCancelBeforeClosingListener(this);
     YesNoCancelDialog *ync = new YesNoCancelDialog(
 	    this,
 	    "Save changes before closing?",
@@ -1225,7 +1224,7 @@ Viewer::menucallback(void *closure, const char *id) {
 /* private */ void
 Viewer::menucallback2(const char *id) {
     if (strcmp(id, "File.Beep") == 0)
-	doBeep();
+	beep();
     else if (strncmp(id, "File.New.", 9) == 0)
 	doNew(id + 9);
     else if (strcmp(id, "File.Clone") == 0)
@@ -1316,43 +1315,6 @@ Viewer::radiocallback2(const char *id, const char *value) {
 	doScale(value);
 }
 
-/* private static */ void
-Viewer::doOpen2(const char *filename, void *closure) {
-    char *type = NULL;
-    char *plugin_name = NULL;
-    void *plugin_data = NULL;
-    int plugin_data_length;
-    FWPixmap pm;
-    char *message = NULL;
-    if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
-		      &plugin_data_length, &pm, &message)) {
-	// Read successful; open viewer
-	new Viewer(plugin_name, plugin_data,
-		   plugin_data_length, &pm,
-		   filename, type);
-	if (message != NULL) {
-	    TextViewer *tv = new TextViewer(message);
-	    tv->raise();
-	    doBeep();
-	}
-    } else {
-	// TODO: nicer error reporting
-	char buf[1024];
-	snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
-	TextViewer *tv = new TextViewer(buf);
-	tv->raise();
-	doBeep();
-    }
-    if (type != NULL)
-	free(type);
-    if (plugin_name != NULL)
-	free(plugin_name);
-    if (plugin_data != NULL)
-	free(plugin_data);
-    if (message != NULL)
-	free(message);
-}
-
 /* private */ bool
 Viewer::save(const char *name, const char *type) {
     const char *plugin_name = plugin->name();
@@ -1368,6 +1330,21 @@ Viewer::save(const char *name, const char *type) {
     bool success;
     if (ImageIO::swrite(name, type, plugin_name, plugin_data,
 			 plugin_data_length, &pm, &message)) {
+	if (filename == NULL || strcmp(name, filename) != 0) {
+	    char buf[1024];
+	    snprintf(buf, 1024, "Windows.X.%d", id);
+	    Iterator *iter = instances->iterator();
+	    char *label = basename(name);
+	    while (iter->hasNext()) {
+		Viewer *v = (Viewer *) iter->next();
+		v->windowsmenu->changeLabel(buf, label);
+	    }
+	    delete iter;
+	    snprintf(buf, 1024, "%s (%s)", label, plugin->name());
+	    setTitle(buf);
+	    setIconTitle(buf);
+	    free(label);
+	}
 	if (filename != NULL)
 	    free(filename);
 	filename = strclone(name);
@@ -1390,69 +1367,44 @@ Viewer::save(const char *name, const char *type) {
     return success;
 }
 
-/* private static */ void
-Viewer::doLoadColors2(const char *filename, void *closure) {
-    ((Viewer *) closure)->doLoadColors3(filename);
-}
-
-/* private */ void
-Viewer::doLoadColors3(const char *filename) {
-    FILE *file = fopen(filename, "r");
-    if (file == NULL) {
-	// TODO - decent error reporting
-	fprintf(stderr, "Can't open \"%s\" for reading (%s).\n",
-			    filename, strerror(errno));
-	return;
-    }
-    FWColor *newcmap = new FWColor[256];
-    for (int i = 0; i < 256; i++) {
-	int r, g, b;
-	if (fscanf(file, "%d %d %d", &r, &g, &b) != 3)
-	    goto failure;
-	if (r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255)
-	    goto failure;
-	newcmap[i].r = r;
-	newcmap[i].g = g;
-	newcmap[i].b = b;
-    }
-    delete[] pm.cmap;
-    pm.cmap = newcmap;
-    fclose(file);
-    colormapChanged();
-    if (cme != NULL)
-	cme->colormapChanged(colormap);
-    return;
-
-    failure:
-    // TODO - decent error reporting
-    doBeep();
-    delete[] newcmap;
-    fclose(file);
-}
-
-/* private static */ void
-Viewer::doSaveColors2(const char *filename, void *closure) {
-    ((Viewer *) closure)->doSaveColors3(filename);
-}
-
-/* private */ void
-Viewer::doSaveColors3(const char *filename) {
-    FILE *file = fopen(filename, "w");
-    if (file == NULL) {
-	// TODO - decent error reporting
-	fprintf(stderr, "Can't open \"%s\" for writing (%s).\n",
-			    filename, strerror(errno));
-	return;
-    }
-    for (int i = 0; i < 256; i++)
-	fprintf(file, "%d %d %d\n", pm.cmap[i].r, pm.cmap[i].g, pm.cmap[i].b);
-    fclose(file);
-}
-
-/* private static */ void
-Viewer::doBeep() {
-    XBell(g_display, 100);
-}
+class LoadColorsAction : public UndoableAction {
+    private:
+	ColormapEditorListener *listener;
+	FWPixmap *pm;
+	FWColor oldcolors[256];
+	FWColor newcolors[256];
+    public:
+	LoadColorsAction(ColormapEditorListener *listener, FWPixmap *pm, FWColor *nc) {
+	    this->listener = listener;
+	    this->pm = pm;
+	    for (int i = 0; i < 256; i++) {
+		oldcolors[i] = pm->cmap[i];
+		newcolors[i] = nc[i];
+	    }
+	}
+	virtual void undo() {
+	    for (int i = 0; i < 256; i++)
+		pm->cmap[i] = oldcolors[i];
+	    ColormapEditor *cme = listener->getCME();
+	    if (cme != NULL)
+		cme->colorsChanged(0, 255);
+	    listener->colormapChanged();
+	}
+	virtual void redo() {
+	    for (int i = 0; i < 256; i++)
+		pm->cmap[i] = newcolors[i];
+	    ColormapEditor *cme = listener->getCME();
+	    if (cme != NULL)
+		cme->colorsChanged(0, 255);
+	    listener->colormapChanged();
+	}
+	virtual const char *getUndoTitle() {
+	    return "Undo Load Colors";
+	}
+	virtual const char *getRedoTitle() {
+	    return "Redo Load Colors";
+	}
+};
 
 /* private */ void
 Viewer::doNew(const char *pluginname) {
@@ -1464,13 +1416,68 @@ Viewer::doClone() {
     new Viewer(plugin);
 }
 
+class OpenListener : public FileDialog::Listener {
+    private:
+	Viewer *viewer;
+	FileDialog *dialog;
+    public:
+	OpenListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	void setDialog(FileDialog *dialog) {
+	    this->dialog = dialog;
+	}
+	virtual void fileSelected(const char *filename) {
+	    char *type = NULL;
+	    char *plugin_name = NULL;
+	    void *plugin_data = NULL;
+	    int plugin_data_length;
+	    FWPixmap pm;
+	    char *message = NULL;
+	    if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
+			    &plugin_data_length, &pm, &message)) {
+		// Read successful; open viewer
+		new Viewer(plugin_name, plugin_data,
+			plugin_data_length, &pm,
+			filename, type);
+		if (message != NULL) {
+		    TextViewer *tv = new TextViewer(message);
+		    tv->raise();
+		    beep();
+		}
+	    } else {
+		// TODO: nicer error reporting
+		char buf[1024];
+		snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
+		TextViewer *tv = new TextViewer(buf);
+		tv->raise();
+		beep();
+	    }
+	    if (type != NULL)
+		free(type);
+	    if (plugin_name != NULL)
+		free(plugin_name);
+	    if (plugin_data != NULL)
+		free(plugin_data);
+	    if (message != NULL)
+		free(message);
+	    delete dialog;
+	    delete this;
+	}
+	virtual void cancelled() {
+	    delete dialog;
+	    delete this;
+	}
+};
+
 /* private */ void
 Viewer::doOpen() {
-    FileDialog *opendialog = new FileDialog(NULL);
+    OpenListener *listener = new OpenListener(this);
+    FileDialog *opendialog = new FileDialog(NULL, listener);
+    listener->setDialog(opendialog);
     opendialog->setTitle("Open File");
     opendialog->setIconTitle("Open File");
     opendialog->setDirectory(&file_directory);
-    opendialog->setFileSelectedCB(doOpen2, this);
     opendialog->raise();
 }
 
@@ -1487,13 +1494,12 @@ Viewer::doSave() {
 	save(filename, filetype);
 }
 
-// SIDListener for use after "Save As" (or "Save" when filename == NULL)
-class SIDListener : public SaveImageDialog::Listener {
+class SaveAsListener : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
 	SaveImageDialog *sid;
     public:
-	SIDListener(Viewer *viewer) {
+	SaveAsListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	void setSID(SaveImageDialog *sid) {
@@ -1513,7 +1519,7 @@ class SIDListener : public SaveImageDialog::Listener {
 
 /* private */ void
 Viewer::doSaveAs() {
-    SIDListener *sidlistener = new SIDListener(this);
+    SaveAsListener *sidlistener = new SaveAsListener(this);
     SaveImageDialog *sid = new SaveImageDialog(this, filename,
 					       filetype, sidlistener);
     sidlistener->setSID(sid);
@@ -1548,13 +1554,12 @@ Viewer::doQuit() {
     doQuit2();
 }
 
-// SIDListener for use after "Quit"
-class SIDListener3 : public SaveImageDialog::Listener {
+class SaveBeforeQuittingListener : public SaveImageDialog::Listener {
     private:
 	Viewer *viewer;
 	SaveImageDialog *sid;
     public:
-	SIDListener3(Viewer *viewer) {
+	SaveBeforeQuittingListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	void setSID(SaveImageDialog *sid) {
@@ -1575,12 +1580,12 @@ class SIDListener3 : public SaveImageDialog::Listener {
 };
 
 		
-class YNCListener2 : public YesNoCancelDialog::Listener {
+class YesNoCancelBeforeQuittingListener : public YesNoCancelDialog::Listener {
     private:
 	Viewer *viewer;
 	YesNoCancelDialog *ync;
     public:
-	YNCListener2(Viewer *viewer) {
+	YesNoCancelBeforeQuittingListener(Viewer *viewer) {
 	    this->viewer = viewer;
 	}
 	void setYNC(YesNoCancelDialog *ync) {
@@ -1589,7 +1594,7 @@ class YNCListener2 : public YesNoCancelDialog::Listener {
 	virtual void yes() {
 	    delete ync;
 	    if (viewer->filename == NULL) {
-		SIDListener3 *sidlistener = new SIDListener3(viewer);
+		SaveBeforeQuittingListener *sidlistener = new SaveBeforeQuittingListener(viewer);
 		SaveImageDialog *sid = new SaveImageDialog(
 			viewer,
 			viewer->filename,
@@ -1640,9 +1645,14 @@ Viewer::doQuit2() {
 	}
 
 	char buf[1024];
-	snprintf(buf, 1024, "Save changes to \"%s\" before quitting?",
-		 viewer->filename == NULL ? "Untitled" : viewer->filename);
-	YNCListener2 *ynclistener = new YNCListener2(viewer);
+	char *bn = viewer->filename == NULL ? (char *) "Untitled"
+					    : basename(viewer->filename);
+	snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
+	if (viewer->filename != NULL)
+	    free(bn);
+
+	YesNoCancelBeforeQuittingListener *ynclistener =
+			    new YesNoCancelBeforeQuittingListener(viewer);
 	YesNoCancelDialog *ync = new YesNoCancelDialog(viewer,
 					    buf, ynclistener);
 	ynclistener->setYNC(ync);
@@ -1663,62 +1673,163 @@ Viewer::doRedo() {
 
 /* private */ void
 Viewer::doCut() {
-    doBeep();
+    beep();
 }
 
 /* private */ void
 Viewer::doCopy() {
-    doBeep();
+    beep();
 }
 
 /* private */ void
 Viewer::doPaste() {
-    doBeep();
+    beep();
 }
 
 /* private */ void
 Viewer::doClear() {
-    doBeep();
+    beep();
 }
+
+class LoadColorsListener : public FileDialog::Listener {
+    private:
+	Viewer *viewer;
+	FileDialog *dialog;
+    public:
+	LoadColorsListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	void setDialog(FileDialog *dialog) {
+	    this->dialog = dialog;
+	}
+	void fileSelected(const char *filename) {
+	    FILE *file = fopen(filename, "r");
+	    if (file == NULL) {
+		char buf[1024];
+		snprintf(buf, 1024, "Can't open \"%s\" for reading (%s).\n",
+				    filename, strerror(errno));
+		TextViewer *tv = new TextViewer(buf);
+		tv->raise();
+		beep();
+		delete dialog;
+		delete this;
+		return;
+	    }
+
+	    FWColor newcmap[256];
+	    for (int i = 0; i < 256; i++) {
+		int r, g, b;
+		if (fscanf(file, "%d %d %d", &r, &g, &b) != 3
+			|| r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+		    char buf[1024];
+		    snprintf(buf, 1024, "The file \"%s\" is not formatted correctly.\nIt should be a plain text file, containing 256 lines, with\neach line containing three decimal numbers in the range 0..255,\nrepresenting red, green, and blue intensities.", filename);
+		    TextViewer *tv = new TextViewer(buf);
+		    tv->raise();
+		    beep();
+		    fclose(file);
+		    delete dialog;
+		    delete this;
+		    return;
+		}
+		newcmap[i].r = r;
+		newcmap[i].g = g;
+		newcmap[i].b = b;
+	    }
+
+	    if (viewer->cmelistener == NULL)
+		viewer->cmelistener = new ColormapEditorListener(viewer);
+	    LoadColorsAction *action = new LoadColorsAction(
+				    viewer->cmelistener, &viewer->pm, newcmap);
+	    viewer->undomanager->addAction(action);
+	    action->redo();
+
+	    fclose(file);
+	    delete dialog;
+	    delete this;
+	}
+	void cancelled() {
+	    delete dialog;
+	    delete this;
+	}
+};
 
 /* private */ void
 Viewer::doLoadColors() {
     if (pm.cmap == NULL) {
-	doBeep();
+	beep();
 	return;
     }
-    FileDialog *loaddialog = new FileDialog(NULL);
+    LoadColorsListener *listener = new LoadColorsListener(this);
+    FileDialog *loaddialog = new FileDialog(NULL, listener);
+    listener->setDialog(loaddialog);
     loaddialog->setTitle("Load Colormap");
     loaddialog->setIconTitle("Load Colormap");
     loaddialog->setDirectory(&colormap_directory);
-    loaddialog->setFileSelectedCB(doLoadColors2, this);
     loaddialog->raise();
 }
+
+class SaveColorsListener : public FileDialog::Listener {
+    private:
+	Viewer *viewer;
+	FileDialog *dialog;
+    public:
+	SaveColorsListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	void setDialog(FileDialog *dialog) {
+	    this->dialog = dialog;
+	}
+	virtual void fileSelected(const char *filename) {
+	    FILE *file = fopen(filename, "w");
+	    if (file == NULL) {
+		char buf[1024];
+		snprintf(buf, 1024, "Can't open \"%s\" for writing (%s).\n",
+				    filename, strerror(errno));
+		TextViewer *tv = new TextViewer(buf);
+		tv->raise();
+		beep();
+		delete dialog;
+		delete this;
+		return;
+	    }
+	    for (int i = 0; i < 256; i++)
+		fprintf(file, "%d %d %d\n", viewer->pm.cmap[i].r,
+			viewer->pm.cmap[i].g, viewer->pm.cmap[i].b);
+	    delete dialog;
+	    fclose(file);
+	    delete this;
+	}
+	virtual void cancelled() {
+	    delete dialog;
+	    delete this;
+	}
+};
 
 /* private */ void
 Viewer::doSaveColors() {
     if (pm.cmap == NULL) {
-	doBeep();
+	beep();
 	return;
     }
-    FileDialog *savedialog = new FileDialog(NULL);
+    SaveColorsListener *listener = new SaveColorsListener(this);
+    FileDialog *savedialog = new FileDialog(NULL, listener);
+    listener->setDialog(savedialog);
     savedialog->setTitle("Save Colormap");
     savedialog->setIconTitle("Save Colormap");
     savedialog->setDirectory(&colormap_directory);
-    savedialog->setFileSelectedCB(doSaveColors2, this);
     savedialog->raise();
 }
 
 /* private */ void
 Viewer::doEditColors() {
     if (pm.depth != 8) {
-	doBeep();
+	beep();
 	return;
     }
-    if (cmeproxy == NULL)
-	cmeproxy = new CMEOwner(this);
+    if (cmelistener == NULL)
+	cmelistener = new ColormapEditorListener(this);
     if (cme == NULL)
-	cme = new ColormapEditor(cmeproxy, &pm, undomanager, colormap);
+	cme = new ColormapEditor(cmelistener, &pm, undomanager, colormap);
     cme->raise();
 }
 
@@ -1736,7 +1847,7 @@ Viewer::doStopOthers() {
 /* private */ void
 Viewer::doStop() {
     if (finished)
-	doBeep();
+	beep();
     else
 	plugin->stop();
 }
@@ -1755,7 +1866,7 @@ Viewer::doStopAll() {
 /* private */ void
 Viewer::doContinue() {
     if (finished)
-	doBeep();
+	beep();
     else {
 	if (plugin->restart()) {
 	    finished = true;
@@ -1846,7 +1957,7 @@ Viewer::doEnlarge() {
 	sprintf(buf, "%d", scale);
 	scalemenu->setRadioValue("Windows.Scale", buf, true);
     } else
-	doBeep();
+	beep();
 }
 
 /* private */ void
@@ -1859,14 +1970,14 @@ Viewer::doReduce() {
 	sprintf(buf, "%d", scale);
 	scalemenu->setRadioValue("Windows.Scale", buf, true);
     } else
-	doBeep();
+	beep();
 }
 
 /* private */ void
 Viewer::doWindows(const char *sid) {
     int nid;
     if (sscanf(sid, "%d", &nid) != 1)
-	doBeep();
+	beep();
     else {
 	Iterator *iter = instances->iterator();
 	while (iter->hasNext()) {
@@ -1878,7 +1989,7 @@ Viewer::doWindows(const char *sid) {
 	    }
 	}
 	delete iter;
-	doBeep();
+	beep();
     }
 }
 

@@ -210,8 +210,8 @@ Plugin::get(const char *name) {
     else if (strcmp(name, "About") == 0)
 	return new About();
 
-    char dlname[_POSIX_PATH_MAX];
-    snprintf(dlname, _POSIX_PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
+    char dlname[PATH_MAX];
+    snprintf(dlname, PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
     if (dl == NULL) {
 	if (g_verbosity >= 1)
@@ -232,8 +232,8 @@ Plugin::release(Plugin *plugin) {
 
 /* public static */ char **
 Plugin::list() {
-    char dirname[_POSIX_PATH_MAX];
-    snprintf(dirname, _POSIX_PATH_MAX, "%s/.fw", getenv("HOME"));
+    char dirname[PATH_MAX];
+    snprintf(dirname, PATH_MAX, "%s/.fw", getenv("HOME"));
     DIR *dir = opendir(dirname);
     if (dir == NULL)
 	return NULL;

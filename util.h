@@ -39,6 +39,8 @@ int long_double_alignment();
 int char_pointer_alignment();
 int char_array_alignment();
 
+void beep();
+
 void crash();
 
 
