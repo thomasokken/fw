@@ -56,6 +56,7 @@ Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
     priv_cmap = None;
     filename = NULL;
     filetype = NULL;
+    savedialog = NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
@@ -393,6 +394,8 @@ Viewer::finish_init() {
 
 /* public */
 Viewer::~Viewer() {
+    if (savedialog != NULL)
+	savedialog->close();
     if (filename != NULL)
 	free(filename);
     if (filetype != NULL)
@@ -2165,7 +2168,7 @@ Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
     int plugin_data_length;
     This->plugin->serialize(&plugin_data, &plugin_data_length);
     char *message = NULL;
-    if (!ImageIO::swrite(type, filename, plugin_name, plugin_data,
+    if (!ImageIO::swrite(filename, type, plugin_name, plugin_data,
 			 plugin_data_length, &This->pm, &message)) {
 	// TODO: nicer error reporting
 	fprintf(stderr, "Saving \"%s\" failed (%s).\n", filename, message);
@@ -2174,6 +2177,13 @@ Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
 	free(plugin_data);
     if (message != NULL)
 	free(message);
+    This->savedialog = NULL;
+}
+
+/* private static */ void
+Viewer::doSaveAsCancelled(void *closure) {
+    Viewer *This = (Viewer *) closure;
+    This->savedialog = NULL;
 }
 
 /* private static */ void
@@ -2265,11 +2275,18 @@ Viewer::doSave() {
 
 /* private */ void
 Viewer::doSaveAs() {
-    SaveImageDialog *savedialog = new SaveImageDialog();
+    if (savedialog != NULL) {
+	savedialog->raise();
+	return;
+    }
+    savedialog = new SaveImageDialog();
     savedialog->setTitle("Save File");
     savedialog->setIconTitle("Save File");
     savedialog->setDirectory(&file_directory);
+    if (filename != NULL)
+	savedialog->setFile(filename, filetype);
     savedialog->setImageSelectedCB(doSaveAs2, this);
+    savedialog->setCancelledCB(doSaveAsCancelled, this);
     savedialog->raise();
 }
 

@@ -289,8 +289,88 @@ class MandelbrotMS : public Plugin {
 	    if (!finished)
 		start_working();
 	}
+	
+	virtual void dump() {
+	    dumpint(width);
+	    dumpint(height);
+	    dumpdouble(xmin);
+	    dumpdouble(xmax);
+	    dumpdouble(ymin);
+	    dumpdouble(ymax);
+	    dumpint(maxiter);
+	    dumpdouble(limit);
+	    dumpint(bands);
+	    dumpdouble(limit2);
+	    dumpint(ndirty);
+	    dumpint(b2);
+	    dumpdouble(step);
+	    dumpdouble(x1);
+	    dumpdouble(y1);
+	    dumpdouble(x2);
+	    dumpdouble(y2);
+	    dumpdouble(xm);
+	    dumpdouble(ym);
+	    dumpint(state);
+	    dumpint(value);
+	    dumpint(sp);
+	    dumprect(&tos);
+	    dumprect(&dirty);
+	    dumpint(hm);
+	    dumpint(vm);
+	    dumpint(hc);
+	    dumpint(vc);
+	    for (int i = 0; i < 50; i++)
+		dumprect(&stack[i]);
+	    dumpint(finished ? 1 : 0);
+	}
+
+	virtual void undump() {
+	    width = undumpint();
+	    height = undumpint();
+	    xmin = undumpdouble();
+	    xmax = undumpdouble();
+	    ymin = undumpdouble();
+	    ymax = undumpdouble();
+	    maxiter = undumpint();
+	    limit = undumpdouble();
+	    bands = undumpint();
+	    limit2 = undumpdouble();
+	    ndirty = undumpint();
+	    b2 = undumpint();
+	    step = undumpdouble();
+	    x1 = undumpdouble();
+	    y1 = undumpdouble();
+	    x2 = undumpdouble();
+	    y2 = undumpdouble();
+	    xm = undumpdouble();
+	    ym = undumpdouble();
+	    state = undumpint();
+	    value = undumpint();
+	    sp = undumpint();
+	    undumprect(&tos);
+	    undumprect(&dirty);
+	    hm = undumpint();
+	    vm = undumpint();
+	    hc = undumpint();
+	    vc = undumpint();
+	    for (int i = 0; i < 50; i++)
+		undumprect(&stack[i]);
+	    finished = undumpint() != 1;
+	}
 
     private:
+	void dumprect(const rect *r) {
+	    dumpint(r->top);
+	    dumpint(r->left);
+	    dumpint(r->bottom);
+	    dumpint(r->right);
+	}
+	void undumprect(rect *r) {
+	    r->top = undumpint();
+	    r->left = undumpint();
+	    r->bottom = undumpint();
+	    r->right = undumpint();
+	}
 	void recurse() {
 	    stack[sp + 1].top = vm;
 	    stack[sp + 1].left = stack[sp + 0].left;

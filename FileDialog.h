@@ -8,6 +8,8 @@ class FileDialog : public Frame {
 	char **directory;
 	void (*fileSelectedCB)(const char *filename, void *closure);
 	void *fileSelectedClosure;
+	void (*cancelledCB)(void *closure);
+	void *cancelledClosure;
 
     protected:
 	Widget fsb;
@@ -18,6 +20,8 @@ class FileDialog : public Frame {
 	void setDirectory(char **dir);
 	void setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),
 			       void *fileSelectedClosure);
+	void setCancelledCB(void (*cancelledCB)(void *cl),
+			    void *cancelledClosure);
 
     private:
 	static void okOrCancel(Widget w, XtPointer cd, XtPointer ud);

@@ -15,10 +15,12 @@ Menu::Menu() {
     commandCallback = NULL;
     toggleCallback = NULL;
     radioCallback = NULL;
+    commandIdToWidgetMap = new Map;
     toggleIdToWidgetMap = new Map;
     radioIdToWidgetMap = new Map;
     radioGroupToSelectedWidgetMap = new Map;
     radioGroupToSelectedIdMap = new Map;
+    optionmenu = NULL;
 }
 
 /* public */
@@ -28,6 +30,7 @@ Menu::~Menu() {
 	delete firstitem;
 	firstitem = next;
     }
+    delete commandIdToWidgetMap;
     delete toggleIdToWidgetMap;
     delete radioIdToWidgetMap;
     delete radioGroupToSelectedWidgetMap;
@@ -140,6 +143,7 @@ Menu::makeWidgets(Widget parent) {
 					     xmPushButtonWidgetClass,
 					     parent,
 					     args, nargs);
+	    commandIdToWidgetMap->put(item->id, w);
 	    XtAddCallback(w, XmNactivateCallback,
 			  commandCB, (XtPointer) item);
 	} else if (item->type == ITEM_TOGGLE) {
@@ -265,6 +269,24 @@ Menu::setRadioValue(const char *id, const char *value, bool doCallbacks) {
 
     if (doCallbacks && radioCallback != NULL)
 	radioCallback(radioClosure, id, value);
+}
+
+/* public */ void
+Menu::setOptionMenu(Widget w) {
+    optionmenu = w;
+}
+
+/* public */ void
+Menu::setSelected(const char *id) {
+    // Should be used when the menu is used with an OptionMenu
+    if (optionmenu == NULL)
+	crash();
+    Widget sel_w = (Widget) commandIdToWidgetMap->get(id);
+    if (sel_w != NULL) {
+	Arg arg;
+	XtSetArg(arg, XmNmenuHistory, sel_w);
+	XtSetValues(optionmenu, &arg, 1);
+    }
 }
 
 /* private static */ void

@@ -2,7 +2,9 @@
 #define UTIL_H 1
 
 char *strclone(const char *src);
-int crc32(void *buf, int size);
+unsigned int crc32(const void *buf, int size);
+bool isDirectory(const char *name);
+bool isFile(const char *name);
 void crash();
 
 class Iterator {

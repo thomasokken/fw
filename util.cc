@@ -1,8 +1,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
 #include <sys/types.h>
 #include <signal.h>
+#include <unistd.h>
 
 #include "util.h"
 
@@ -19,22 +21,55 @@ char *strclone(const char *src) {
     return dst;
 }
 
-int crc32(void *buf, int size) {
-    // TODO -- actual CRCs!
-    // Just XORing for now.
-    int res = 0;
-    int w = 0;
-    for (int i = 0; i < size + 3; i++) {
-	if (i >= size)
-	    w <<= 8;
-	else
-	    w = (w << 8) + *(((unsigned char *) buf) + i);
-	if ((i & 3) == 3) {
-	    res ^= w;
-	    w = 0;
+unsigned int crc32(const void *buf, int size) {
+    static unsigned int crctab[256];
+    static bool inited = false;
+    
+    if (!inited) {
+	unsigned int crc = 0;
+	for (int i = 0; i < 256; i++) {
+	    crc = i << 24;
+	    for (int j = 0; j < 8; j++) {
+		if (crc & 0x80000000)
+		    crc = (crc << 1) ^ 0x04c11db7;
+		else
+		    crc <<= 1;
+	    }
+	    crctab[i] = crc;
 	}
+	inited = true;
     }
-    return res;
+
+    if (size < 4)
+	return 0;
+    
+    unsigned int result = 0;
+    const unsigned char *data = (const unsigned char *) buf;
+    result = *data++ << 24;
+    result |= *data++ << 16;
+    result |= *data++ << 8;
+    result |= *data++;
+    result = ~result;
+    size -= 4;
+
+    for (int i = 0; i < size; i++)
+	result = (result << 8 | *data++) ^ crctab[result >> 24];
+
+    return result;
+}
+
+bool isDirectory(const char *name) {
+    struct stat st;
+    if (stat(name, &st) == -1)
+	return false;
+    return S_ISDIR(st.st_mode);
+}
+
+bool isFile(const char *name) {
+    struct stat st;
+    if (stat(name, &st) == -1)
+	return false;
+    return S_ISREG(st.st_mode);
 }
 
 void crash() {

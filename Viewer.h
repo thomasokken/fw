@@ -7,11 +7,13 @@
 #include "FWPixmap.h"
 
 class Plugin;
+class SaveImageDialog;
 
 class Viewer : private Frame {
     private:
 	char *filename;
 	char *filetype;
+	SaveImageDialog *savedialog;
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
@@ -72,6 +74,7 @@ class Viewer : private Frame {
 	static Boolean deleteLater2(XtPointer ud);
 	static void doOpen2(const char *fn, void *cl);
 	static void doSaveAs2(const char *fn, const char *type, void *cl);
+	static void doSaveAsCancelled(void *cl);
 	static void doLoadColors2(const char *fn, void *cl);
 	void doLoadColors3(const char *fn);
 	static void doSaveColors2(const char *fn, void *cl);

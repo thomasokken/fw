@@ -1,5 +1,6 @@
 #include <Xm/Form.h>
 #include <Xm/RowColumn.h>
+#include <stdlib.h>
 
 #include "SaveImageDialog.h"
 #include "ImageIO.h"
@@ -29,6 +30,7 @@ SaveImageDialog::SaveImageDialog() {
     XtSetValues(cascadebutton, args, 1);
 
     typeMenu = new Menu;
+    typeMenu->setOptionMenu(option);
     Iterator *iter = ImageIO::list();
     type = NULL;
     while (iter->hasNext()) {
@@ -47,6 +49,34 @@ SaveImageDialog::SaveImageDialog() {
 /* public virtual */
 SaveImageDialog::~SaveImageDialog() {
     delete typeMenu;
+}
+
+/* public */ void
+SaveImageDialog::setFile(const char *filename, const char *type) {
+    Arg args[2];
+    char *dirname;
+    if (isDirectory(filename))
+	dirname = (char *) filename;
+    else {
+	dirname = strclone(filename);
+	char *lastslash = strrchr(dirname, '/');
+	if (lastslash != NULL)
+	    lastslash[1] = 0;
+    }
+    XmString d = XmStringCreateLocalized(dirname);
+    XtSetArg(args[0], XmNdirectory, d);
+    XtSetValues(fsb, args, 1);
+    XmStringFree(d);
+    if (dirname != filename)
+	free(dirname);
+
+    Widget text = XtNameToWidget(fsb, "Text");
+    XtSetArg(args[0], XmNvalue, filename);
+    XtSetArg(args[1], XmNcursorPosition, strlen(filename));
+    XtSetValues(text, args, 2);
+
+    typeMenu->setSelected(type);
+    this->type = type;
 }
 
 /* public */ void

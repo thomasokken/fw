@@ -15,6 +15,7 @@ class SaveImageDialog : public FileDialog {
     public:
 	SaveImageDialog();
 	virtual ~SaveImageDialog();
+	void setFile(const char *name, const char *type);
 	void setImageSelectedCB(
 	    void (*imageSelectedCB)(const char *fn, const char *type, void *cl),
 	    void *imageSelectedClosure);

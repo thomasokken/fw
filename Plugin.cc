@@ -46,7 +46,7 @@ struct DumpInfo {
 	    buf = (char *) realloc(buf, newsize);
 	    bufsize = newsize;
 	}
-	memcpy(buf + bufsize, b, n);
+	memcpy(buf + bufptr, b, n);
 	bufptr += n;
     }
     int getchar() {
@@ -177,6 +177,8 @@ Plugin::list() {
 Plugin::serialize(void **buf, int *nbytes) {
     DumpInfo *di = new DumpInfo;
     dump_info = di;
+    const char *pn = name();
+    dumpstring(pn == NULL ? "Null" : pn);
     dump();
     *buf = di->buf;
     *nbytes = di->bufptr;

@@ -1,4 +1,4 @@
-#include <stdlib.h>
+#include <stdio.h>
 
 #include "ImageIO.h"
 #include "util.h"
@@ -27,9 +27,10 @@ ImageIO::list() {
 }
 
 /* public static */ bool
-ImageIO::sread(const char *filename, char **type, char **plugin_name,
-	       void **plugin_data, int *plugin_data_length,
-	       FWPixmap *pm, char **message) {
+ImageIO::sread(const char *filename, char **type,
+	       char **plugin_name, void **plugin_data,
+	       int *plugin_data_length, FWPixmap *pm,
+	       char **message) {
     Iterator *iter = map->values();
     while (iter->hasNext()) {
 	ImageIO *imgio = (ImageIO *) iter->next();
@@ -48,10 +49,11 @@ ImageIO::sread(const char *filename, char **type, char **plugin_name,
 }
 
 /* public static */ bool
-ImageIO::swrite(const char *type,
-		const char *filename, const char *plugin_name,
-		const void *plugin_data, int plugin_data_length,
-		const FWPixmap *pm, char **message) {
+ImageIO::swrite(const char *filename, const char *type,
+		const char *plugin_name, const void *plugin_data,
+		int plugin_data_length, const FWPixmap *pm,
+		char **message) {
+    fprintf(stderr, "Trying to write \"%s\" (type %s)...\n", filename, type);
     ImageIO *imgio = (ImageIO *) map->get(type);
     if (imgio == NULL) {
 	*message = strclone("Unsupported file type.");

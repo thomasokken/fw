@@ -14,6 +14,8 @@ class Menu {
 	void (*radioCallback)(void *closure, const char *id, const char *value);
 	void *radioClosure;
 
+	Widget optionmenu;
+
 	// Menu item types
 	enum {
 	    ITEM_SEPARATOR,
@@ -40,6 +42,7 @@ class Menu {
 	    ItemNode *next;
 	};
 	ItemNode *firstitem, *lastitem;
+	Map *commandIdToWidgetMap;
 	Map *toggleIdToWidgetMap;
 	Map *radioIdToWidgetMap;
 	Map *radioGroupToSelectedWidgetMap;
@@ -68,6 +71,10 @@ class Menu {
 	bool getToggleValue(const char *id);
 	void setRadioValue(const char *id, const char *value, bool doCallbacks);
 	const char *getRadioValue(const char *id);
+
+	// OptionMenu support
+	void setOptionMenu(Widget w);
+	void setSelected(const char *id);
 
     private:
 	static void commandCB(Widget w, XtPointer ud, XtPointer cd);

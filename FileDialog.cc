@@ -1,5 +1,6 @@
 #include <Xm/Xm.h>
 #include <Xm/FileSB.h>
+#include <Xm/Text.h>
 #include <stdlib.h>
 
 #include "FileDialog.h"
@@ -17,6 +18,8 @@ FileDialog::FileDialog()
     directory = NULL;
     fileSelectedCB = NULL;
     fileSelectedClosure = NULL;
+    cancelledCB = NULL;
+    cancelledClosure = NULL;
 }
 
 /* public virtual */
@@ -41,6 +44,13 @@ FileDialog::setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),
 			      void *fileSelectedClosure) {
     this->fileSelectedCB = fileSelectedCB;
     this->fileSelectedClosure = fileSelectedClosure;
+}
+
+/* public */ void
+FileDialog::setCancelledCB(void (*cancelledCB)(void *cl),
+			   void *cancelledClosure) {
+    this->cancelledCB = cancelledCB;
+    this->cancelledClosure = cancelledClosure;
 }
 
 /* private static */ void
@@ -68,6 +78,9 @@ FileDialog::okOrCancel(Widget w, XtPointer ud, XtPointer cd) {
 		This->fileSelectedCB(filename, This->fileSelectedClosure);
 	    XtFree(filename);
 	}
+    } else if (cbs->reason == XmCR_CANCEL) {
+	if (This->cancelledCB != NULL)
+	    This->cancelledCB(This->cancelledClosure);
     }
     This->close();
 }
