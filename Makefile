@@ -1,6 +1,11 @@
 CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include
-LDFLAGS = -L/usr/X11R6/lib -rdynamic
-LOADLIBES = -lXm -lXt -lX11 -lXmu -lXp -lXpm -ldl -ljpeg -lpng -lz
+LDFLAGS = -L/usr/X11R6/lib -Xlinker --export-dynamic
+LOADLIBES = -lXm -lXpm -ljpeg -lpng
+
+# To link a "mostly" static version (everything linked statically,
+# except libc, libm, libstdc++, and libdl):
+# LOADLIBES = -Xlinker -Bstatic -lXmu -lXm -lXp -lXt -lX11 -lXpm -ljpeg \
+#             -lpng -lz -lSM -lICE -lXext -ldl -Xlinker -Bdynamic
 
 SRCS := $(wildcard *.cc)
 OBJS := $(SRCS:.cc=.o)
