@@ -55,7 +55,8 @@ class Viewer : private Frame {
 	Viewer(const char *pluginname);
 	Viewer(Plugin *clonee);
 	Viewer(const char *pluginname, void *plugin_data,
-	       int plugin_data_length, FWPixmap *pm);
+	       int plugin_data_length, FWPixmap *pm,
+	       const char *filename, const char *filetype);
 	void finish_init();
 	~Viewer();
 	void deleteLater();
@@ -65,7 +66,6 @@ class Viewer : private Frame {
 	void get_selection(int *x, int *y, int *width, int *height);
 	int get_scale();
 	void colormapChanged();
-	void setFile(const char *filename, const char *filetype);
 	void setDirty();
 	void pluginFinished(bool notify);
 

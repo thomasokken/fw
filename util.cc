@@ -71,6 +71,47 @@ bool isFile(const char *name) {
     return S_ISREG(st.st_mode);
 }
 
+char *basename(const char *fullname) {
+    char *lastslash = strrchr(fullname, '/');
+    if (lastslash == NULL)
+	return strclone(fullname);
+    else
+	return strclone(lastslash + 1);
+}
+
+char *canonical_pathname(const char *fullname) {
+    char buf[10000];
+    buf[0] = 0;
+
+    // First, make sure we start with a full pathname.
+    if (fullname[0] != '/')
+	if (getcwd(buf, 10000) == NULL)
+	    return strclone(fullname);
+    strcat(buf, "/");
+    strcat(buf, fullname);
+    char *pos;
+    while ((pos = strstr(buf, "/./")) != NULL)
+	memmove(pos, pos + 2, strlen(buf) - 1 - (pos - buf));
+    while ((pos = strstr(buf, "//")) != NULL)
+	memmove(pos, pos + 1, strlen(buf) - (pos - buf));
+    while ((pos = strstr(buf, "/../")) != NULL) {
+	// Find start of directory preceding the "/../" segment
+	char *prevslash = pos - 1;
+	while (prevslash >= buf && *prevslash != '/')
+	    prevslash--;
+	if (prevslash < buf) {
+	    // The pathname starts with "/../". Since root is its own parent,
+	    // we can simply remove the first three characters from the
+	    // pathname.
+	    memmove(buf, buf + 3, strlen(buf) - 2);
+	} else {
+	    memmove(prevslash, pos + 3, strlen(buf) - 2 - (pos - buf));
+	}
+    }
+	
+    return strclone(buf);
+}
+
 bool is_grayscale(const FWColor *cmap) {
     for (int i = 0; i < 256; i++)
 	if (cmap[i].r != i || cmap[i].g != i || cmap[i].b != i)

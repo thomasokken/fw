@@ -56,6 +56,8 @@ TextViewer::TextViewer(const char *text) : Frame(true, true, false) {
 	rows = 5;
     if (columns < 64)
 	columns = 64;
+    else if (columns > 100)
+	columns = 100;
 
     XtSetArg(args[0], XmNeditable, False);
     XtSetArg(args[1], XmNcursorPositionVisible, False);

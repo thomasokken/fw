@@ -54,6 +54,8 @@ Viewer::Viewer(const char *pluginname)
 
     // This constructor is called in response to "File->New->(Plugin)"
     is_brand_new = true;
+    filename = NULL;
+    filetype = NULL;
     init(pluginname, NULL, NULL, 0, NULL);
 }
 
@@ -63,17 +65,22 @@ Viewer::Viewer(Plugin *clonee)
 
     // This constructor is called in response to "File->New->Clone"
     is_brand_new = true;
+    filename = NULL;
+    filetype = NULL;
     init(NULL, clonee, NULL, 0, NULL);
 }
 
 /* public */
 Viewer::Viewer(const char *pluginname, void *plugin_data,
-	               int plugin_data_length, FWPixmap *fpm)
+	               int plugin_data_length, FWPixmap *fpm,
+		       const char *filename, const char *filetype)
     : Frame(true, false, true) {
 
     // This constructor is called in response to "File->Open"
     // and for files passed as command line arguments
     is_brand_new = false;
+    this->filename = filename == NULL ? NULL : canonical_pathname(filename);
+    this->filetype = filetype == NULL ? NULL : strclone(filetype);
     init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
 
@@ -120,8 +127,6 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     id = idcount++;
     image = NULL;
     colormap = g_colormap;
-    filename = NULL;
-    filetype = NULL;
     savedialog = NULL;
     cme = NULL;
     finished = false;
@@ -188,10 +193,22 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 
 /* public */ void
 Viewer::finish_init() {
-    char title[256];
-    snprintf(title, 256, "Fractal Wizard - %s", plugin->name());
-    setTitle(title);
-    setIconTitle(title);
+    char *name;
+    if (filename == NULL)
+	name = "Untitled";
+    else
+	name = basename(filename);
+    if (strcmp(plugin->name(), "Null") == 0) {
+	setTitle(name);
+	setIconTitle(name);
+    } else {
+	char buf[256];
+	snprintf(buf, 256, "%s (%s)", name, plugin->name());
+	setTitle(buf);
+	setIconTitle(buf);
+    }
+    if (filename != NULL)
+	free(name);
 
     Menu *topmenu = new Menu;
 
@@ -561,8 +578,13 @@ Viewer::finish_init() {
 	    if (plugin->restart()) {
 		finished = true;
 		plugin->setFinished();
-	    } else
+	    } else {
 		dirty = true;
+		// The user may not be aware that the document they just opened
+		// is an unfinished one, so in this case we turn on
+		// notifications automagically.
+		optionsmenu->setToggleValue("Options.Notify", true, false);
+	    }
 	}
     }
 
@@ -658,16 +680,6 @@ Viewer::removeViewer(Viewer *viewer) {
     }
     delete iter;
     instances->remove(viewer);
-}
-
-/* public */ void
-Viewer::setFile(const char *name, const char *type) {
-    if (filename != NULL)
-	free(filename);
-    filename = name == NULL ? NULL : strclone(name);
-    if (filetype != NULL)
-	free(filetype);
-    filetype = type == NULL ? NULL : strclone(type);
 }
 
 /* public */ void
@@ -1242,9 +1254,9 @@ Viewer::doOpen2(const char *filename, void *closure) {
     if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
 		      &plugin_data_length, &pm, &message)) {
 	// Read successful; open viewer
-	Viewer *viewer = new Viewer(plugin_name, plugin_data,
-				    plugin_data_length, &pm);
-	viewer->setFile(filename, type);
+	new Viewer(plugin_name, plugin_data,
+		   plugin_data_length, &pm,
+		   filename, type);
 	if (message != NULL) {
 	    TextViewer *tv = new TextViewer(message);
 	    tv->raise();

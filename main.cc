@@ -439,9 +439,9 @@ int main(int argc, char **argv) {
 	if (ImageIO::sread(argv[i], &type, &plugin_name, &plugin_data,
 			  &plugin_data_length, &pm, &message)) {
 	    // Read successful; open viewer
-	    Viewer *viewer = new Viewer(plugin_name, plugin_data,
-				       plugin_data_length, &pm);
-	    viewer->setFile(argv[i], type);
+	    new Viewer(plugin_name, plugin_data,
+		       plugin_data_length, &pm,
+		       argv[i], type);
 	    nothingOpened = false;
 	    if (message != NULL)
 		// TODO: nicer warning reporting

@@ -4,9 +4,14 @@
 class FWColor;
 
 char *strclone(const char *src);
+
 unsigned int crc32(const void *buf, int size);
+
 bool isDirectory(const char *name);
 bool isFile(const char *name);
+char *basename(const char *fullname);
+char *canonical_pathname(const char *fullname);
+
 bool is_grayscale(const FWColor *cmap);
 unsigned long rgb2pixel(unsigned char r, unsigned char g, unsigned char b);
 void rgb2nearestgrays(unsigned char *r, unsigned char *g, unsigned char *b,
