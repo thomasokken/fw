@@ -973,11 +973,6 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		START = RIGHT - LEFT - 1;
 		END = -1;
 	    }
-	    int *temp;
-	    temp = nextdr; nextdr = dr; dr = temp;
-	    temp = nextdg; nextdg = dg; dg = temp;
-	    temp = nextdb; nextdb = db; db = temp;
-	    dR = dG = dB = 0;
 
 	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
@@ -1014,6 +1009,12 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    }
 
 	    if (YY == s - 1 || y == bottom - 1) {
+		int *temp;
+		temp = nextdr; nextdr = dr; dr = temp;
+		temp = nextdg; nextdg = dg; dg = temp;
+		temp = nextdb; nextdb = db; db = temp;
+		dR = dG = dB = 0;
+
 		for (X = START; X != END; X += dir) {
 		    int w = W[X];
 		    int r = (R[X] + w / 2) / w; if (r > 255) r = 255;
@@ -1133,7 +1134,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 			}
 			XPutPixel(image, X + LEFT, Y, pixel);
 		    }
-
+		    
 		    int PREVX = X - dir;
 		    int NEXTX = X + dir;
 		    if (PREVX >= 0 && PREVX < RIGHT - LEFT) {
@@ -1184,9 +1185,6 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		START = RIGHT - LEFT - 1;
 		END = -1;
 	    }
-	    int *temp;
-	    temp = nextdk; nextdk = dk; dk = temp;
-	    dK = 0;
 
 	    int X = dir == 1 ? 0 : RIGHT - LEFT - 1;
 	    int XX = dir == 1 ? 0 : (right - 1) % s + 1;
@@ -1221,6 +1219,10 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 	    }
 
 	    if (YY == s - 1 || y == bottom - 1) {
+		int *temp;
+		temp = nextdk; nextdk = dk; dk = temp;
+		dK = 0;
+
 		for (X = START; X != END; X += dir) {
 		    int w = W[X];
 		    int k;
