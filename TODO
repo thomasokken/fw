@@ -6,6 +6,9 @@ and select_cell() etc. should not appear in the Actions.
 
 The new Newton and Polynomial plugins don't use the 'bands' setting yet.
 
+Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
+giftoppm, Mozilla, IE) seems to like it just fine.
+
 In SaveImageDialog, using the 'type' menu tends to mess up input focus (you
 can't set focus on a text field any more). Am I doing something wrong there, or
 is this an OpenMotif 2.2.2 bug? Take a look at...
