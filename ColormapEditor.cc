@@ -5,6 +5,7 @@
 #include <stdlib.h>
 
 #include "ColormapEditor.h"
+#include "ColorPicker.h"
 #include "FWColor.h"
 #include "FWPixmap.h"
 #include "UndoManager.h"
@@ -27,6 +28,49 @@
 #define BTN_REDO   10
 #define BTN_OK     11
 #define BTN_CANCEL 12
+
+
+class PickAction : public UndoableAction {
+    private:
+	ColormapEditor *cme;
+	int index;
+	unsigned char old_r, old_g, old_b;
+	unsigned char new_r, new_g, new_b;
+    public:
+	PickAction(ColormapEditor *cme, int index,
+		   unsigned char new_r,
+		   unsigned char new_g,
+		   unsigned char new_b) {
+	    this->cme = cme;
+	    this->index = index;
+	    old_r = cme->pm->cmap[index].r;
+	    old_g = cme->pm->cmap[index].g;
+	    old_b = cme->pm->cmap[index].b;
+	    this->new_r = new_r;
+	    this->new_g = new_g;
+	    this->new_b = new_b;
+	}
+	virtual void undo() {
+	    cme->pm->cmap[index].r = old_r;
+	    cme->pm->cmap[index].g = old_g;
+	    cme->pm->cmap[index].b = old_b;
+	    cme->update_cell(index);
+	    cme->redraw_cells(index, index);
+	}
+	virtual void redo() {
+	    cme->pm->cmap[index].r = new_r;
+	    cme->pm->cmap[index].g = new_g;
+	    cme->pm->cmap[index].b = new_b;
+	    cme->update_cell(index);
+	    cme->redraw_cells(index, index);
+	}
+	virtual const char *undoTitle() {
+	    return "Undo Pick Color";
+	}
+	virtual const char *redoTitle() {
+	    return "Redo Pick Color";
+	}
+};
 
 
 /* public */
@@ -142,9 +186,37 @@ ColormapEditor::colormapChanged(Colormap colormap) {
     // also, and then free the private colormap.
 }
 
+class CPListener : public ColorPicker::Listener {
+    private:
+	ColormapEditor *cme;
+	int index;
+    public:
+	CPListener(ColormapEditor *cme, int index) {
+	    this->cme = cme;
+	    this->index = index;
+	}
+	virtual void colorPicked(unsigned short r,
+				 unsigned short g,
+				 unsigned short b) {
+	    PickAction *action = new PickAction(cme, index, r / 257,
+						g / 257, b / 257);
+	    cme->undomgr->addAction(action);
+	    action->redo();
+	}
+};
+
 /* private */ void
 ColormapEditor::doPick() {
-    //
+    if (sel_start == -1 || sel_start != sel_end)
+	XBell(g_display, 100);
+    else {
+	ColorPicker *picker = new ColorPicker(
+		    new CPListener(this, sel_start),
+		    pm->cmap[sel_start].r * 257,
+		    pm->cmap[sel_start].g * 257,
+		    pm->cmap[sel_start].b * 257);
+	picker->raise();
+    }
 }
 
 /* private */ void
@@ -275,6 +347,8 @@ ColormapEditor::update_cell(int c) {
 	    for (int yy = y; yy < y + CELL_SIZE; yy++)
 		XPutPixel(image, xx, yy, pixel);
     }
+    if (sel_start != -1 && c >= sel_start && c <= sel_end)
+	select_cell(c);
 }
 
 /* private */ void

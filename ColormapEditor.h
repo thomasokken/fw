@@ -60,4 +60,7 @@ class ColormapEditor : public Frame {
 	static void input(Widget w, XtPointer ud, XtPointer cd);
 	void input2(XEvent *event);
 	static void activate(Widget w, XtPointer ud, XtPointer cd);
+
+	friend class CPListener;
+	friend class PickAction;
 };
