@@ -12,6 +12,8 @@
 #include "main.h"
 #include "util.h"
 
+static XmString curr_path_name = NULL;
+
 /* private static */ int
 Viewer::instances = 0;
 
@@ -613,7 +615,9 @@ Viewer::doNew(const char *plugin) {
 
 /* private */ void
 Viewer::doOpen() {
-    Widget fsb = XmCreateFileSelectionDialog(getContainer(), "Open", NULL, 0);
+    Arg arg;
+    XtSetArg(arg, XmNdirectory, curr_path_name);
+    Widget fsb = XmCreateFileSelectionDialog(getContainer(), "Open", &arg, 1);
     XtAddCallback(fsb, XmNokCallback, doOpen2, (XtPointer) this);
     XtAddCallback(fsb, XmNcancelCallback, doOpen2, (XtPointer) this);
     XtManageChild(fsb);
@@ -642,8 +646,18 @@ Viewer::doOpen2(Widget w, XtPointer ud, XtPointer cd) {
 		}
 		free(names);
 		if (pluginname != NULL) {
+		    // TODO: shouldn't use a constructor here!
+		    // What if opening the file fails?!?
 		    new Viewer(pluginname, filename);
 		    free(pluginname);
+
+		    // if (successful) {
+			if (curr_path_name != NULL)
+			    XmStringFree(curr_path_name);
+			Arg arg;
+			XtSetArg(arg, XmNdirectory, &curr_path_name);
+			XtGetValues(w, &arg, 1);
+		    // }
 		} else
 		    // No matching plugin found
 		    XBell(display, 100);
