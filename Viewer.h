@@ -6,6 +6,7 @@
 #include "Frame.h"
 #include "FWPixmap.h"
 
+class ColormapEditor;
 class Plugin;
 class SaveImageDialog;
 
@@ -15,6 +16,7 @@ class Viewer : private Frame {
 	char *filetype;
 	bool is_brand_new;
 	SaveImageDialog *savedialog;
+	ColormapEditor *cme;
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
@@ -112,6 +114,8 @@ class Viewer : private Frame {
 	void doScale(const char *scale);
 	void doGeneral();
 	void doHelp(const char *plugin);
+
+	friend class CMEProxy;
 };
 
 #endif

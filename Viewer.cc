@@ -8,9 +8,10 @@
 #include <errno.h>
 
 #include "Viewer.h"
-#include "Menu.h"
+#include "ColormapEditor.h"
 #include "FileDialog.h"
 #include "ImageIO.h"
+#include "Menu.h"
 #include "Plugin.h"
 #include "SaveImageDialog.h"
 #include "main.h"
@@ -53,6 +54,7 @@ Viewer::init(const char *pluginname, void *plugin_data,
     filename = NULL;
     filetype = NULL;
     savedialog = NULL;
+    cme = NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
@@ -390,8 +392,20 @@ Viewer::finish_init() {
 
 /* public */
 Viewer::~Viewer() {
-    if (savedialog != NULL)
+    if (savedialog != NULL) {
 	savedialog->close();
+	savedialog = NULL;
+    }
+    if (cme != NULL) {
+	cme->close();
+	cme = NULL;
+    }
+    if (plugin != NULL) {
+	Plugin::release(plugin);
+	plugin = NULL;
+    }
+    if (priv_cmap != None)
+	setColormap(g_colormap);
     if (filename != NULL)
 	free(filename);
     if (filetype != NULL)
@@ -401,8 +415,8 @@ Viewer::~Viewer() {
 	    free(image->data);
 	XFree(image);
     }
-    if (plugin != NULL)
-	Plugin::release(plugin);
+    if (gc != None)
+	XFreeGC(g_display, gc);
     if (pm.pixels != NULL)
 	free(pm.pixels);
     if (pm.cmap != NULL)
@@ -2220,6 +2234,8 @@ Viewer::doLoadColors3(const char *filename) {
     pm.cmap = newcmap;
     fclose(file);
     colormapChanged();
+    if (cme != NULL)
+	cme->colormapChanged(priv_cmap);
     return;
 
     failure:
@@ -2364,9 +2380,36 @@ Viewer::doSaveColors() {
     savedialog->raise();
 }
 
+class CMEProxy : public ColormapEditor::Owner {
+    private:
+	Viewer *viewer;
+    public:
+	CMEProxy(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual ~CMEProxy() {
+	    viewer->cme = NULL;
+	}
+	virtual void colormapChanged() {
+	    viewer->colormapChanged();
+	}
+	virtual void loadColors() {
+	    viewer->doLoadColors();
+	}
+	virtual void saveColors() {
+	    viewer->doSaveColors();
+	}
+};
+
 /* private */ void
 Viewer::doEditColors() {
-    doBeep();
+    if (pm.depth != 8) {
+	doBeep();
+	return;
+    }
+    if (cme == NULL)
+	cme = new ColormapEditor(new CMEProxy(this), &pm);
+    cme->raise();
 }
 
 /* private */ void
@@ -2417,6 +2460,8 @@ Viewer::doPrivateColormap(bool value) {
 		fprintf(stderr, "Using direct copy.\n");
 	}
 	colormapChanged();
+	if (cme != NULL)
+	    cme->colormapChanged(priv_cmap);
 	paint(0, 0, pm.height, pm.width);
     } else {
 	XFreeColormap(g_display, priv_cmap);
@@ -2429,6 +2474,8 @@ Viewer::doPrivateColormap(bool value) {
 	    direct_copy = false;
 	}
 	colormapChanged();
+	if (cme != NULL)
+	    cme->colormapChanged(priv_cmap);
     }
 }
 

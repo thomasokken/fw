@@ -8,6 +8,7 @@ unsigned int crc32(const void *buf, int size);
 bool isDirectory(const char *name);
 bool isFile(const char *name);
 bool is_grayscale(const FWColor *cmap);
+unsigned long rgb2pixel(unsigned int r, unsigned int g, unsigned int b);
 
 int bool_alignment();
 int char_alignment();
@@ -29,6 +30,24 @@ class Iterator {
 	virtual ~Iterator();
 	virtual bool hasNext() = 0;
 	virtual void *next() = 0;
+};
+
+class List {
+    private:
+	void **array;
+	int capacity;
+	int length;
+    public:
+	List();
+	~List();
+	void clear();
+	void append(void *item);
+	void insert(int index, void *item);
+	void *remove(int index);
+	void set(int index, void *item);
+	void *get(int index);
+	int size();
+	Iterator *iterator();
 };
 
 class Entry;

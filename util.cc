@@ -8,6 +8,7 @@
 
 #include "util.h"
 #include "FWColor.h"
+#include "main.h"
 
 
 extern int g_verbosity;
@@ -78,6 +79,48 @@ bool is_grayscale(const FWColor *cmap) {
 	if (cmap[i].r != i || cmap[i].g != i || cmap[i].b != i)
 	    return false;
     return true;
+}
+
+unsigned long rgb2pixel(unsigned int r, unsigned int g, unsigned int b) {
+    if (g_grayramp != NULL) {
+	int p = ((306 * r + 601 * g + 117 * b)
+		    * (g_rampsize - 1) + 130560) / 261120;
+	return g_grayramp[p].pixel;
+    } else if (g_colorcube != NULL) {
+	int index =  (((r * (g_cubesize - 1) + 127) / 255)
+		    * g_cubesize
+		    + ((g * (g_cubesize - 1) + 127) / 255))
+		    * g_cubesize
+		    + ((b * (g_cubesize - 1) + 127) / 255);
+	return g_colorcube[index].pixel;
+    } else {
+	static bool inited = false;
+	static int rmax, rmult, bmax, bmult, gmax, gmult;
+	if (!inited) {
+	    rmax = g_visual->red_mask;
+	    rmult = 0;
+	    while ((rmax & 1) == 0) {
+		rmax >>= 1;
+		rmult++;
+	    }
+	    gmax = g_visual->green_mask;
+	    gmult = 0;
+	    while ((gmax & 1) == 0) {
+		gmax >>= 1;
+		gmult++;
+	    }
+	    bmax = g_visual->blue_mask;
+	    bmult = 0;
+	    while ((bmax & 1) == 0) {
+		bmax >>= 1;
+		bmult++;
+	    }
+	    inited = true;
+	}
+	return  (((r * rmax + 127) / 255) << rmult)
+	      + (((g * gmax + 127) / 255) << gmult)
+	      + (((b * bmax + 127) / 255) << bmult);
+    }
 }
 
 int bool_alignment() {
@@ -175,6 +218,104 @@ Iterator::~Iterator() {
     //
 }
 
+class ListIterator : public Iterator {
+    private:
+	void **array;
+	int pos, length;
+    public:
+	ListIterator(void **array, int length) {
+	    this->array = array;
+	    this->length = length;
+	    pos = 0;
+	}
+	virtual ~ListIterator() {
+	    //
+	}
+	virtual bool hasNext() {
+	    return pos < length;
+	}
+	virtual void *next() {
+	    if (pos >= length)
+		crash();
+	    return array[pos++];
+	}
+};
+
+/* public */
+List::List() {
+    array = NULL;
+    capacity = 0;
+    length = 0;
+}
+
+/* public */
+List::~List() {
+    if (array != NULL)
+	free(array);
+}
+
+/* public */ void
+List::clear() {
+    length = 0;
+}
+
+/* public */ void
+List::append(void *item) {
+    if (length == capacity) {
+	capacity++;
+	array = (void **) realloc(array, capacity * sizeof(void *));
+    }
+    array[length++] = item;
+}
+
+/* public */ void
+List::insert(int index, void *item) {
+    if (index < 0 || index > length)
+	crash();
+    if (length == capacity) {
+	capacity++;
+	array = (void **) realloc(array, capacity * sizeof(void *));
+    }
+    memmove(array + index + 1, array + index,
+	    (length - index) * sizeof(void *));
+    array[index] = item;
+    length++;
+}
+
+/* public */ void *
+List::remove(int index) {
+    if (index < 0 || index >= length)
+	crash();
+    void *result = array[index];
+    memmove(array + index, array + index + 1,
+	    (length - index - 1) * sizeof(void *));
+    length--;
+    return result;
+}
+
+/* public */ void
+List::set(int index, void *item) {
+    if (index < 0 || index >= length)
+	crash();
+    array[index] = item;
+}
+
+/* public */ void *
+List::get(int index) {
+    if (index < 0 || index >= length)
+	crash();
+    return array[index];
+}
+
+/* public */ int
+List::size() {
+    return length;
+}
+
+/* public */ Iterator *
+List::iterator() {
+    return new ListIterator(array, length);
+}
 
 class Entry {
     public:
@@ -214,8 +355,10 @@ class MapIterator : public Iterator {
 		    return entries[pos++].key;
 		else
 		    return (void *) entries[pos++].value;
-	    } else
+	    } else {
+		crash();
 		return NULL;
+	    }
 	}
 };
 
