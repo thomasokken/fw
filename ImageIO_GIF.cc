@@ -307,6 +307,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 			bits_needed -= bits_copied;
 
 			if (bits_needed == 0) {
+			    printf("%d:%d:%d ", curr_code, curr_code_size, maxcode);
 			    if (curr_code == end_code) {
 				end_code_seen = true;
 			    } else if (curr_code == clear_code) {
@@ -589,6 +590,12 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 		   const FWPixmap *pm, char **message) {
     char msgbuf[MSGLEN];
 
+    if (pm->depth > 8) {
+	snprintf(msgbuf, MSGLEN, "This image has %d bits per pixel.\nGIF only supports depths of up to 8 bits per pixel.", pm->depth);
+	*message = strclone(msgbuf);
+	return false;
+    }
+
     FILE *gif = fopen(filename, "w");
     if (gif == NULL) {
 	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).",
@@ -706,9 +713,122 @@ ImageIO_GIF::write(const char *filename, const char *plugin_name,
 
     // Image Data
 
-    fputc(pm->depth == 1 ? 2 : 8, gif);
-    // Now, LZW-compressed data, in blocks of up to 255 bytes, each preceded
-    // by a length byte, the whole sequence terminated by a 0 byte.
+    int codesize = pm->depth == 1 ? 2 : 8;
+    int bytecount = 0;
+    char buf[255];
+
+    short prefix_table[4096];
+    short code_table[4096];
+
+    int maxcode = 1 << codesize;
+    for (int i = 0; i < maxcode; i++) {
+	prefix_table[i] = -1;
+	code_table[i] = i;
+    }
+    int clear_code = maxcode++;
+    int end_code = maxcode++;
+
+    int curr_code_size = codesize + 1;
+    int prefix = -1;
+    int currbyte = 0;
+    int bits_needed = 8;
+
+    int outcode1 = clear_code;
+    int outcode2 = -1;
+
+    fputc(codesize, gif);
+    for (int v = 0; v <= pm->height; v++) {
+	bool done = v == pm->height;
+	for (int h = 0; h < pm->width; h++) {
+	    if (done) {
+		if (outcode1 == -1) {
+		    outcode1 = prefix;
+		    outcode2 = -1;
+		} else
+		    outcode2 = prefix;
+		goto emit;
+	    }
+
+	    int pixel;
+	    if (pm->depth == 1)
+		pixel = ((pm->pixels[pm->bytesperline * v + (h >> 3)])
+			    >> (h & 7)) & 1;
+	    else
+		pixel = pm->pixels[pm->bytesperline * v + h];
+
+	    // Look for concat(prefix, pixel) in string table
+	    if (prefix == -1) {
+		prefix = pixel;
+		continue;
+	    }
+	    for (int i = end_code + 1; i < maxcode; i++)
+		if (prefix_table[i] == prefix
+			&& code_table[i] == pixel) {
+		    prefix = i;
+		    goto endofloop;
+		}
+
+	    // Not found:
+	    if (maxcode == 4096) {
+		outcode1 = prefix;
+		outcode2 = clear_code;
+	    } else {
+		prefix_table[maxcode] = prefix;
+		code_table[maxcode] = pixel;
+		maxcode++;
+		outcode1 = prefix;
+	    }
+	    prefix = pixel;
+	    
+	    emit:
+	    while (outcode1 != -1) {
+		printf("%d:%d:%d ", outcode1, curr_code_size, maxcode);
+		int bits_available = curr_code_size;
+		while (bits_available != 0) {
+		    int bits_copied = bits_needed < bits_available ?
+				bits_needed : bits_available;
+		    int bits = outcode1 >> (curr_code_size - bits_available);
+		    bits &= 255 >> (8 - bits_copied);
+		    currbyte |= bits << (8 - bits_needed);
+		    bits_available -= bits_copied;
+		    bits_needed -= bits_copied;
+		    if (bits_needed == 0 || (bits_available == 0 && done)) {
+			buf[bytecount++] = currbyte;
+			if (bytecount == 255) {
+			    fputc(255, gif);
+			    fwrite(buf, 1, 255, gif);
+			    bytecount = 0;
+			}
+			currbyte = 0;
+			bits_needed = 8;
+		    }
+		}
+
+		if (maxcode > (1 << curr_code_size)) {
+		    curr_code_size++;
+		    if (curr_code_size == 13)
+			outcode2 = clear_code;
+		} else if (outcode1 == clear_code) {
+		    maxcode = (1 << codesize) + 2;
+		    curr_code_size = codesize + 1;
+		}
+
+		outcode1 = outcode2;
+		outcode2 = -1;
+	    }
+	    
+	    if (done)
+		break;
+	    endofloop:;
+	}
+	if (done)
+	    break;
+    }
+
+    if (bytecount > 0) {
+	fputc(bytecount, gif);
+	fwrite(buf, 1, bytecount, gif);
+    }
     fputc(0, gif);
 
 
