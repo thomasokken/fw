@@ -138,7 +138,7 @@ class Kaos : public Plugin {
 		    int xs = xmid + (int) (x * maxmid + 0.5);
 		    int ys = ymid + (int) (y * maxmid + 0.5);
 		    if (xs >= 0 && ys >= 0 && xs < (int) width && ys < (int) height) {
-			char *p = pixels + ys * bytesperline + xs;
+			char *p = pixels + (ys * bytesperline + xs);
 			unsigned char c = *((unsigned char *) p);
 			if (c < 254)
 			    *p = c + 1;
@@ -179,7 +179,7 @@ class Kaos : public Plugin {
 			    comp = 2;
 			else
 			    comp = 3;
-			char *p = pixels + ys * bytesperline + xs * 4 + comp;
+			char *p = pixels + (ys * bytesperline + xs * 4 + comp);
 			unsigned char c = *((unsigned char *) p);
 			if (c < 254)
 			    *p = c + 1;

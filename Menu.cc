@@ -10,7 +10,9 @@
 /* public */
 Menu::Menu() {
     firstitem = NULL;
-    callback = NULL;
+    commandCallback = NULL;
+    toggleCallback = NULL;
+    radioCallback = NULL;
 }
 
 /* public */
@@ -25,7 +27,8 @@ Menu::~Menu() {
 /* public */ void
 Menu::addItem(const char *name, const char *mnemonic,
 	      const char *accelerator, const char *id) {
-    ItemNode *item = new ItemNode(name, mnemonic, accelerator, id, this);
+    ItemNode *item = new ItemNode(name, mnemonic, accelerator,
+					    id, ITEM_COMMAND, this);
     if (firstitem == NULL)
 	firstitem = lastitem = item;
     else {
@@ -100,7 +103,7 @@ Menu::makeWidgets(Widget parent) {
 					     parent,
 					     args, nargs);
 	    XtAddCallback(w, XmNactivateCallback,
-			  widgetCallback, (XtPointer) item);
+			  commandCB, (XtPointer) item);
 	} else {
 	    // Submenu
 	    Widget submenu = XmCreatePulldownMenu(parent, "Menu", NULL, 0);
@@ -121,34 +124,45 @@ Menu::makeWidgets(Widget parent) {
 }
 
 /* public */ void
-Menu::setListener(void (*callback)(void *closure, const char *id),
+Menu::setCommandListener(void (*callback)(void *closure, const char *id),
 		  void *closure) {
-    this->callback = callback;
-    this->closure = closure;
+    this->commandCallback = callback;
+    this->commandClosure = closure;
     ItemNode *item = firstitem;
     while (item != NULL) {
 	if (item->menu != NULL)
-	    item->menu->setListener(callback, closure);
+	    item->menu->setCommandListener(callback, closure);
 	item = item->next;
     }
 }
 
+/* public */ void
+Menu::setToggleListener(void (*callback)(void *closure, const char *id,
+		    bool value), void *closure) {
+}
+
+/* public */ void
+Menu::setRadioListener(void (*callback)(void *closure, const char *id,
+		    int value), void *closure) {
+}
+
 /* private static */ void
-Menu::widgetCallback(Widget w, XtPointer ud, XtPointer cd) {
+Menu::commandCB(Widget w, XtPointer ud, XtPointer cd) {
     ItemNode *item = (ItemNode *) ud;
     Menu *menu = item->owner;
-    if (menu->callback != NULL)
-	menu->callback(menu->closure, item->id);
+    if (menu->commandCallback != NULL)
+	menu->commandCallback(menu->commandClosure, item->id);
 }
 
 /* private::public */
 Menu::ItemNode::ItemNode(const char *name, const char *mnemonic,
 			 const char *accelerator, const char *id,
-			 Menu *owner) {
+			 int type, Menu *owner) {
     this->name = strclone(name);
     this->mnemonic = strclone(mnemonic);
     this->accelerator = strclone(accelerator);
     this->id = strclone(id);
+    this->type = type;
     this->menu = NULL;
     this->owner = owner;
 }
@@ -161,6 +175,7 @@ Menu::ItemNode::ItemNode(const char *name, const char *mnemonic,
     this->mnemonic = strclone(mnemonic);
     this->accelerator = strclone(accelerator);
     this->id = strclone(id);
+    this->type = ITEM_MENU;
     this->menu = menu;
     this->owner = owner;
 }

@@ -100,8 +100,8 @@ Viewer::finish_init() {
     filemenu->addItem();
     filemenu->addItem("Print...", NULL, NULL, "File.Print");
     filemenu->addItem();
-    filemenu->addItem("Quit", NULL, NULL, "File.Quit");
-    topmenu->addItem("File", NULL, NULL, "File", filemenu);
+    filemenu->addItem("Quit", "Q", "Ctrl+Q", "File.Quit");
+    topmenu->addItem("File", "F", NULL, "File", filemenu);
 
     Menu *editmenu = new Menu;
     editmenu->addItem("Undo", NULL, NULL, "Edit.Undo");
@@ -178,7 +178,7 @@ Viewer::finish_init() {
     }
     topmenu->addItem("Help", NULL, NULL, "Help", helpmenu);
 
-    topmenu->setListener(menucallback, this);
+    topmenu->setCommandListener(menucallback, this);
     setMenu(topmenu);
 
     unsigned int W, H;

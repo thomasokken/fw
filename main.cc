@@ -1,8 +1,12 @@
 #include <Xm/Xm.h>
 #include <Xm/DrawingA.h>
 #include <X11/xpm.h>
+#include <signal.h>
 #include <stdlib.h>
+#include <stdio.h>
+#include <sys/types.h>
 #include <time.h>
+#include <unistd.h>
 
 #include "main.h"
 #include "Viewer.h"
@@ -24,6 +28,22 @@ Pixmap icon, iconmask;
 XColor *colorcube = NULL, *grayramp = NULL;
 int cubesize, rampsize;
 int verbosity = 0;
+bool x_errors_coredump = false;
+
+
+static int x_error_handler(Display *display, XErrorEvent *event) {
+    char buf[1024];
+    XGetErrorText(display, event->error_code, buf, 1024);
+    fprintf(stderr, "X Error: type=%d, serial=%lu, request=%u, minor=%u "
+	    "rsrc=0x%lx\n", event->type, event->serial, event->request_code,
+	    event->minor_code, event->resourceid);
+    fprintf(stderr, "         code=%d: %s\n", event->error_code, buf);
+    if (x_errors_coredump)
+	kill(0, SIGQUIT);
+    else
+	fprintf(stderr, "\007\n");
+    return 0;
+}
 
 
 int main(int argc, char **argv) {
@@ -42,6 +62,23 @@ int main(int argc, char **argv) {
 	    while (*p++ == 'v')
 		verbosity++;
 	    remove = 1;
+	} else if (strcmp(argv[i], "-xdump") == 0) {
+	    x_errors_coredump = true;
+	    remove = 1;
+	} else if (strcmp(argv[i], "-h") == 0
+		|| strcmp(argv[i], "-help") == 0
+		|| strcmp(argv[i], "--help") == 0) {
+	    fprintf(stderr, "Usage: fw [options] [files...]\n");
+	    fprintf(stderr, "    available options:\n");
+	    fprintf(stderr, "    X Toolkit options (see \"man X\")\n");
+	    fprintf(stderr, "    -v : verbose (-vv, -vvv, etc: more verbosity)\n");
+	    fprintf(stderr, "    -xdump : dump core on X errors (implies -synchronous)\n");
+	    fprintf(stderr, "    -h , -help , --help : print usage information & exit\n");
+	    exit(0);
+	    
+	} else if (argv[i][0] == '-') {
+	    fprintf(stderr, "Unrecognized option \"%s\" (see \"fw -h\" for help)\n", argv[i]);
+	    exit(1);
 	}
 
 	if (remove > 0) {
@@ -53,17 +90,21 @@ int main(int argc, char **argv) {
 	}
     }
 
+    if (getenv("FW_XDUMP") != NULL)
+	x_errors_coredump = true;
+
     if (verbosity >= 1) {
 	fprintf(stderr, "Verbosity level set to %d.\n", verbosity);
+	if (x_errors_coredump)
+	    fprintf(stderr, "Dumping core on X errors.\n");
     }
-
 
     // Seed random number generator so things like Kaos don't give you
     // the same pictures every time...
 
     srand(time(NULL));
 
-    
+
     display = XtDisplay(appshell);
     screen = XtScreen(appshell);
     screennumber = 0;
@@ -71,9 +112,19 @@ int main(int argc, char **argv) {
 	screennumber++;
     rootwindow = RootWindowOfScreen(screen);
 
+    // If the user has requested core dumps for X errors, turn on X
+    // synchronization as well (like using the "-synchronize" Xt switch).
+    // This is necessary if you want the core dump to actually lead you,
+    // via the stack trace, to the context in which the offending call
+    // was made.
+    if (x_errors_coredump)
+	XSynchronize(display, True);
+    XSetErrorHandler(x_error_handler);
+
     visual = DefaultVisual(display, screennumber);
     colormap = DefaultColormap(display, screennumber);
     depth = DefaultDepth(display, screennumber);
+
     if (visual->c_class == StaticColor
 		|| visual->c_class == PseudoColor) {
 	// Try to allocate as large as possible a color cube
