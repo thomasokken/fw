@@ -8,8 +8,11 @@
 #include "util.h"
 
 /* public */
-FileDialog::FileDialog()
-	    : Frame(false, true, false) {
+FileDialog::FileDialog(Frame *parent)
+	    : Frame(parent, true, false, true, false) {
+    // I'm using the protected frame-or-dialog constructor from Frame,
+    // so the FileDialog will be a modal dialog if 'parent' is non-null,
+    // and a plain TopLevelShell if 'parent' is null.
     fsb = XmCreateFileSelectionBox(getContainer(), "FileSelBox", NULL, 0);
     XtAddCallback(fsb, XmNokCallback, okOrCancel, (XtPointer) this);
     XtAddCallback(fsb, XmNcancelCallback, okOrCancel, (XtPointer) this);

@@ -97,8 +97,7 @@ class Viewer : private Frame {
 
 	static Boolean deleteLater2(XtPointer ud);
 	static void doOpen2(const char *fn, void *cl);
-	static void doSaveAs2(const char *fn, const char *type, void *cl);
-	static void doSaveAsCancelled(void *cl);
+	bool save(const char *filename, const char *filetype);
 	static void doLoadColors2(const char *fn, void *cl);
 	void doLoadColors3(const char *fn);
 	static void doSaveColors2(const char *fn, void *cl);
@@ -141,7 +140,8 @@ class Viewer : private Frame {
 
 	friend class CMEOwner;
 	friend class UMListener;
-	friend class CCDListener;
+	friend class YNCListener;
+	friend class SIDListener;
 };
 
 #endif

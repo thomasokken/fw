@@ -15,7 +15,7 @@ class FileDialog : public Frame {
 	Widget fsb;
 
     public:
-	FileDialog();
+	FileDialog(Frame *parent);
 	virtual ~FileDialog();
 	void setDirectory(char **dir);
 	void setFileSelectedCB(void (*fileSelectedCB)(const char *fn, void *cl),

@@ -1025,13 +1025,15 @@ class YNCListener : public YesNoCancelDialog::Listener {
 	    this->viewer = viewer;
 	}
 	virtual void yes() {
-	    // viewer->doSave() or something along those lines
-	    // keep in mind that while this method is executing,
-	    // the YesNoCancelDialog is still mapped and still
-	    // modaling out all events to the Viewer (maybe it
-	    // should hide() as soon as the user clicks a button
-	    // or closes it)
-	    viewer->doBeep();
+	    if (viewer->filename == NULL) {
+		// TODO -- SaveImageDialog needs to be different
+		// it should be modal, and support a nicer callback
+		// mechanism (Listener)
+		viewer->doBeep();
+	    } else {
+		if (viewer->save(viewer->filename, viewer->filetype))
+		    delete viewer;
+	    }
 	}
 	virtual void no() {
 	    delete viewer;
@@ -1316,36 +1318,41 @@ Viewer::doOpen2(const char *filename, void *closure) {
 	free(message);
 }
 
-/* private static */ void
-Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
-    Viewer *This = (Viewer *) closure;
-    const char *plugin_name = This->plugin->name();
+/* private */ bool
+Viewer::save(const char *name, const char *type) {
+    const char *plugin_name = plugin->name();
     void *plugin_data;
     int plugin_data_length;
     if (strcmp(plugin_name, "Null") == 0) {
 	plugin_data = NULL;
 	plugin_data_length = 0;
     } else
-	This->plugin->serialize(&plugin_data, &plugin_data_length);
+	plugin->serialize(&plugin_data, &plugin_data_length);
     char *message = NULL;
-    if (!ImageIO::swrite(filename, type, plugin_name, plugin_data,
-			 plugin_data_length, &This->pm, &message)) {
+
+    bool success;
+    if (ImageIO::swrite(name, type, plugin_name, plugin_data,
+			 plugin_data_length, &pm, &message)) {
+	if (filename != NULL)
+	    free(filename);
+	filename = strclone(name);
+	if (filetype != NULL)
+	    free(filetype);
+	filetype = strclone(type);
+	success = true;
+    } else {
 	char buf[1024];
-	snprintf(buf, 1024, "Saving \"%s\" failed (%s).\n", filename, message);
+	snprintf(buf, 1024, "Saving \"%s\" failed (%s).\n", name, message);
 	TextViewer *tv = new TextViewer(buf);
 	tv->raise();
+	success = false;
     }
+
     if (plugin_data != NULL)
 	free(plugin_data);
     if (message != NULL)
 	free(message);
-    This->savedialog = NULL;
-}
-
-/* private static */ void
-Viewer::doSaveAsCancelled(void *closure) {
-    Viewer *This = (Viewer *) closure;
-    This->savedialog = NULL;
+    return success;
 }
 
 /* private static */ void
@@ -1436,7 +1443,7 @@ Viewer::doOpen() {
 	doBeep();
 	return;
     }
-    FileDialog *opendialog = new FileDialog();
+    FileDialog *opendialog = new FileDialog(NULL);
     opendialog->setTitle("Open File");
     opendialog->setIconTitle("Open File");
     opendialog->setDirectory(&file_directory);
@@ -1451,8 +1458,27 @@ Viewer::doClose() {
 
 /* private */ void
 Viewer::doSave() {
-    doBeep();
+    if (filename == NULL)
+	doSaveAs();
+    else
+	save(filename, filetype);
 }
+
+class SIDListener : public SaveImageDialog::Listener {
+    private:
+	Viewer *viewer;
+    public:
+	SIDListener(Viewer *viewer) {
+	    this->viewer = viewer;
+	}
+	virtual void save(const char *filename, const char *filetype) {
+	    viewer->save(filename, filetype);
+	    viewer->savedialog = NULL;
+	}
+	virtual void cancel() {
+	    viewer->savedialog = NULL;
+	}
+};
 
 /* private */ void
 Viewer::doSaveAs() {
@@ -1460,14 +1486,11 @@ Viewer::doSaveAs() {
 	savedialog->raise();
 	return;
     }
-    savedialog = new SaveImageDialog();
+    savedialog = new SaveImageDialog(this, filename, filetype,
+				     new SIDListener(this));
     savedialog->setTitle("Save File");
     savedialog->setIconTitle("Save File");
     savedialog->setDirectory(&file_directory);
-    if (filename != NULL)
-	savedialog->setFile(filename, filetype);
-    savedialog->setImageSelectedCB(doSaveAs2, this);
-    savedialog->setCancelledCB(doSaveAsCancelled, this);
     savedialog->raise();
 }
 
@@ -1534,7 +1557,7 @@ Viewer::doLoadColors() {
 	doBeep();
 	return;
     }
-    FileDialog *loaddialog = new FileDialog();
+    FileDialog *loaddialog = new FileDialog(NULL);
     loaddialog->setTitle("Load Colormap");
     loaddialog->setIconTitle("Load Colormap");
     loaddialog->setDirectory(&colormap_directory);
@@ -1548,7 +1571,7 @@ Viewer::doSaveColors() {
 	doBeep();
 	return;
     }
-    FileDialog *savedialog = new FileDialog();
+    FileDialog *savedialog = new FileDialog(NULL);
     savedialog->setTitle("Save Colormap");
     savedialog->setIconTitle("Save Colormap");
     savedialog->setDirectory(&colormap_directory);

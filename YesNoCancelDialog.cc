@@ -35,7 +35,7 @@ static void set_geom(Widget w, int x, int y, int width, int height) {
 
 /* public */
 YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
-				       Listener *listener) 
+				    Listener *listener, bool showCancel = true) 
 	: Frame(parent, true) {
     
     this->listener = listener;
@@ -72,6 +72,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 	    XmNlabelString, s,
 	    NULL);
     XmStringFree(s);
+    XtAddCallback(yesB, XmNactivateCallback, yesCB, (XtPointer) this);
 
     s = XmStringCreateLocalized("No");
     Widget noB = XtVaCreateManagedWidget(
@@ -81,40 +82,46 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 	    XmNlabelString, s,
 	    NULL);
     XmStringFree(s);
-
-    s = XmStringCreateLocalized("Cancel");
-    Widget cancelB = XtVaCreateManagedWidget(
-	    "Cancel",
-	    xmPushButtonWidgetClass,
-	    bb,
-	    XmNlabelString, s,
-	    NULL);
-    XmStringFree(s);
-
-    XtAddCallback(yesB, XmNactivateCallback, yesCB, (XtPointer) this);
     XtAddCallback(noB, XmNactivateCallback, noCB, (XtPointer) this);
-    XtAddCallback(cancelB, XmNactivateCallback, cancelCB, (XtPointer) this);
+
+    Widget cancelB;
+    if (showCancel) {
+	s = XmStringCreateLocalized("Cancel");
+	cancelB = XtVaCreateManagedWidget(
+		"Cancel",
+		xmPushButtonWidgetClass,
+		bb,
+		XmNlabelString, s,
+		NULL);
+	XmStringFree(s);
+	XtAddCallback(cancelB, XmNactivateCallback, cancelCB, (XtPointer) this);
+    }
 
     int message_w, message_h;
     pref_size(label, &message_w, &message_h);
+
     int yes_w, yes_h;
     pref_size(yesB, &yes_w, &yes_h);
     int no_w, no_h;
     pref_size(noB, &no_w, &no_h);
-    int cancel_w, cancel_h;
-    pref_size(cancelB, &cancel_w, &cancel_h);
 
     int button_w, button_h;
     button_w = yes_w;
     if (button_w < no_w)
 	button_w = no_w;
-    if (button_w < cancel_w)
-	button_w = cancel_w;
     button_h = yes_h;
     if (button_h < no_h)
 	button_h = no_h;
-    if (button_h < cancel_h)
-	button_h = cancel_h;
+
+    if (showCancel) {
+	int cancel_w, cancel_h;
+	pref_size(cancelB, &cancel_w, &cancel_h);
+
+	if (button_w < cancel_w)
+	    button_w = cancel_w;
+	if (button_h < cancel_h)
+	    button_h = cancel_h;
+    }
 
     int outer_margin = 10;
     int margin1 = 5; // Between message & buttons
@@ -129,15 +136,21 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 
     set_geom(label, (total_w - message_w) / 2, outer_margin,
 			message_w, message_h);
-    int x = (total_w - 3 * button_w - 2 * margin2) / 2;
+    int x;
+    if (showCancel)
+	x = (total_w - 3 * button_w - 2 * margin2) / 2;
+    else
+	x = (total_w - 2 * button_w - margin2) / 2;
     set_geom(yesB, x, outer_margin + message_h + margin1,
 		button_w, button_h);
     x += button_w + margin2;
     set_geom(noB, x, outer_margin + message_h + margin1,
 		button_w, button_h);
-    x += button_w + margin2;
-    set_geom(cancelB, x, outer_margin + message_h + margin1,
-		button_w, button_h);
+    if (showCancel) {
+	x += button_w + margin2;
+	set_geom(cancelB, x, outer_margin + message_h + margin1,
+		    button_w, button_h);
+    }
 
     XtVaSetValues(bb, XmNwidth, total_w, XmNheight, total_h, NULL);
 }
@@ -149,6 +162,7 @@ YesNoCancelDialog::~YesNoCancelDialog() {
 
 /* public virtual */ void
 YesNoCancelDialog::close() {
+    hide();
     listener->cancel();
     delete this;
 }
@@ -156,6 +170,7 @@ YesNoCancelDialog::close() {
 /* private static */ void
 YesNoCancelDialog::yesCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
+    This->hide();
     This->listener->yes();
     delete This;
 }
@@ -163,6 +178,7 @@ YesNoCancelDialog::yesCB(Widget w, XtPointer ud, XtPointer cd) {
 /* private static */ void
 YesNoCancelDialog::noCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
+    This->hide();
     This->listener->no();
     delete This;
 }
@@ -170,6 +186,7 @@ YesNoCancelDialog::noCB(Widget w, XtPointer ud, XtPointer cd) {
 /* private static */ void
 YesNoCancelDialog::cancelCB(Widget w, XtPointer ud, XtPointer cd) {
     YesNoCancelDialog *This = (YesNoCancelDialog *) ud;
+    This->hide();
     This->listener->cancel();
     delete This;
 }

@@ -8,8 +8,23 @@
 #include "util.h"
 
 
+/* public::public */
+SaveImageDialog::Listener::Listener() {
+    //
+}
+
+/* public::public */
+SaveImageDialog::Listener::~Listener() {
+    //
+}
+
+
 /* public */
-SaveImageDialog::SaveImageDialog() {
+SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
+	    const char *filetype, Listener *listener) : FileDialog(parent) {
+
+    this->listener = listener;
+
     Widget form = XtCreateManagedWidget("TypeForm", xmFormWidgetClass,
 					fsb, NULL, 0);
 
@@ -44,47 +59,38 @@ SaveImageDialog::SaveImageDialog() {
     typeMenu->makeWidgets(pulldown);
 
     setFileSelectedCB(privateFileSelectedCallback, this);
+    setCancelledCB(privateCancelledCallback, this);
+
+    if (filename != NULL) {
+	char *dirname;
+	if (isDirectory(filename))
+	    dirname = (char *) filename;
+	else {
+	    dirname = strclone(filename);
+	    char *lastslash = strrchr(dirname, '/');
+	    if (lastslash != NULL)
+		lastslash[1] = 0;
+	}
+	XmString d = XmStringCreateLocalized(dirname);
+	XtSetArg(args[0], XmNdirectory, d);
+	XtSetValues(fsb, args, 1);
+	XmStringFree(d);
+	if (dirname != filename)
+	    free(dirname);
+
+	Widget text = XtNameToWidget(fsb, "Text");
+	XtSetArg(args[0], XmNvalue, filename);
+	XtSetArg(args[1], XmNcursorPosition, strlen(filename));
+	XtSetValues(text, args, 2);
+
+	typeMenu->setSelected(type);
+	this->type = type;
+    }
 }
 
 /* public virtual */
 SaveImageDialog::~SaveImageDialog() {
     delete typeMenu;
-}
-
-/* public */ void
-SaveImageDialog::setFile(const char *filename, const char *type) {
-    Arg args[2];
-    char *dirname;
-    if (isDirectory(filename))
-	dirname = (char *) filename;
-    else {
-	dirname = strclone(filename);
-	char *lastslash = strrchr(dirname, '/');
-	if (lastslash != NULL)
-	    lastslash[1] = 0;
-    }
-    XmString d = XmStringCreateLocalized(dirname);
-    XtSetArg(args[0], XmNdirectory, d);
-    XtSetValues(fsb, args, 1);
-    XmStringFree(d);
-    if (dirname != filename)
-	free(dirname);
-
-    Widget text = XtNameToWidget(fsb, "Text");
-    XtSetArg(args[0], XmNvalue, filename);
-    XtSetArg(args[1], XmNcursorPosition, strlen(filename));
-    XtSetValues(text, args, 2);
-
-    typeMenu->setSelected(type);
-    this->type = type;
-}
-
-/* public */ void
-SaveImageDialog::setImageSelectedCB(
-	void (*imageSelectedCB)(const char *fn, const char *type, void *cl),
-	void *imageSelectedClosure) {
-    this->imageSelectedCB = imageSelectedCB;
-    this->imageSelectedClosure = imageSelectedClosure;
 }
 
 /* private static */ void
@@ -96,5 +102,11 @@ SaveImageDialog::typeMenuCB(void *closure, const char *id) {
 /* private static */ void
 SaveImageDialog::privateFileSelectedCallback(const char *fn, void *cl) {
     SaveImageDialog *This = (SaveImageDialog *) cl;
-    This->imageSelectedCB(fn, This->type, This->imageSelectedClosure);
+    This->listener->save(fn, This->type);
+}
+
+/* private static */ void
+SaveImageDialog::privateCancelledCallback(void *cl) {
+    SaveImageDialog *This = (SaveImageDialog *) cl;
+    This->listener->cancel();
 }

@@ -31,8 +31,28 @@ Frame::taskbar_width = 0;
 Frame::taskbar_height = 0;
 
 
+/* protected */
+Frame::Frame(Frame *parent, bool modal,
+	     bool resizable, bool centered, bool hasMenuBar) {
+    if (parent == NULL)
+	init(resizable, centered, hasMenuBar);
+    else
+	init(parent, modal);
+}
+
 /* public */
 Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
+    init(resizable, centered, hasMenuBar);
+}
+
+/* public */
+Frame::Frame(Frame *parent, bool modal) {
+    init(parent, modal);
+}
+
+
+/* private */ void
+Frame::init(bool resizable, bool centered, bool hasMenuBar) {
     this->centered = centered;
     this->menu = NULL;
     is_dialog = false;
@@ -107,8 +127,8 @@ Frame::Frame(bool resizable, bool centered, bool hasMenuBar) {
 				      args, nargs);
 }
 
-/* public */
-Frame::Frame(Frame *parent, bool modal) {
+/* public */ void
+Frame::init(Frame *parent, bool modal) {
     this->centered = false;
     this->menu = NULL;
     is_dialog = true;

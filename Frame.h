@@ -31,6 +31,8 @@ class Frame {
 	virtual void close();
 
     protected:
+	Frame(Frame *parent, bool modal,
+	      bool resizable, bool centered, bool hasMenuBar);
 	Widget getContainer();
 	void setColormap(Colormap xcmap);
 	void getSize(int *width, int *height);
@@ -40,6 +42,8 @@ class Frame {
 	void fitToScreen();
 
     private:
+	void init(bool resizable, bool centered, bool hasMenuBar);
+	void init(Frame *parent, bool modal);
 	static void deleteWindow(Widget w, XtPointer ud, XtPointer cd);
 	void findDecorSize();
 	void findTaskBarSize();

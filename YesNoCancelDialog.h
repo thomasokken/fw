@@ -19,7 +19,7 @@ class YesNoCancelDialog : public Frame {
 
     public:
 	YesNoCancelDialog(Frame *parent, const char *message,
-			   Listener *listener);
+			   Listener *listener, bool showCancel = true);
 	virtual ~YesNoCancelDialog();
 	virtual void close();
 
