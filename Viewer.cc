@@ -201,6 +201,9 @@ Viewer::finish_init() {
     if (strcmp(plugin->name(), "Null") == 0) {
 	setTitle(name);
 	setIconTitle(name);
+    } else if (strcmp(plugin->name(), "About") == 0) {
+	setTitle("Fractal Wizard");
+	setIconTitle("Fractal Wizard");
     } else {
 	char buf[256];
 	snprintf(buf, 256, "%s (%s)", name, plugin->name());
@@ -1021,10 +1024,11 @@ class SaveBeforeClosingListener : public SaveImageDialog::Listener {
 	    this->sid = sid;
 	}
 	virtual void save(const char *filename, const char *filetype) {
-	    delete sid;
+	    sid->hide();
 	    if (viewer->save(filename, filetype)) {
 		delete viewer;
 	    }
+	    delete sid;
 	    delete this;
 	}
 	virtual void cancel() {
@@ -1328,7 +1332,7 @@ Viewer::save(const char *name, const char *type) {
     const char *plugin_name = plugin->name();
     void *plugin_data;
     int plugin_data_length;
-    if (strcmp(plugin_name, "Null") == 0) {
+    if (strcmp(plugin_name, "Null") == 0 || strcmp(plugin_name, "About") == 0) {
 	plugin_data = NULL;
 	plugin_data_length = 0;
     } else
@@ -1339,19 +1343,29 @@ Viewer::save(const char *name, const char *type) {
     if (ImageIO::swrite(name, type, plugin_name, plugin_data,
 			 plugin_data_length, &pm, &message)) {
 	if (filename == NULL || strcmp(name, filename) != 0) {
-	    char buf[1024];
-	    snprintf(buf, 1024, "Windows.X.%d", id);
-	    Iterator *iter = instances->iterator();
+	    char idbuf[1024];
+	    snprintf(idbuf, 1024, "Windows.X.%d", id);
+	    const char *pluginname = plugin->name();
 	    char *label = basename(name);
+	    char labelbuf[1024];
+
+	    if (strcmp(pluginname, "Null") == 0)
+		strcpy(labelbuf, label);
+	    else if (strcmp(pluginname, "About") == 0)
+		strcpy(labelbuf, "Fractal Wizard");
+	    else
+		snprintf(labelbuf, 1024, "%s (%s)", label, pluginname);
+	    free(label);
+
+	    Iterator *iter = instances->iterator();
 	    while (iter->hasNext()) {
 		Viewer *v = (Viewer *) iter->next();
-		v->windowsmenu->changeLabel(buf, label);
+		v->windowsmenu->changeLabel(idbuf, labelbuf);
 	    }
 	    delete iter;
-	    snprintf(buf, 1024, "%s (%s)", label, plugin->name());
-	    setTitle(buf);
-	    setIconTitle(buf);
-	    free(label);
+
+	    setTitle(labelbuf);
+	    setIconTitle(labelbuf);
 	}
 	if (filename != NULL)
 	    free(filename);
@@ -1514,8 +1528,9 @@ class SaveAsListener : public SaveImageDialog::Listener {
 	    this->sid = sid;
 	}
 	virtual void save(const char *filename, const char *filetype) {
-	    delete sid;
+	    sid->hide();
 	    viewer->save(filename, filetype);
+	    delete sid;
 	    delete this;
 	}
 	virtual void cancel() {
@@ -1574,11 +1589,12 @@ class SaveBeforeQuittingListener : public SaveImageDialog::Listener {
 	    this->sid = sid;
 	}
 	virtual void save(const char *filename, const char *filetype) {
-	    delete sid;
+	    sid->hide();
 	    if (viewer->save(filename, filetype)) {
 		delete viewer;
 		Viewer::doQuit2();
 	    }
+	    delete sid;
 	    delete this;
 	}
 	virtual void cancel() {
