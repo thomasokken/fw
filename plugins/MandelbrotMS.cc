@@ -5,29 +5,6 @@
 
 #include "Plugin.h"
 
-struct my_settings {
-    int width, height;
-    double xmin, xmax, ymin, ymax;
-    int maxiter;
-    double limit;
-    int bands;
-    my_settings() {
-	width = 700;
-	height = 500;
-	xmin = -1.600 * width / height;
-	xmax =  0.550 * width / height;
-	ymin = -1.075;
-	ymax =  1.075;
-	maxiter = 100;
-	bands = 1;
-	limit = 2;
-    }
-};
-static char *my_settings_layout[] = {
-    "iWidth", "iHeight", "dLower Real Bound", "dUpper Real Bound",
-    "dLower Imaginary Bound", "dUpper Imaginary Bound",
-    "iMaximum Iterations", "dCutoff Value", "iColor Bands", NULL
-};
 struct rect {
     int top, left, bottom, right;
     void set(int top, int left, int bottom, int right) {
@@ -62,7 +39,14 @@ struct rect {
 
 class MandelbrotMS : public Plugin {
     private:
-	my_settings s;
+	// Settings
+	int width, height;
+	double xmin, xmax, ymin, ymax;
+	int maxiter;
+	double limit;
+	int bands;
+	// End Settings
+
 	double limit2;
 	int ndirty;
 	int b2;
@@ -89,24 +73,61 @@ class MandelbrotMS : public Plugin {
 	}
 
 	MandelbrotMS(void *dl) : Plugin(dl) {
-	    settings = &s;
-	    settings_layout = my_settings_layout;
+	    settings = getSettingsInstance();
+
+	    settings->addField(PluginSettings::INT, "Width");
+	    settings->addField(PluginSettings::INT, "Height");
+	    settings->addField(PluginSettings::DOUBLE, "Lower Real Bound");
+	    settings->addField(PluginSettings::DOUBLE, "Upper Real Bound");
+	    settings->addField(PluginSettings::DOUBLE, "Lower Imaginary Bound");
+	    settings->addField(PluginSettings::DOUBLE, "Upper Imaginary Bound");
+	    settings->addField(PluginSettings::INT, "Maximum Iterations");
+	    settings->addField(PluginSettings::DOUBLE, "Cutoff Value");
+	    settings->addField(PluginSettings::INT, "Color Bands");
+
+	    int w = 700;
+	    int h = 500;
+
+	    settings->setIntField(0, w);
+	    settings->setIntField(1, h);
+	    settings->setDoubleField(2, -1.6 * w / h);
+	    settings->setDoubleField(3, 0.55 * w / h);
+	    settings->setDoubleField(4, -1.075);
+	    settings->setDoubleField(5, 1.075);
+	    settings->setIntField(6, 100);
+	    settings->setDoubleField(7, 2);
+	    settings->setIntField(8, 1);
 	}
+
 	virtual ~MandelbrotMS() {}
+
 	virtual const char *name() const {
 	    return "MandelbrotMS";
 	}
+
 	virtual bool does_depth(int depth) {
 	    return depth == 8;
 	}
+
 	virtual void init_new() {
 	    get_settings_dialog();
 	}
+
 	virtual void get_settings_ok() {
-	    pm->width = s.width;
-	    pm->height = s.height;
+	    width = settings->getIntField(0);
+	    height = settings->getIntField(1);
+	    xmin = settings->getDoubleField(2);
+	    xmax = settings->getDoubleField(3);
+	    ymin = settings->getDoubleField(4);
+	    ymax = settings->getDoubleField(5);
+	    maxiter = settings->getIntField(6);
+	    limit = settings->getDoubleField(7);
+	    bands = settings->getIntField(8);
+
+	    pm->width = width;
+	    pm->height = height;
 	    pm->depth = 8;
-	    pm->bytesperline = s.width + 3 & ~3;
+	    pm->bytesperline = width + 3 & ~3;
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
 	    pm->cmap = new FWColor[256];
@@ -117,10 +138,11 @@ class MandelbrotMS : public Plugin {
 	    }
 	    init_proceed();
 	}
+
 	virtual void run() {
-	    b2 = s.bands * 253;
-	    limit2 = s.limit * s.limit;
-	    step = (s.xmax - s.xmin) / s.width;
+	    b2 = bands * 253;
+	    limit2 = limit * limit;
+	    step = (xmax - xmin) / width;
 	    sp = 0;
 	    stack[sp].set(0, 0, pm->height - 1, pm->width - 1);
 	    state = 0;
@@ -130,18 +152,20 @@ class MandelbrotMS : public Plugin {
 	    paint();
 	    start_working();
 	}
+
 	virtual void stop() {
 	    stop_working();
 	    paint();
 	}
+
 	virtual bool work() {
 	    int count = 1000;
 	    do {
 		switch (state) {
 		    case 0:
 			tos = stack[sp];
-			x1 = s.xmin + (tos.left + 0.5) * step;
-			y1 = s.ymax - (tos.top + 0.5) * step;
+			x1 = xmin + (tos.left + 0.5) * step;
+			y1 = ymax - (tos.top + 0.5) * step;
 			if (tos.right - tos.left < 5 || tos.bottom - tos.top < 5) {
 			    hc = tos.left;
 			    vc = tos.top;
@@ -157,8 +181,8 @@ class MandelbrotMS : public Plugin {
 		    case 1:
 			hm = (tos.left + tos.right) >> 1;
 			vm = (tos.top + tos.bottom) >> 1;
-			xm = s.xmin + (hm + 0.5) * step;
-			ym = s.ymax - (vm + 0.5) * step;
+			xm = xmin + (hm + 0.5) * step;
+			ym = ymax - (vm + 0.5) * step;
 			if (value != calcandset(hm, vm, xm, ym))
 			    recurse();
 			else
@@ -166,7 +190,7 @@ class MandelbrotMS : public Plugin {
 			break;
 
 		    case 2:
-			x2 = s.xmin + (tos.right + 0.5) * step;
+			x2 = xmin + (tos.right + 0.5) * step;
 			if (value != calcandset(tos.right, tos.top, x2, y1))
 			    recurse();
 			else
@@ -174,7 +198,7 @@ class MandelbrotMS : public Plugin {
 			break;
 
 		    case 3:
-			y2 = s.ymax - (tos.bottom + 0.5) * step;
+			y2 = ymax - (tos.bottom + 0.5) * step;
 			if (value != calcandset(tos.right, tos.bottom, x2, y2))
 			    recurse();
 			else
@@ -253,6 +277,7 @@ class MandelbrotMS : public Plugin {
 	    }
 	    return finished;
 	}
+
 	virtual void restart() {
 	    if (!finished)
 		start_working();
@@ -291,7 +316,7 @@ class MandelbrotMS : public Plugin {
 	    double re = x, im = y;
 	    double re2 = re * re;
 	    double im2 = im * im;
-	    while (n < s.maxiter && re2 + im2 < limit2) {
+	    while (n < maxiter && re2 + im2 < limit2) {
 		double tmp = re2 - im2 + x;
 		im = 2 * re * im + y;
 		re = tmp;
@@ -299,8 +324,8 @@ class MandelbrotMS : public Plugin {
 		im2 = im * im;
 		n++;
 	    }
-	    int value = n == s.maxiter ? 0
-			: ((n * b2) / (s.maxiter - 1)) % 254 + 1;
+	    int value = n == maxiter ? 0
+			: ((n * b2) / (maxiter - 1)) % 254 + 1;
 	    pm->pixels[v * pm->bytesperline + h] = value;
 	    return value;
 	}

@@ -5,17 +5,20 @@
 #include <Xm/RowColumn.h>
 #include <Xm/Text.h>
 #include <stdio.h>
+#include <stdlib.h>
 
 #include "SettingsDialog.h"
 #include "Plugin.h"
+#include "PluginSettings.h"
 #include "main.h"
+#include "util.h"
 
 /* public */
-SettingsDialog::SettingsDialog(void *settings, char **settings_layout,
-			       Plugin *plugin) : Frame(false, true, false) {
-    this->settings = settings;
-    this->settings_layout = settings_layout;
+SettingsDialog::SettingsDialog(Plugin *plugin, PluginSettings *settings)
+					: Frame(false, true, false) {
     this->plugin = plugin;
+    this->settings = settings;
+
     Widget form = getContainer();
 
     Widget left = XtVaCreateManagedWidget(
@@ -201,38 +204,36 @@ SettingsDialog::SettingsDialog(void *settings, char **settings_layout,
     } else
 	XtSetSensitive(radio24, False);
 
-    char **p = settings_layout;
-    char *ptr = (char *) settings;
-    int t = 0;
     char text[256];
-    while (*p != NULL) {
-	char *s = *p;
-	switch (s[0]) {
-	    case 'i':
-		snprintf(text, 256, "%d", *(int *) ptr);
-		ptr += sizeof(int);
+    int nfields = settings->getFieldCount();
+    if (nfields > 20)
+	crash();
+    for (int t = 0; t < nfields; t++) {
+	int type;
+	const char *label;
+	settings->getFieldInfo(t, &type, &label);
+	switch (type) {
+	    case PluginSettings::INT:
+		snprintf(text, 256, "%d", settings->getIntField(t));
 		break;
-	    case 'd':
-		snprintf(text, 256, "%f", *(double *) ptr);
-		ptr += sizeof(double);
+	    case PluginSettings::DOUBLE:
+		snprintf(text, 256, "%f", settings->getDoubleField(t));
 		break;
-	    case 's':
-		snprintf(text, 256, "%s", (char *) ptr);
-		ptr += 256;
+	    case PluginSettings::STRING:
+		char *s = settings->getStringField(t);
+		snprintf(text, 256, "%s", s);
+		free(s);
 		break;
 	}
 	XmTextSetString(tf[t], text);
-	xms = XmStringCreateLocalized(s + 1);
+	xms = XmStringCreateLocalized((char *) label);
 	XtVaSetValues(labels[t], XmNlabelString, xms, NULL);
 	XmStringFree(xms);
-	t++;
-	p++;
     }
 
-    while (t < 20) {
+    for (int t = nfields; t < 20; t++) {
 	XtSetMappedWhenManaged(tf[t], False);
 	XtSetMappedWhenManaged(labels[t], False);
-	t++;
     }
 
     snprintf(text, 256, "New %s", plugin->name());
@@ -261,28 +262,44 @@ SettingsDialog::ok(Widget w, XtPointer ud, XtPointer cd) {
 /* private */ void
 SettingsDialog::ok2() {
     hide();
-    char **p = settings_layout;
-    char *ptr = (char *) settings;
-    int t = 0;
-    while (*p != NULL) {
-	char *s = *p;
-	char *v = XmTextGetString(tf[t++]);
-	switch (s[0]) {
-	    case 'i':
-		sscanf(v, "%d", (int *) ptr);
-		ptr += sizeof(int);
+    int nfields = settings->getFieldCount();
+    if (nfields > 20)
+	crash();
+    for (int t = 0; t < nfields; t++) {
+	char *v = XmTextGetString(tf[t]);
+	int type;
+	settings->getFieldInfo(t, &type, NULL);
+	switch (type) {
+	    case PluginSettings::INT:
+		int iv;
+		sscanf(v, "%d", &iv);
+		if (iv != settings->getIntField(t)) {
+		    settings->setIntField(t, iv);
+		    settings->fieldChanged(t);
+		}
 		break;
-	    case 'd':
-		sscanf(v, "%lf", (double *) ptr);
-		ptr += sizeof(double);
+	    case PluginSettings::DOUBLE:
+		double dv;
+		sscanf(v, "%lf", &dv);
+		// Whoa! Comparing doubles for equality?
+		// TODO...
+		if (dv != settings->getDoubleField(t)) {
+		    settings->setDoubleField(t, dv);
+		    settings->fieldChanged(t);
+		}
 		break;
-	    case 's':
-		snprintf((char *) ptr, 256, "%s", v);
-		ptr += 256;
+	    case PluginSettings::STRING:
+		char sv[256];
+		snprintf(sv, 256, "%s", v);
+		char *old = settings->getStringField(t);
+		if (strcmp(sv, old) != 0) {
+		    settings->setStringField(t, sv);
+		    settings->fieldChanged(t);
+		}
+		free(old);
 		break;
 	}
 	XtFree(v);
-	p++;
     }
 
     plugin->get_settings_ok();

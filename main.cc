@@ -194,7 +194,7 @@ static int x_error_handler(Display *display, XErrorEvent *event) {
     fprintf(stderr, "  Current serial number in output stream:  ???\n");
 
     if (x_errors_coredump)
-	dump_core();
+	crash();
     else
 	fprintf(stderr, "\007\n");
     return 0;
@@ -418,7 +418,7 @@ int main(int argc, char **argv) {
 	    fprintf(stderr, "Can't open \"%s\".\n", argv[i]);
     }
     if (nothingOpened)
-	new Viewer("AboutViewer");
+	new Viewer("About");
 
     XtAppMainLoop(g_appcontext);
 

@@ -2,12 +2,13 @@
 #define PLUGIN_H 1
 
 
-// These two headers aren't actually needed here, but they're included for the
-// convenience of plugin writers: now plugins only need to include Plugin.h
+// These three headers aren't actually needed here, but they're included for
+// the convenience of plugin writers: now plugins only need to include Plugin.h
 // and nothing else.
 
 #include "FWColor.h"
 #include "FWPixmap.h"
+#include "PluginSettings.h"
 
 
 // We don't want to include Viewer.h here; the plugin interface should be
@@ -27,8 +28,7 @@ class Plugin {
 
     protected:
 	FWPixmap *pm;
-	void *settings;
-	char **settings_layout;
+	PluginSettings *settings;
 
     public:
 	static Plugin *get(const char *name);
@@ -55,6 +55,7 @@ class Plugin {
     protected:
 	Plugin(void *dl);
 	virtual ~Plugin();
+	static PluginSettings *getSettingsInstance();
 	static void beep();
 	void get_settings_dialog();
 	void init_proceed();

@@ -3,16 +3,16 @@
 
 #include "Frame.h"
 class Plugin;
+class PluginSettings;
 
 class SettingsDialog : private Frame {
     private:
-	void *settings;
-	char **settings_layout;
 	Plugin *plugin;
+	PluginSettings *settings;
 	Widget tf[20];
 
     public:
-	SettingsDialog(void *settings, char **settings_layout, Plugin *plugin);
+	SettingsDialog(Plugin *plugin, PluginSettings *settings);
 	virtual ~SettingsDialog();
 	virtual void close();
 

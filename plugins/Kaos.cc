@@ -3,23 +3,13 @@
 
 #include "Plugin.h"
 
-struct my_settings {
-    int width, height;
-    my_settings() {
-	width = 983;
-	height = 647;
-    }
-};
-static char *my_settings_layout[] = {
-    "iWidth", "iHeight"
-};
-
 const int NMAX = 10;
 const int ITERS = 10000;
 
 struct q_struct {
     double a11, a12, a21, a22, b1, b2;
 };
+
 struct rggb_struct {
     int rg, gb;
 };
@@ -37,7 +27,6 @@ static double my_rand() {
 
 class Kaos : public Plugin {
     private:
-	my_settings s;
 	q_struct Q[NMAX];
 	rggb_struct RGGB[NMAX];
 	int n;
@@ -50,8 +39,11 @@ class Kaos : public Plugin {
 	
     public:
 	Kaos(void *dl) : Plugin(dl) {
-	    settings = &s;
-	    settings_layout = my_settings_layout;
+	    settings = getSettingsInstance();
+	    settings->addField(PluginSettings::INT, "Width");
+	    settings->addField(PluginSettings::INT, "Height");
+	    settings->setIntField(0, 983);
+	    settings->setIntField(1, 647);
 	}
 	virtual ~Kaos() {}
 	virtual const char *name() const {
@@ -67,8 +59,8 @@ class Kaos : public Plugin {
 	    pm->depth = depth;
 	}
 	virtual void get_settings_ok() {
-	    pm->width = s.width;
-	    pm->height = s.height;
+	    pm->width = settings->getIntField(0);
+	    pm->height = settings->getIntField(1);
 	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    if (pm->depth == 8) { 

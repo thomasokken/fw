@@ -7,6 +7,7 @@
 #include <dirent.h>
 
 #include "Plugin.h"
+#include "BasicPluginSettings.h"
 #include "SettingsDialog.h"
 #include "Viewer.h"
 #include "main.h"
@@ -27,12 +28,13 @@ static int list_compar(const void *a, const void *b);
 Plugin::Plugin(void *dl) {
     this->dl = dl;
     settings = NULL;
-    settings_layout = NULL;
 }
 
 /* protected virtual */
 Plugin::~Plugin() {
     stop_working();
+    if (settings != NULL)
+	delete settings;
 }
 
 /* public static */ Plugin *
@@ -166,6 +168,11 @@ Plugin::help() {
     return NULL;
 }
 
+/* protected static */ PluginSettings *
+Plugin::getSettingsInstance() {
+    return new BasicPluginSettings();
+}
+
 /* protected static */ void
 Plugin::beep() {
     XBell(g_display, 100);
@@ -173,7 +180,7 @@ Plugin::beep() {
 
 /* protected */ void
 Plugin::get_settings_dialog() {
-    new SettingsDialog(settings, settings_layout, this);
+    new SettingsDialog(this, settings);
 }
 
 /* protected */ void

@@ -6,39 +6,22 @@
 
 #include "Plugin.h"
 
-struct my_settings {
-    int width, height;
-    int xr, yr, xg, yg, xb, yb;
-    my_settings() {
-	width = 256;
-	height = 256;
-	xr = 1;
-	yr = 0;
-	xg = 0;
-	yg = 1;
-	xb = 0;
-	yb = 0;
-    }
-};
-static char *my_settings_layout[] = {
-    "iWidth",
-    "iHeight",
-    "iX contribution to Red",
-    "iY contribution to Red",
-    "iX contribution to Green",
-    "iY contribution to Green",
-    "iX contribution to Blue",
-    "iY contribution to Blue",
-    NULL
-};
-
 class Ramp : public Plugin {
-    private:
-	my_settings s;
     public:
 	Ramp(void *dl) : Plugin(dl) {
-	    settings = &s;
-	    settings_layout = my_settings_layout;
+	    settings = getSettingsInstance();
+	    settings->addField(PluginSettings::INT, "Width");
+	    settings->addField(PluginSettings::INT, "Height");
+	    settings->addField(PluginSettings::INT, "X contribution to Red");
+	    settings->addField(PluginSettings::INT, "Y contribution to Red");
+	    settings->addField(PluginSettings::INT, "X contribution to Green");
+	    settings->addField(PluginSettings::INT, "Y contribution to Green");
+	    settings->addField(PluginSettings::INT, "X contribution to Blue");
+	    settings->addField(PluginSettings::INT, "Y contribution to Blue");
+	    settings->setIntField(0, 256);
+	    settings->setIntField(1, 256);
+	    settings->setIntField(2, 1);
+	    settings->setIntField(5, 1);
 	}
 	virtual ~Ramp() {}
 	virtual const char *name() const {
@@ -54,8 +37,17 @@ class Ramp : public Plugin {
 	    get_settings_dialog();
 	}
 	virtual void get_settings_ok() {
-	    pm->width = s.width;
-	    pm->height = s.height;
+	    int width = settings->getIntField(0);
+	    int height = settings->getIntField(1);
+	    int xr = settings->getIntField(2);
+	    int yr = settings->getIntField(3);
+	    int xg = settings->getIntField(4);
+	    int yg = settings->getIntField(5);
+	    int xb = settings->getIntField(6);
+	    int yb = settings->getIntField(7);
+
+	    pm->width = width;
+	    pm->height = height;
 	    pm->bytesperline = pm->depth == 8 ? (pm->width + 3 & ~3) : (pm->width * 4);
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    unsigned char *dst = pm->pixels;
@@ -63,42 +55,42 @@ class Ramp : public Plugin {
 	    int roffset = 0, boffset = 0, goffset = 0;
 	    int rshift = 0, bshift = 0, gshift = 0;
 
-	    if (s.xr < 0) {
-		s.xr = -1;
+	    if (xr < 0) {
+		xr = -1;
 		roffset += 255;
-	    } else if (s.xr > 0)
-		s.xr = 1;
-	    if (s.yr < 0) {
-		s.yr = -1;
+	    } else if (xr > 0)
+		xr = 1;
+	    if (yr < 0) {
+		yr = -1;
 		roffset += 255;
-	    } else if (s.yr > 0)
-		s.yr = 1;
+	    } else if (yr > 0)
+		yr = 1;
 
-	    if (s.xg < 0) {
-		s.xg = -1;
+	    if (xg < 0) {
+		xg = -1;
 		goffset += 255;
-	    } else if (s.xg > 0)
-		s.xg = 1;
-	    if (s.yg < 0) {
-		s.yg = -1;
+	    } else if (xg > 0)
+		xg = 1;
+	    if (yg < 0) {
+		yg = -1;
 		goffset += 255;
-	    } else if (s.yg > 0)
-		s.yg = 1;
+	    } else if (yg > 0)
+		yg = 1;
 
-	    if (s.xb < 0) {
-		s.xb = -1;
+	    if (xb < 0) {
+		xb = -1;
 		boffset += 255;
-	    } else if (s.xb > 0)
-		s.xb = 1;
-	    if (s.yb < 0) {
-		s.yb = -1;
+	    } else if (xb > 0)
+		xb = 1;
+	    if (yb < 0) {
+		yb = -1;
 		boffset += 255;
-	    } else if (s.yb > 0)
-		s.yb = 1;
+	    } else if (yb > 0)
+		yb = 1;
 
-	    rshift = s.xr != 0 && s.yr != 0 ? 1 : 0;
-	    gshift = s.xg != 0 && s.yg != 0 ? 1 : 0;
-	    bshift = s.xb != 0 && s.yb != 0 ? 1 : 0;
+	    rshift = xr != 0 && yr != 0 ? 1 : 0;
+	    gshift = xg != 0 && yg != 0 ? 1 : 0;
+	    bshift = xb != 0 && yb != 0 ? 1 : 0;
 
 	    for (int y = 0; y < pm->height; y++) {
 		int yy = (y * 255) / (pm->height - 1);
@@ -106,10 +98,10 @@ class Ramp : public Plugin {
 		    int xx = (x * 255) / (pm->width - 1);
 		    if (pm->depth == 24)
 			*dst++ = 0;
-		    *dst++ = (roffset + s.xr * xx + s.yr * yy) >> rshift;
+		    *dst++ = (roffset + xr * xx + yr * yy) >> rshift;
 		    if (pm->depth == 24) {
-			*dst++ = (goffset + s.xg * xx + s.yg * yy) >> gshift;
-			*dst++ = (boffset + s.xb * xx + s.yb * yy) >> bshift;
+			*dst++ = (goffset + xg * xx + yg * yy) >> gshift;
+			*dst++ = (boffset + xb * xx + yb * yy) >> bshift;
 		    }
 		}
 	    }

@@ -1,13 +1,17 @@
+The SettingsDialog code should receive focus notifications, and invoke
+PluginSettings::fieldChanged() immediately (if the field has, in fact,
+changed!), rather than putting it all off until the ok() callback.
+Also, PluginSettings::fieldChanged() should return a bool saying whether a
+change is vetoed or not. If vetoed, the focus could return to the offending
+field, or the offending field could be highlighted (e.g. red background), or
+something along those lines. Also, the OK action should be prevented when a
+field has an error. (Cancel should always be allowed.)
+
 In paint_reduced(), the code for displaying 8-bit colormapped images when a
 private colormap is in effect, is painfully slow. Finding the closest match for
 a color within an arbitrary set of colors is the problem. The current
 implementation is totally naive... Even if a brute-force search really can't be
 avoided, that code still wants some optimizing.
-
-Find a better way for SettingsDialog to access the settings.
-The current approach is based on the assumption that structs are packed,
-i.e. if a and b are consecutive members of a struct, that (&b - &a)
-equals sizeof(a), and that is not a safe assumption.
 
 Fix the tabbing order in SettingsDialog (should traverse the bit depth radio
 buttons *before* the group of pushbuttons in the lower right corner). Is the

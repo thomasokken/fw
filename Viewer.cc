@@ -95,8 +95,7 @@ Viewer::finish_init() {
 	pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
     else {
 	for (char **p = plugins; *p != NULL; p++) {
-	    int len = strlen(*p);
-	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
+	    if (strcmp(*p, "About") != 0) {
 		char id[100];
 		snprintf(id, 100, "File.New.%s", *p);
 		pluginmenu->addCommand(*p, NULL, NULL, id);
@@ -176,13 +175,12 @@ Viewer::finish_init() {
     topmenu->addMenu("Windows", NULL, NULL, "Windows", windowsmenu);
 
     Menu *helpmenu = new Menu;
-    helpmenu->addCommand("About Fractal Wizard", NULL, NULL, "File.New.AboutViewer");
+    helpmenu->addCommand("About Fractal Wizard", NULL, NULL, "File.New.About");
     helpmenu->addCommand("General", NULL, NULL, "Help.General");
     if (plugins != NULL) {
 	helpmenu->addSeparator();
 	for (char **p = plugins; *p != NULL; p++) {
-	    int len = strlen(*p);
-	    if (len < 6 || strcmp(*p + (len - 6), "Viewer") != 0) {
+	    if (strcmp(*p, "About") != 0) {
 		char id[100];
 		snprintf(id, 100, "Help.X.%s", *p);
 		helpmenu->addCommand(*p, NULL, NULL, id);

@@ -17,7 +17,7 @@ char *strclone(const char *src) {
     return dst;
 }
 
-void dump_core() {
+void crash() {
     kill(0, SIGQUIT);
 }
 
@@ -38,7 +38,7 @@ Map::~Map() {
 /* public */ void
 Map::put(const char *key, const void *value) {
     if (key == NULL || value == NULL) {
-	dump_core();
+	crash();
 	return;
     }
 
@@ -89,7 +89,7 @@ Map::put(const char *key, const void *value) {
 /* public */ const void *
 Map::get(const char *key) {
     if (key == NULL) {
-	dump_core();
+	crash();
 	return NULL;
     }
 
@@ -106,7 +106,7 @@ Map::get(const char *key) {
 /* public */ void
 Map::remove(const char *key) {
     if (key == NULL) {
-	dump_core();
+	crash();
 	return;
     }
 
