@@ -683,7 +683,7 @@ Viewer::getTopmostViewer() {
 	    if (windows[j] == g_rootwindow)
 		windows[j] = ((Viewer *) instances->get(j))->getWindow();
 	    if (windows[j] == w) {
-		free(children);
+		XFree(children);
 		return (Viewer *) instances->get(j);
 	    }
 	}
@@ -691,7 +691,7 @@ Viewer::getTopmostViewer() {
 
     // No match found. Weird.
     // Again we punt and just take a wild guess.
-    free(children);
+    XFree(children);
     return (Viewer *) instances->get(0);
 }
 
