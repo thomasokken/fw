@@ -1,4 +1,4 @@
-CXXFLAGS = -MMD -Wall -g -I.. -I/usr/X11R6/include
+CXXFLAGS = -MMD -Wall -g -I..
 LDFLAGS = -shared
 
 SRCS := $(wildcard *.cc)
