@@ -1,9 +1,30 @@
+Selecting the currently selected button of a radio group causes it to be
+deselected. Not good! How to prevent? Hmmm, if programmatical deselection
+by Menu's group management code is always done with doCallbacks = False,
+then the very fact that you find yourself in radioCB with a value that's
+changing to 'false' can only mean that it's the user doing it; in that case,
+just veto (i.e. set it right back to 'true' w/o invoking callbacks (and hope
+that XmToggleButton can deal with being reentered like that. If not, check
+the XmRowColumnWidget source code: *it* has to deal with the same problem
+somehow, no?)
+
 Find a better way for SettingsDialog to access the settings.
 The current approach is based on the assumption that structs are packed,
 i.e. if a and b are consecutive members of a struct, that (&b - &a)
 equals sizeof(a), and that is not a safe assumption.
 
+Fix the tabbing order in SettingsDialog (should traverse the bit depth radio
+buttons *before* the group of pushbuttons in the lower right corner). Is the
+order currently governed by the order in which the widgets were added to the
+container? May not be possible to change the order in which the widgets are
+added to the container, because of the XmForm constraints... But the tabbing
+order can be overridden using some resource. Check xmlgui if unsure; I seem to
+remember doing just that right there.
+
+Low priority, especially as long as I have no access to a Sun machine:
 Sun-related issues: textfields are weird (repaint problem: backspaced-over
 characters do not disappear), and icons have wrong colors if display depth != 8
 
+Low priority, especially since I don't run Mandrake 8.1 and don't plan to.
+How did this get here anyway?!? Who do I know who does run it? Oh, well...
 Mandrake 8.1 requires -I/usr/X11R6/include and -lXp

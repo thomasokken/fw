@@ -41,6 +41,7 @@ class Kaos : public Plugin {
 	Kaos(void *dl) : Plugin(dl) {
 	    settings = &s;
 	    settings_layout = my_settings_layout;
+	    jOud1 = 0;
 	}
 	virtual ~Kaos() {}
 	virtual const char *name() const {
@@ -148,7 +149,7 @@ class Kaos : public Plugin {
 		    jop++;
 		}
 	    } else {
-		int j;
+		int j = 0;
 		for (int k = 0; k < ITERS && !finished; k++) {
 		    int jOud2 = jOud1;
 		    jOud1 = j;
