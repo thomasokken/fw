@@ -1501,7 +1501,6 @@ class OpenListener : public FileDialog::Listener {
 		    beep();
 		}
 	    } else {
-		// TODO: nicer error reporting
 		char buf[1024];
 		snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
 		TextViewer *tv = new TextViewer(buf);

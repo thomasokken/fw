@@ -364,6 +364,10 @@ ImageIO_PNG::write(const char *filename, const char *plugin_name,
 	// TODO: try wiping the chunk data buffer after the
 	// png_set_unknown_chunks() call, to find out if libpng makes a copy
 	// of the data.
+	//
+	// TODO: Re: the comments above: looking at the libpng source code,
+	// I discovered that libpng copies *everything*. So, there's no need
+	// to hold on to anything after having given it to libpng.
 
 	int size = plugin_data_length + FW_ID_LEN + 8;
 	chunkbuf = (unsigned char *) malloc(size);

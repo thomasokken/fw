@@ -10,19 +10,13 @@
 #include "main.h"
 #include "util.h"
 
-/* TO DO:
- * Better error handling.
+/* TODO:
  * GIF87a support is complete, as far as I have been able to determine.
  * For GIF89a support, it would be nice to handle the Plain Text extension,
  * and maybe honor the Graphic Control extension (e.g., if a sub-image is
  * specified to be restored to previous, don't even paint it to begin with;
  * or erase its extent if the specified behaviour is to restore to the
  * background color, etc.
- * Also, the Application Extension is made to order for using GIF as a base
- * format for some FW plugins -- basically, any that don't use 24-bit mode
- * and don't store outrageous amounts of application data. MandelbrotMS should
- * be a perfect fit. Of course, I'll also have to write a GIF encoder, and
- * then move both decoder and encoder to some nice GIF support class.
  */
 
 #define MSGLEN 1024

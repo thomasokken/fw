@@ -577,9 +577,6 @@ ColorPicker::repaintOldNewImage() {
 
 	oldnew_image_initialized = true;
     } else {
-	// TODO: It always uses dithering. At 5 or more bits per RGB component,
-	// that's really not necessary. Should check for that case.
-
 	if (g_grayramp != NULL) {
 	    // Greyscale halftoning
 	    unsigned char r, g, b;
