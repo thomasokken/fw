@@ -1,9 +1,0 @@
-Why does gif2tiff crash on newton.gif? Everybody else (fw itself, xv,
-giftopnm, Mozilla, IE, WinJPEG, xpaint) seems to like it just fine.
-Maybe it's a gif2tiff bug... Then again I'd feel a lot better if I had some
-source where the *precise* details of when to send clear codes and when to
-switch code sizes were documented. Writing ImageIO_GIF has felt a lot like
-flying blind at times. I guess I should be thankful that it works as well as it
-does now, but still, stuff like the gif2tiff problem just makes me wonder what
-other surprises are still lurking in that code.
-I know, I know, don't use GIF, use PNG. :-)

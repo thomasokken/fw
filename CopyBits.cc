@@ -1282,12 +1282,12 @@ CopyBits::rgb2nearestgrays(unsigned char *r, unsigned char *g,
 	int k2;
 	if (k < v) {
 	    p2 = p + 1;
-	    k2 = g_grayramp[p2].red;
+	    k2 = g_grayramp[p2].red / 257;
 	} else {
 	    p2 = p;
 	    k2 = k;
 	    p = p - 1;
-	    k = g_grayramp[p].red;
+	    k = g_grayramp[p].red / 257;
 	}
 	pixels[0] = g_grayramp[p].pixel;
 	pixels[1] = g_grayramp[p2].pixel;
