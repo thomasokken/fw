@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Plugin.h"
+#include "Julia.help"
 
 struct rect {
     int top, left, bottom, right;
@@ -123,6 +124,10 @@ class Julia : public Plugin {
 
 	virtual const char *name() {
 	    return "Julia";
+	}
+
+	virtual const char *help() {
+	    return helptext;
 	}
 
 	virtual bool does_depth(int depth) {

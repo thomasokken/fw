@@ -10,6 +10,7 @@
 #include "SettingsDialog.h"
 #include "Plugin.h"
 #include "SettingsHelper.h"
+#include "TextViewer.h"
 #include "main.h"
 #include "util.h"
 
@@ -280,7 +281,11 @@ SettingsDialog::help(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 SettingsDialog::help2() {
-    XBell(g_display, 100);
+    const char *helptext = plugin->help();
+    if (helptext == NULL)
+	helptext = "This plugin does not provide help.";
+    TextViewer *tv = new TextViewer(helptext);
+    tv->raise();
 }
 
 /* private static */ void

@@ -15,8 +15,11 @@
 #include "Menu.h"
 #include "Plugin.h"
 #include "SaveImageDialog.h"
+#include "TextViewer.h"
 #include "main.h"
 #include "util.h"
+
+#include "FW.help"
 
 
 /* private static */ List *
@@ -1477,10 +1480,31 @@ Viewer::doScale(const char *value) {
 
 /* private */ void
 Viewer::doGeneral() {
-    doBeep();
+    TextViewer *tv = new TextViewer(helptext);
+    tv->raise();
 }
 
 /* private */ void
 Viewer::doHelp(const char *id) {
-    doBeep();
+    Plugin *plugin = Plugin::get(id);
+    if (plugin == NULL) {
+	char buf[1024];
+	snprintf(buf, 1024, "The plugin \"%s\" could not be loaded.\n"
+			    "Please check $HOME/.fw to see if it is missing.",
+			    id);
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
+    } else {
+	const char *help = plugin->help();
+	if (help == NULL) {
+	    char buf[1024];
+	    snprintf(buf, 1024, "The plugin \"%s\" does not provide help.", id);
+	    TextViewer *tv = new TextViewer(buf);
+	    tv->raise();
+	} else {
+	    TextViewer *tv = new TextViewer(help);
+	    tv->raise();
+	}
+	Plugin::release(plugin);
+    }
 }

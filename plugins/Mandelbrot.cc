@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Plugin.h"
+#include "Mandelbrot.help"
 
 struct rect {
     int top, left, bottom, right;
@@ -120,6 +121,10 @@ class Mandelbrot : public Plugin {
 
 	virtual const char *name() {
 	    return "Mandelbrot";
+	}
+
+	virtual const char *help() {
+	    return helptext;
 	}
 
 	virtual bool does_depth(int depth) {

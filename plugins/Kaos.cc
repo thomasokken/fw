@@ -2,6 +2,7 @@
 #include <string.h>
 
 #include "Plugin.h"
+#include "Kaos.help"
 
 const int NMAX = 10;
 const int ITERS = 10000;
@@ -67,6 +68,9 @@ class Kaos : public Plugin {
 	virtual ~Kaos() {}
 	virtual const char *name() {
 	    return "Kaos";
+	}
+	virtual const char *help() {
+	    return helptext;
 	}
 	virtual bool does_depth(int depth) {
 	    return depth == 8 || depth == 24;

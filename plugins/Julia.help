@@ -1,0 +1,17 @@
+static const char *helptext =
+  "------------------------------------ Julia -----------------------------------"
+"\n"
+"\n'Julia' is an EDP for computing Julia sets of z:=z^2+c using the Escape Time"
+"\nalgorithm. It is one of the standard EDPs for Fractal Wizard."
+"\nA Julia set consists of all points for which this iterated function remains"
+"\nbounded. As the constant 'c' is varied, the Julia sets change appearance"
+"\ndramatically."
+"\nYou can explore the realm of Julia sets by choosing different values for 'c'."
+"\n(Set the real part in 'c[r]', the imaginary in 'c[i]'). You can also generate a"
+"\nJulia set by bringing an Mandelbrot window to the front, selecting a rectangle"
+"\nfrom it, and then choosing New_(Julia) from the File menu while holding down"
+"\nthe Shift key. The value of c will correspond with the center of the selected"
+"\nrectangle. You will often notice a strong similarity between a part of the"
+"\nMandelbrot set and its associated Julia set."
+"\n"
+"\nFor more information, see the Help for Mandelbrot, especially the references.";
