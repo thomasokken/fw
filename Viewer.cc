@@ -1942,14 +1942,16 @@ Viewer::input(Widget w, XtPointer ud, XtPointer cd) {
 
 /* private */ void
 Viewer::input2(XEvent *event) {
+    // TODO: xv-like use of cursor keys to move or resize the selection.
+    // Also, establishing a selection by double-clicking; getting rid of a
+    // selection by double-clicking inside it; moving a selection by dragging
+    // inside it, and all that.
     switch (event->type) {
 	case KeyPress:
 	    // event->xkey.state, event->xkey.keycode
-	    // TODO: xv-like use of cursor keys to move or resize the selection
 	    break;
 	case KeyRelease:
 	    // event->xkey.state, event->xkey.keycode
-	    // TODO: xv-like use of cursor keys to move or resize the selection
 	    break;
 	case ButtonPress: {
 	    // event->xbutton.x, event->xbutton.y,
