@@ -75,6 +75,7 @@ class Viewer : private Frame {
 	virtual void close();
 	static void addViewer(Viewer *viewer);
 	static void removeViewer(Viewer *viewer);
+	static Viewer *getTopmostViewer();
 	bool canIDoDirectCopy();
 	void draw_selection();
 	void erase_selection();

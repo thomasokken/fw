@@ -690,6 +690,48 @@ Viewer::removeViewer(Viewer *viewer) {
     instances->remove(viewer);
 }
 
+/* private static */ Viewer *
+Viewer::getTopmostViewer() {
+    int nviewers = instances->size();
+    if (nviewers == 0)
+	return NULL;
+
+    Window windows[nviewers];
+
+    // Initialize the windows array with g_rootwindow, because I need
+    // a special value to distinguish from the case where getWindow()
+    // returns None (which I don't think should ever happen, but hey).
+    for (int i = 0; i < nviewers; i++)
+	windows[i] = g_rootwindow;
+
+    Window root;
+    Window parent;
+    Window *children;
+    unsigned int nchildren;
+    if (XQueryTree(g_display, g_rootwindow, &root, &parent,
+		&children, &nchildren) == 0)
+	// Whoa! Harsh.
+	// Just take a wild guess, then.
+	return (Viewer *) instances->get(0);
+
+    for (int i = nchildren - 1; i >= 0; i--) {
+	Window w = children[i];
+	for (int j = 0; j < nviewers; j++) {
+	    if (windows[j] == g_rootwindow)
+		windows[j] = ((Viewer *) instances->get(j))->getWindow();
+	    if (windows[j] == w) {
+		free(children);
+		return (Viewer *) instances->get(j);
+	    }
+	}
+    }
+
+    // No match found. Weird.
+    // Again we punt and just take a wild guess.
+    free(children);
+    return (Viewer *) instances->get(0);
+}
+
 /* public */ void
 Viewer::setDirty() {
     dirty = true;
@@ -1672,15 +1714,10 @@ class YesNoCancelBeforeQuittingListener : public YesNoCancelDialog::Listener {
 /* private static */ void
 Viewer::doQuit2() {
     while (true) {
-	int sz = instances->size();
-	if (sz == 0)
+	Viewer *viewer = getTopmostViewer();
+	if (viewer == NULL)
 	    exit(0);
 
-	// TODO -- it would be nicer to start with the one that's closest
-	// to the top of the window stacking order, but that's too much of
-	// a pain for me to code right now.
-
-	Viewer *viewer = (Viewer *) instances->get(sz - 1);
 	if (!viewer->dirty && viewer->undomanager->getCurrentId()
 				== viewer->saved_undo_id) {
 	    delete viewer;

@@ -339,24 +339,9 @@ Frame::findDecorSize() {
     if (decor_known)
 	return;
 
-    Window w = XtWindow(toplevel);
-    while (true) {
-	Window root;
-	Window parent;
-	Window *children;
-	unsigned int nchildren;
-	if (XQueryTree(g_display, w, &root, &parent, &children, &nchildren) == 0)
-	    // Fatal error
-	    return;
-	if (children != NULL)
-	    XFree(children);
-	if (root == parent)
-	    break;
-	else
-	    w = parent;
-    }
+    Window w = getWindow();
 
-    // w is now the outermost window, i.e. the window owned by the window
+    // w is the outermost window, i.e. the window owned by the window
     // manager, which is a child of the root window, and which contains all
     // the decorations (and our own top level window, of course).
 
@@ -496,6 +481,26 @@ Frame::fitToScreen() {
     }
     if (n > 0)
 	XtSetValues(toplevel, args, n);
+}
+
+/* protected */ Window
+Frame::getWindow() {
+    Window w = XtWindow(toplevel);
+    while (true) {
+	Window root;
+	Window parent;
+	Window *children;
+	unsigned int nchildren;
+	if (XQueryTree(g_display, w, &root, &parent, &children, &nchildren) == 0)
+	    // Fatal error
+	    return None;
+	if (children != NULL)
+	    XFree(children);
+	if (root == parent)
+	    return w;
+	else
+	    w = parent;
+    }
 }
 
 /* private static */ void

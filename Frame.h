@@ -40,6 +40,7 @@ class Frame {
 	void getDecorSize(int *width, int *height);
 	void getTaskBarSize(int *width, int *height);
 	void fitToScreen();
+	Window getWindow();
 
     private:
 	void init(bool resizable, bool centered, bool hasMenuBar);
