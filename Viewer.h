@@ -10,6 +10,8 @@ class Plugin;
 
 class Viewer : private Frame {
     private:
+	char *filename;
+	char *filetype;
 	Plugin *plugin;
 	Widget drawingarea;
 	XImage *image;
@@ -39,6 +41,7 @@ class Viewer : private Frame {
 	void deleteLater();
 	void paint(int top, int left, int bottom, int right);
 	void colormapChanged();
+	void setFile(const char *filename, const char *filetype);
 
     private:
 	void init(const char *pluginname, const Viewer *src, void *plugin_data,			  int plugin_data_length, FWPixmap *pm);

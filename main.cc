@@ -422,20 +422,25 @@ int main(int argc, char **argv) {
 
     bool nothingOpened = true;
     for (int i = 1; i < argc; i++) {
+	char *type = NULL;
 	char *plugin_name = NULL;
 	void *plugin_data = NULL;
 	int plugin_data_length;
 	FWPixmap pm;
 	char *message = NULL;
-	if (ImageIO::sread(argv[i], &plugin_name, &plugin_data,
+	if (ImageIO::sread(argv[i], &type, &plugin_name, &plugin_data,
 			  &plugin_data_length, &pm, &message)) {
 	    // Read successful; open viewer
-	    new Viewer(plugin_name, plugin_data, plugin_data_length, &pm);
+	    Viewer *viewer = new Viewer(plugin_name, plugin_data,
+				       plugin_data_length, &pm);
+	    viewer->setFile(argv[i], type);
 	    nothingOpened = false;
 	} else {
 	    // TODO: nicer error reporting
 	    fprintf(stderr, "Can't open \"%s\" (%s).\n", argv[i], message);
 	}
+	if (type != NULL)
+	    free(type);
 	if (plugin_name != NULL)
 	    free(plugin_name);
 	if (plugin_data != NULL)

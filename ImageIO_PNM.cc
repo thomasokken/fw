@@ -299,7 +299,7 @@ static int get_one_char(FILE *file) {
 }
 
 /* public virtual */ bool
-ImageIO_PNM::write(const char *filename, char *plugin_name,
+ImageIO_PNM::write(const char *filename, const char *plugin_name,
 		   const void *plugin_data, int plugin_data_length,
 		   const FWPixmap *pm, char **message) {
     *message = strclone("foo");

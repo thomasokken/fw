@@ -22,15 +22,20 @@ class ImageIO {
 	virtual bool read(const char *filename, char **plugin_name,
 			  void **plugin_data, int *plugin_data_length,
 			  FWPixmap *pm, char **message) = 0;
-	virtual bool write(const char *filename, char *plugin_name,
+	virtual bool write(const char *filename, const char *plugin_name,
 			   const void *plugin_data, int plugin_data_length,
 			   const FWPixmap *pm, char **message) = 0;
 
 	static void regist(ImageIO *imgio);
 	static Iterator *list();
-	static bool sread(const char *filename, char **plugin_name,
-			 void **plugin_data, int *plugin_data_length,
-			 FWPixmap *pm, char **message);
+	static bool sread(const char *filename, char **type,
+			  char **plugin_name, void **plugin_data,
+			  int *plugin_data_length, FWPixmap *pm,
+			  char **message);
+	static bool swrite(const char *filename, const char *type,
+			   const char *plugin_name, const void *plugin_data,
+			   int plugin_data_length, const FWPixmap *pm,
+			   char **message);
 };
 
 #endif

@@ -458,7 +458,7 @@ ImageIO_GIF::read(const char *filename, char **plugin_name, void **plugin_data,
 }
 
 /* public virtual */ bool
-ImageIO_GIF::write(const char *filename, char *plugin_name,
+ImageIO_GIF::write(const char *filename, const char *plugin_name,
 		   const void *plugin_data, int plugin_data_length,
 		   const FWPixmap *pm, char **message) {
     *message = strclone("foo");

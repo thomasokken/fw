@@ -2,14 +2,13 @@
 #include <Xm/RowColumn.h>
 
 #include "SaveImageDialog.h"
+#include "ImageIO.h"
 #include "Menu.h"
+#include "util.h"
 
 
 /* public */
 SaveImageDialog::SaveImageDialog() {
-    setFileSelectedCB(privateFileSelectedCallback, this);
-    type = "";
-
     Widget form = XtCreateManagedWidget("TypeForm", xmFormWidgetClass,
 					fsb, NULL, 0);
 
@@ -30,12 +29,19 @@ SaveImageDialog::SaveImageDialog() {
     XtSetValues(cascadebutton, args, 1);
 
     typeMenu = new Menu;
-    typeMenu->addCommand("GIF", NULL, NULL, "GIF");
-    typeMenu->addCommand("JPEG", NULL, NULL, "JPEG");
-    typeMenu->addCommand("PNG", NULL, NULL, "PNG");
-    typeMenu->addCommand("PBM/PGM/PPM", NULL, NULL, "PNM");
+    Iterator *iter = ImageIO::list();
+    type = NULL;
+    while (iter->hasNext()) {
+	const char *t = (const char *) iter->next();
+	typeMenu->addCommand(t, NULL, NULL, t);
+	if (type == NULL)
+	    type = t;
+    }
+    delete iter;
     typeMenu->setCommandListener(typeMenuCB, this);
     typeMenu->makeWidgets(pulldown);
+
+    setFileSelectedCB(privateFileSelectedCallback, this);
 }
 
 /* public virtual */

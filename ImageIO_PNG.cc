@@ -191,7 +191,7 @@ ImageIO_PNG::read(const char *filename, char **plugin_name,
 }
 
 /* public virtual */ bool
-ImageIO_PNG::write(const char *filename, char *plugin_name,
+ImageIO_PNG::write(const char *filename, const char *plugin_name,
 		   const void *plugin_data, int plugin_data_length,
 		   const FWPixmap *pm, char **message) {
     *message = strclone("foo");

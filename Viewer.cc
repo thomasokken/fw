@@ -54,6 +54,8 @@ Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
     instances++;
     image = NULL;
     priv_cmap = None;
+    filename = NULL;
+    filetype = NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
@@ -391,6 +393,10 @@ Viewer::finish_init() {
 
 /* public */
 Viewer::~Viewer() {
+    if (filename != NULL)
+	free(filename);
+    if (filetype != NULL)
+	free(filetype);
     if (image != NULL) {
 	if (!direct_copy)
 	    free(image->data);
@@ -429,6 +435,16 @@ Viewer::deleteLater2(XtPointer ud) {
     Viewer *This = (Viewer *) ud;
     delete This;
     return True;
+}
+
+/* public */ void
+Viewer::setFile(const char *name, const char *type) {
+    if (filename != NULL)
+	free(filename);
+    filename = name == NULL ? NULL : strclone(name);
+    if (filetype != NULL)
+	free(filetype);
+    filetype = type == NULL ? NULL : strclone(type);
 }
 
 /* public */ void
@@ -2114,20 +2130,25 @@ Viewer::radiocallback2(const char *id, const char *value) {
 
 /* private static */ void
 Viewer::doOpen2(const char *filename, void *closure) {
+    char *type = NULL;
     char *plugin_name = NULL;
     void *plugin_data = NULL;
     int plugin_data_length;
     FWPixmap pm;
     char *message = NULL;
-    if (ImageIO::sread(filename, &plugin_name, &plugin_data,
+    if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
 		      &plugin_data_length, &pm, &message)) {
 	// Read successful; open viewer
-	new Viewer(plugin_name, plugin_data, plugin_data_length, &pm);
+	Viewer *viewer = new Viewer(plugin_name, plugin_data,
+				    plugin_data_length, &pm);
+	viewer->setFile(filename, type);
     } else {
 	// TODO: nicer error reporting
 	fprintf(stderr, "Can't open \"%s\" (%s).\n", filename, message);
 	doBeep();
     }
+    if (type != NULL)
+	free(type);
     if (plugin_name != NULL)
 	free(plugin_name);
     if (plugin_data != NULL)
@@ -2139,7 +2160,20 @@ Viewer::doOpen2(const char *filename, void *closure) {
 /* private static */ void
 Viewer::doSaveAs2(const char *filename, const char *type, void *closure) {
     Viewer *This = (Viewer *) closure;
-    fprintf(stderr, "Saving image as \"%s\", type %s.\n", filename, type);
+    const char *plugin_name = This->plugin->name();
+    void *plugin_data;
+    int plugin_data_length;
+    This->plugin->serialize(&plugin_data, &plugin_data_length);
+    char *message = NULL;
+    if (!ImageIO::swrite(type, filename, plugin_name, plugin_data,
+			 plugin_data_length, &This->pm, &message)) {
+	// TODO: nicer error reporting
+	fprintf(stderr, "Saving \"%s\" failed (%s).\n", filename, message);
+    }
+    if (plugin_data != NULL)
+	free(plugin_data);
+    if (message != NULL)
+	free(message);
 }
 
 /* private static */ void
