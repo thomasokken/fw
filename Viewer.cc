@@ -52,6 +52,25 @@ Viewer::init(const char *pluginname, const Viewer *src, const char *filename) {
 	} else {
 	    plugin->init_new();
 	    // the plugin must call finish_init or delete the Viewer
+	    // TODO: The plugin can't currently delete the Viewer safely,
+	    // because deleting the Viewer causes the plugin's .so to be
+	    // unloaded if it was the only instance; the result being that
+	    // execution returns from ~Viewer() (or from
+	    // Plugin::get_settings_cancel(), which simply calls ~Viewer()
+	    // itself) BACK TO THE .so THAT WAS JUST UNLOADED -- causing a
+	    // SIGSEGV.
+	    // Can't init_new() simply return a bool to indicate success or
+	    // failure, like init_clone() and init_load(), so that deleting the
+	    // Viewer (if necessary, i.e. if init_new() returns 'false') can be
+	    // done *here*, in Viewer.cc, where it is safe to do so? Or is the
+	    // problem that bringing up a Settings dialog requires a return to
+	    // the main event loop (Java solves this by firing up a secondary
+	    // message pump, but let's not go there, it's a bit ugly)? If so,
+	    // then the fix would be to maintain a queue of viewers to be
+	    // deleted; the pluging would enqueue its viewer, end the queue
+	    // would be handled by a XtWorkProc. Hmm, actually, all this
+	    // XtWorkProc stuff makes me think it would be nice to have a nice
+	    // C++ wrapper, a la Java's SwingUtilities.invokeLater()...
 	}
     }
 }
