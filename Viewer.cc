@@ -41,7 +41,14 @@ Viewer::colormap_directory = NULL;
 Viewer::Viewer(const char *pluginname)
     : Frame(true, false, true) {
     is_brand_new = true;
-    init(pluginname, NULL, 0, NULL);
+    init(pluginname, NULL, NULL, 0, NULL);
+}
+
+/* public */
+Viewer::Viewer(Plugin *clonee)
+    : Frame(true, false, true) {
+    is_brand_new = true;
+    init(NULL, clonee, NULL, 0, NULL);
 }
 
 /* public */
@@ -49,11 +56,11 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
 	               int plugin_data_length, FWPixmap *fpm)
     : Frame(true, false, true) {
     is_brand_new = false;
-    init(pluginname, plugin_data, plugin_data_length, fpm);
+    init(pluginname, NULL, plugin_data, plugin_data_length, fpm);
 }
 
 /* private */ void
-Viewer::init(const char *pluginname, void *plugin_data,
+Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
 	     int plugin_data_length, FWPixmap *fpm) {
     id = idcount++;
     image = NULL;
@@ -62,6 +69,9 @@ Viewer::init(const char *pluginname, void *plugin_data,
     filetype = NULL;
     savedialog = NULL;
     cme = NULL;
+
+    if (clonee != NULL)
+	pluginname = clonee->name();
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
@@ -79,17 +89,20 @@ Viewer::init(const char *pluginname, void *plugin_data,
     }
     plugin->setViewer(this);
     plugin->setPixmap(&pm);
-    if (plugin != NULL) {
-	if (fpm != NULL) {
-	    pm = *fpm;
-	    plugin->deserialize(plugin_data, plugin_data_length);
-	    finish_init();
-	} else {
-	    plugin->init_new();
-	    // The plugin must call Plugin::init_proceed() (which calls
-	    // Viewer::finish_init()) or Plugin::init_abort() (which calls
-	    // Viewer::deleteLater()).
-	}
+    if (fpm != NULL) {
+	pm = *fpm;
+	plugin->deserialize(plugin_data, plugin_data_length);
+	finish_init();
+    } else if (clonee != NULL) {
+	plugin->init_clone(clonee);
+	// The plugin must call Plugin::init_proceed() (which calls
+	// Viewer::finish_init()) or Plugin::init_abort() (which calls
+	// Viewer::deleteLater()).
+    } else {
+	plugin->init_new();
+	// The plugin must call Plugin::init_proceed() (which calls
+	// Viewer::finish_init()) or Plugin::init_abort() (which calls
+	// Viewer::deleteLater()).
     }
 }
 
@@ -103,6 +116,8 @@ Viewer::finish_init() {
     Menu *topmenu = new Menu;
 
     Menu *pluginmenu = new Menu;
+    pluginmenu->addCommand("Clone", NULL, "Ctrl+R", "File.Clone");
+    pluginmenu->addSeparator();
     char **plugins = Plugin::list();
     if (plugins == NULL)
 	pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
@@ -564,6 +579,45 @@ Viewer::paint(int top, int left, int bottom, int right) {
     }
 }
 
+/* public */ void
+Viewer::get_recommended_size(int *width, int *height) {
+    // TODO -- factor in decor size!
+    get_screen_size(width, height);
+}
+
+/* public */ void
+Viewer::get_screen_size(int *width, int *height) {
+    *width = XWidthOfScreen(g_screen);
+    *height = XHeightOfScreen(g_screen);
+}
+
+/* public */ void
+Viewer::get_selection(int *x, int *y, int *width, int *height) {
+    if (selection_visible) {
+	if (sel_x1 < sel_x2) {
+	    *x = sel_x1;
+	    *width = sel_x2 - sel_x1;
+	} else {
+	    *x = sel_x2;
+	    *width = sel_x1 - sel_x2;
+	}
+	if (sel_y1 < sel_y2) {
+	    *y = sel_y1;
+	    *height = sel_y2 - sel_y1;
+	} else {
+	    *y = sel_y2;
+	    *height = sel_y1 - sel_y2;
+	}
+    } else {
+	*x = *y = *width = *height = -1;
+    }
+}
+
+/* public */ int
+Viewer::get_scale() {
+    return scale;
+}
+
 /* private */ void
 Viewer::draw_selection() {
     if (gc == None)
@@ -904,8 +958,10 @@ Viewer::menucallback(void *closure, const char *id) {
 Viewer::menucallback2(const char *id) {
     if (strcmp(id, "File.Beep") == 0)
 	doBeep();
-    if (strncmp(id, "File.New.", 9) == 0)
+    else if (strncmp(id, "File.New.", 9) == 0)
 	doNew(id + 9);
+    else if (strcmp(id, "File.Clone") == 0)
+	doClone();
     else if (strcmp(id, "File.Open") == 0)
 	doOpen();
     else if (strcmp(id, "File.Close") == 0)
@@ -1005,12 +1061,16 @@ Viewer::doOpen2(const char *filename, void *closure) {
 				    plugin_data_length, &pm);
 	viewer->setFile(filename, type);
 	if (message != NULL) {
-	    fprintf(stderr, "%s\n", message);
+	    TextViewer *tv = new TextViewer(message);
+	    tv->raise();
 	    doBeep();
 	}
     } else {
 	// TODO: nicer error reporting
-	fprintf(stderr, "Can't open \"%s\" (%s).\n", filename, message);
+	char buf[1024];
+	snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
 	doBeep();
     }
     if (type != NULL)
@@ -1114,7 +1174,12 @@ Viewer::doBeep() {
 }
 
 /* private */ void
-Viewer::doNew(const char *plugin) {
+Viewer::doNew(const char *pluginname) {
+    new Viewer(pluginname);
+}
+
+/* private */ void
+Viewer::doClone() {
     new Viewer(plugin);
 }
 

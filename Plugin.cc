@@ -181,6 +181,11 @@ Plugin::init_new() {
 }
 
 /* public virtual */ void
+Plugin::init_clone(Plugin *src) {
+    init_new();
+}
+
+/* public virtual */ void
 Plugin::get_settings_ok() {
     init_proceed();
 }
@@ -283,6 +288,26 @@ Plugin::stop_working() {
 	if (worklist == NULL)
 	    XtRemoveWorkProc(workproc_id);
     }
+}
+
+/* protected */ void
+Plugin::get_recommended_size(int *width, int *height) {
+    viewer->get_recommended_size(width, height);
+}
+
+/* protected */ void
+Plugin::get_screen_size(int *width, int *height) {
+    viewer->get_screen_size(width, height);
+}
+
+/* protected */ void
+Plugin::get_selection(int *x, int *y, int *width, int *height) {
+    viewer->get_selection(x, y, width, height);
+}
+
+/* protected */ int
+Plugin::get_scale() {
+    return viewer->get_scale();
 }
 
 /* protected */ void

@@ -282,10 +282,16 @@ SettingsDialog::help(Widget w, XtPointer ud, XtPointer cd) {
 /* private */ void
 SettingsDialog::help2() {
     const char *helptext = plugin->help();
-    if (helptext == NULL)
-	helptext = "This plugin does not provide help.";
-    TextViewer *tv = new TextViewer(helptext);
-    tv->raise();
+    if (helptext == NULL) {
+	char buf[1024];
+	snprintf(buf, 1024, "The plugin \"%s\" does not provide help.",
+		 plugin->name());
+	TextViewer *tv = new TextViewer(buf);
+	tv->raise();
+    } else {
+	TextViewer *tv = new TextViewer(helptext);
+	tv->raise();
+    }
 }
 
 /* private static */ void

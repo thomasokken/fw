@@ -50,6 +50,7 @@ class Plugin {
 	// these, except for name().)
 	virtual bool does_depth(int depth);
 	virtual void init_new();
+	virtual void init_clone(Plugin *src);
 	virtual void get_settings_ok();
 	virtual void get_settings_cancel();
 	virtual void start();
@@ -68,6 +69,10 @@ class Plugin {
 	void init_abort();
 	void start_working();
 	void stop_working();
+	void get_recommended_size(int *width, int *height);
+	void get_screen_size(int *width, int *height);
+	void get_selection(int *x, int *y, int *width, int *height);
+	int get_scale();
 
 	// Methods used by plugins to tell FW that the image has changed
 	void paint();

@@ -76,8 +76,9 @@ class Kaos : public Plugin {
 	    return depth == 8 || depth == 24;
 	}
 	virtual void init_new() {
-	    pm->width = 983;
-	    pm->height = 647;
+	    get_recommended_size(&pm->width, &pm->height);
+	    //pm->width = 983;
+	    //pm->height = 647;
 	    pm->depth = 24;
 	    get_settings_dialog();
 	}

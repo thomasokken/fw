@@ -103,6 +103,9 @@ class Mandelbrot : public Plugin {
 	int hc, vc;
 	rect stack[50];
 	bool finished;
+	// End of serialized data
+
+	Mandelbrot *clonee;
 
     public:
 	/* move this to Plugin later */
@@ -115,6 +118,7 @@ class Mandelbrot : public Plugin {
 	Mandelbrot(void *dl) : Plugin(dl) {
 	    settings_layout = my_settings_layout;
 	    settings_base = &xmin;
+	    clonee = NULL;
 	}
 
 	virtual ~Mandelbrot() {}
@@ -144,15 +148,56 @@ class Mandelbrot : public Plugin {
 	    get_settings_dialog();
 	}
 
+	virtual void init_clone(Plugin *src) {
+	    clonee = (Mandelbrot *) src;
+
+	    int sx, sy, sw, sh;
+	    clonee->get_selection(&sx, &sy, &sw, &sh);
+	    if (sx == -1) {
+		sx = 0;
+		sy = 0;
+		sw = clonee->pm->width;
+		sh = clonee->pm->height;
+	    }
+
+	    int scale = clonee->get_scale();
+	    if (scale >= 1) {
+		pm->width = sw * scale;
+		pm->height = sh * scale;
+	    } else {
+		pm->width = sw / (-scale);
+		pm->height = sh / (-scale);
+	    }
+
+	    xmin = clonee->xmin + ((clonee->xmax - clonee->xmin)
+			    * sx) / (clonee->pm->width - 1);
+	    xmax = clonee->xmin + ((clonee->xmax - clonee->xmin)
+			    * (sx + sw - 1)) / (clonee->pm->width - 1);
+	    ymax = clonee->ymax - ((clonee->ymax - clonee->ymin)
+			    * sy) / (clonee->pm->height - 1);
+	    ymin = clonee->ymax - ((clonee->ymax - clonee->ymin)
+			    * (sy + sh - 1)) / (clonee->pm->height - 1);
+
+	    maxiter = clonee->maxiter;
+	    limit = clonee->limit;
+	    bands = clonee->bands;
+	    get_settings_dialog();
+	}
+
 	virtual void get_settings_ok() {
 	    pm->bytesperline = pm->width + 3 & ~3;
 	    pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
 	    memset(pm->pixels, 255, pm->bytesperline * pm->height);
 	    pm->cmap = new FWColor[256];
-	    for (int k = 0; k < 256; k++) {
-		pm->cmap[k].r = k;
-		pm->cmap[k].g = k;
-		pm->cmap[k].b = k;
+	    if (clonee != NULL && clonee->pm->depth == 8) {
+		for (int k = 0; k < 256; k++)
+		    pm->cmap[k] = clonee->pm->cmap[k];
+	    } else {
+		for (int k = 0; k < 256; k++) {
+		    pm->cmap[k].r = k;
+		    pm->cmap[k].g = k;
+		    pm->cmap[k].b = k;
+		}
 	    }
 	    init_proceed();
 	}

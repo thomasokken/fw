@@ -42,17 +42,22 @@ class Viewer : private Frame {
 
     public:
 	Viewer(const char *pluginname);
+	Viewer(Plugin *clonee);
 	Viewer(const char *pluginname, void *plugin_data,
 	       int plugin_data_length, FWPixmap *pm);
 	void finish_init();
 	~Viewer();
 	void deleteLater();
 	void paint(int top, int left, int bottom, int right);
+	void get_recommended_size(int *width, int *height);
+	void get_screen_size(int *width, int *height);
+	void get_selection(int *x, int *y, int *width, int *height);
+	int get_scale();
 	void colormapChanged();
 	void setFile(const char *filename, const char *filetype);
 
     private:
-	void init(const char *pluginname, void *plugin_data,
+	void init(const char *pluginname, Plugin *clonee, void *plugin_data,
 		  int plugin_data_length, FWPixmap *pm);
 	virtual void close();
 	static void addViewer(Viewer *viewer);
@@ -87,6 +92,7 @@ class Viewer : private Frame {
 
 	static void doBeep();
 	void doNew(const char *plugin);
+	void doClone();
 	void doOpen();
 	void doClose();
 	void doSave();

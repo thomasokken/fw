@@ -7,6 +7,7 @@
 #include <stdlib.h>
 
 #include "Menu.h"
+#include "main.h"
 #include "util.h"
 
 /* public */
@@ -63,7 +64,8 @@ Menu::remove(const char *id) {
 	previtem = item;
 	item = item->next;
     }
-    fprintf(stderr, "Attempt to remove nonexistent id \"%s\" from menu.\n", id);
+    if (g_verbosity >= 2)
+	fprintf(stderr, "Attempt to remove nonexistent id \"%s\" from menu.\n", id);
     return;
 
     found:
@@ -233,6 +235,7 @@ Menu::setRadioValue(const char *id, const char *value, bool doCallbacks) {
     Widget new_w = (Widget) radioIdToWidgetMap->get(buf);
     free(buf);
     if (new_w == NULL) {
+	if (g_verbosity >= 2)
 	fprintf(stderr, "Attempt to set nonexistent radio \"%s@%s\".\n", id, value);
 	return;
     }
@@ -321,7 +324,8 @@ Menu::makeItem(Widget parent, ItemNode *item) {
     } else if (item->type == ITEM_RADIO) {
 	// Radio menu item
 	if (strchr(item->id, '@') == NULL) {
-	    fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
+	    if (g_verbosity >= 2)
+		fprintf(stderr, "Lame attempt to add radio w/o '@' in id.\n");
 	} else {
 	    XtSetArg(args[nargs], XmNindicatorType, XmONE_OF_MANY); nargs++;
 	    item->widget = XtCreateManagedWidget(

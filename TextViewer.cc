@@ -26,7 +26,7 @@ TextViewer::TextViewer(const char *text) : Frame(true, true, false) {
 	    "OKButton",
 	    xmPushButtonWidgetClass,
 	    form,
-	    args, 6);
+	    args, 5);
     XmStringFree(label);
     XtAddCallback(okB, XmNactivateCallback, ok, (XtPointer) this);
     XtOverrideTranslations(okB,
