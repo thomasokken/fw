@@ -204,7 +204,7 @@ Viewer::finish_init() {
 
     clipwindow = XtNameToWidget(scroll, "ClipWindow");
 
-    scale = -2;
+    scale = 1; // get from preferences!
     int image_width, image_height;
     if (scale > 0) {
 	image_width = scale * width;
@@ -336,7 +336,7 @@ Viewer::finish_init() {
 			 bitmap_ok ? 8 : 32,
 			 0);
 
-    bool want_priv_cmap = true; // get from preferences!
+    bool want_priv_cmap = false; // get from preferences!
     optionsmenu->setToggleValue("Options.PrivateColormap", want_priv_cmap, false);
     if (want_priv_cmap
 	    && g_depth == 8
@@ -436,12 +436,12 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 			(pixels[y * bytesperline + (x >> 3)] & 1 << (x & 7))
 			    == 0 ? black : white);
     } else if (depth == 8 && priv_cmap != None) {
-	// As in the 1-bit case, in this case we know all our colors are available,
-	// so no dithering is required and all we do is copy pixels.
+	// As in the 1-bit case, in this case we know all our colors are
+	// available, so no dithering is required and all we do is copy pixels.
 	for (int y = top; y < bottom; y++)
 	    for (int x = left; x < right; x++)
 		XPutPixel(image, x, y, pixels[y * bytesperline + x]);
-    } else if ((g_grayramp == NULL || priv_cmap != None) && !dithering) {
+    } else if (!dithering && (g_grayramp == NULL || priv_cmap != None)) {
 	// Color display, not dithered
 	for (int y = top; y < bottom; y++) {
 	    for (int x = left; x < right; x++) {
@@ -524,7 +524,7 @@ Viewer::paint_unscaled(int top, int left, int bottom, int right) {
 		XPutPixel(image, x, y, pixel);
 	    }
 	}
-    } else if ((g_grayramp == NULL || priv_cmap != None) && dithering) {
+    } else if (dithering && (g_grayramp == NULL || priv_cmap != None)) {
 	// Color display, dithered
 	int *dr = new int[right - left];
 	int *dg = new int[right - left];
@@ -945,7 +945,7 @@ Viewer::paint_reduced(int top, int left, int bottom, int right) {
 		Y++;
 	    }
 	}
-    } else if ((depth != 1 || priv_cmap == None) && g_grayramp == NULL) {
+    } else if (g_grayramp == NULL || priv_cmap != None) {
 	// Color dithering
 	int *dr = new int[RIGHT - LEFT];
 	int *dg = new int[RIGHT - LEFT];
@@ -1451,7 +1451,8 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
-    fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
+    if (g_verbosity >= 1)
+	fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
     if (strcmp(id, "Options.PrivateColormap") == 0)
 	doPrivateColormap(value);
     else if (strcmp(id, "Options.Dither") == 0)
@@ -1467,7 +1468,8 @@ Viewer::radiocallback(void *closure, const char *id, const char *value) {
 
 /* private */ void
 Viewer::radiocallback2(const char *id, const char *value) {
-    fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
+    if (g_verbosity >= 1)
+	fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
     if (strcmp(id, "Windows.Scale") == 0)
 	doScale(value);
 }
