@@ -297,12 +297,12 @@ Plugin::list() {
     int n = 0;
     while (iter->hasNext())
 	names[n++] = strclone((const char *) iter->next());
+    names[n] = NULL;
 #endif
     if (n == 0) {
 	free(names);
 	return NULL;
     }
-    names[n] = NULL;
     qsort(names, n, sizeof(char *), list_compar);
     return names;
 }
