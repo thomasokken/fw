@@ -337,11 +337,7 @@ Viewer::finish_init() {
     scalemenu->setRadioValue("Windows.Scale", buf, false);
 
     selection_in_progress = false;
-    selection_visible = true;
-    sel_x1 = 10;
-    sel_y1 = 50;
-    sel_x2 = 200;
-    sel_y2 = 100;
+    selection_visible = false;
 
     bool bitmap_ok = depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
@@ -1703,14 +1699,14 @@ Viewer::draw_selection() {
 	if (scale == 1) {
 	    x = s_left;
 	    y = s_top;
-	    w = s_right - s_left - 1;
-	    h = s_bottom - s_top - 1;
+	    w = s_right - s_left;
+	    h = s_bottom - s_top;
 	} else {
 	    int s = -scale;
 	    x = s_left / s;
 	    y = s_top / s;
-	    w = (s_right / s) - x - 1;
-	    h = (s_bottom / s) - x - 1;
+	    w = (s_right / s) - x;
+	    h = (s_bottom / s) - x;
 	}
 	XSetLineAttributes(g_display, gc, 1, LineOnOffDash, CapButt, JoinMiter);
 	XSetDashes(g_display, gc, 0, "\004\004", 2);
@@ -1722,8 +1718,8 @@ Viewer::draw_selection() {
     } else {
 	x = s_left * scale + scale / 2;
 	y = s_top * scale + scale / 2;
-	w = (s_right - s_left - 1) * scale;
-	h = (s_bottom - s_top - 1) * scale;
+	w = (s_right - s_left) * scale;
+	h = (s_bottom - s_top) * scale;
 	XSetLineAttributes(g_display, gc, scale, LineOnOffDash, CapButt, JoinMiter);
 	char dashes[2];
 	dashes[0] = dashes[1] = 4 * scale;
@@ -1758,14 +1754,14 @@ Viewer::erase_selection() {
 	if (scale == 1) {
 	    x = s_left;
 	    y = s_top;
-	    w = s_right - s_left;
-	    h = s_bottom - s_top;
+	    w = s_right - s_left + 1;
+	    h = s_bottom - s_top + 1;
 	} else {
 	    int s = -scale;
 	    x = s_left / s;
 	    y = s_top / s;
-	    w = (s_right / s) - x;
-	    h = (s_bottom / s) - x;
+	    w = (s_right / s) - x + 1;
+	    h = (s_bottom / s) - x + 1;
 	}
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  x, y, x, y, w, 1);
@@ -1778,8 +1774,8 @@ Viewer::erase_selection() {
     } else {
 	x = s_left * scale;
 	y = s_top * scale;
-	w = (s_right - s_left) * scale;
-	h = (s_bottom - s_top) * scale;
+	w = (s_right - s_left + 1) * scale;
+	h = (s_bottom - s_top + 1) * scale;
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
 		  x, y, x, y, w, scale);
 	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
