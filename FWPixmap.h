@@ -20,6 +20,11 @@ struct FWPixmap {
     FWColor *cmap;
     int depth;
     int width, height, bytesperline;
+
+    FWPixmap() {
+	pixels = NULL;
+	cmap = NULL;
+    }
 };
 
 #endif

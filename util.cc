@@ -88,9 +88,9 @@ class MapIterator : public Iterator {
 	virtual void *next() {
 	    if (pos < nentries) {
 		if (doKeys)
-		    return &entries[pos++].key;
+		    return entries[pos++].key;
 		else
-		    return &entries[pos++].value;
+		    return (void *) entries[pos++].value;
 	    } else
 		return NULL;
 	}
@@ -213,7 +213,7 @@ Map::values() {
     return new MapIterator(entries, nentries, false);
 }
 
-/* private */ void
+/* public */ void
 Map::dump() {
     fprintf(stderr, "Contents of Map instance %p (entries=%d, size=%d)\n",
 	    this, nentries, size);

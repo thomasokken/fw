@@ -29,8 +29,6 @@ class Map {
 	void remove(const char *key);
 	Iterator *keys();
 	Iterator *values();
-
-    private:
 	void dump();
 };
 

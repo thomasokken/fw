@@ -53,8 +53,6 @@ Viewer::init(const char *pluginname, const Viewer *src, void *plugin_data,
     instances++;
     image = NULL;
     priv_cmap = None;
-    pm.pixels = NULL;
-    pm.cmap = NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {

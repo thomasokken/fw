@@ -20,7 +20,7 @@ ImageIO_JPEG::can_read(const char *filename) {
     fclose(jpg);
     if (n != 4)
 	return false;
-    return magic[0] == 0xFF && magic[1] != 0xD8 && magic[2] != 0xFF;
+    return magic[0] == 0xFF && magic[1] == 0xD8 && magic[2] == 0xFF;
 }
 
 typedef struct {
