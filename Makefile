@@ -1,4 +1,4 @@
-CXXFLAGS = -MMD -Wall -g
+CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include
 LDFLAGS = -L/usr/X11R6/lib -rdynamic
 LOADLIBES = -lXm -lXt -lX11 -lXmu -lXpm -ldl
 

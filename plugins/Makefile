@@ -1,4 +1,4 @@
-CXXFLAGS = -MMD -Wall -g -I..
+CXXFLAGS = -MMD -Wall -g -I.. -I/usr/X11R6/include
 
 SRCS := $(wildcard *.cc)
 OBJS := $(SRCS:.cc=.o)
