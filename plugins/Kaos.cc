@@ -5,8 +5,8 @@
 struct my_settings {
     int width, height;
     my_settings() {
-	width = 700;
-	height = 500;
+	width = 983;
+	height = 647;
     }
 };
 static char *my_settings_layout[] = {
