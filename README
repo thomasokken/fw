@@ -1,0 +1,51 @@
+-------------------------------------------------------------------------------
+Fractal Wizard is a free fractal renderer for Linux and other Unix-like
+operating systems. It is a port of an earlier Fractal Wizard that was written
+for MacOS (this is still evident in some of the help files, which have not
+yet been updated for the Linux port!).
+Fractal Wizard delegates the work of computing fractal images to plug-in
+modules, which are dynamically linked C++ classes. There is no real
+documentation about plug-in writing yet, but in the meantime, Plugin.h,
+MarianiSilver.h, and plugins/*.cc should provide a starting point. Plugin is
+the base class for all plug-ins, and provides some common functionality for
+them, including cooperative multitasking and communication with the main
+program; MarianiSilver extends Plugin to provide an efficient algorithm for
+fractals that are computed pixel-by-pixel (it looks for rectangles that are
+all one color; this is a big plus for the interior of the Mandelbrot set, for
+example).
+
+-------------------------------------------------------------------------------
+Building it from source:
+
+Different operating systems require different compiler and linker flags. One
+day I would like to use autoconf or something similar to make it easier to
+provide a Fractal Wizard source package that builds easily on all sorts of
+different flavors of Unix; until then, here are a few hints that may help in
+case simply saying 'make' doesn't to the job for you.
+
+One known source of confusion is the LOADLIBES line in the Makefile. Depending
+on your system's specifics, you may have to list more libraries there than I
+have in my Makefile. Apparently, different linkers have different abilities to
+automatically include required libs: on my system, -lXm (Motif) automatically
+includes -lXp -lXmu -lXt -lX11, but on others, some or all of these may have
+to be specified explicitly. Additional libraries may also be needed.
+
+I developed Fractal Wizard under Red Hat 7.1, Red Hat 7.3, and Fedora Core 3;
+it compiles and links as is on those systems.
+Other systems may require additional libraries to be specified in Makefile
+and/or plugins/Makefile, e.g.:
+
+LOADLIBES = -lXm -lXp -lXt -lX11 -lXmu -lXpm -ldl -ljpeg -lpng -lz
+
+I have built early versions of Fractal Wizard on Solaris as well (using g++);
+this requires some changes to CXXFLAGS and LDFLAGS to get the shared libraries
+to build, and to get the fw executable to export its symbols. Unfortunately, I
+do not have access to a Solaris box at the moment, and I do not have those old
+versions of my Makefiles any more -- all I can offer is words of encouragement:
+yes, it IS possible to build Fractal Wizard on Solaris. :-)
+
+I have never built anything using shared libs on other flavors of Unix, so I
+can't even begin to offer advice about those. If you are having problems, with
+the plugins in particular, please try using Makefile.staticplugins and
+plugins/Makefile.staticplugins instead of the regular Makefiles; these will
+link the plug-ins statically into the executable.

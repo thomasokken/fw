@@ -1,22 +1,20 @@
-/*-
- * Copyright (c) 2002 by Thomas Okken <thomas.okken@erols.com>
- *
- * Permission to use, copy, modify, and distribute this software and its
- * documentation for any purpose and without fee is hereby granted,
- * provided that the above copyright notice appear in all copies and that
- * both that copyright notice and this permission notice appear in
- * supporting documentation.
- *
- * This file is provided AS IS with no warranties of any kind.  The author
- * shall have no liability with respect to the infringement of copyrights,
- * trade secrets or any patents by this file or any part thereof.  In no
- * event will the author be liable for any lost revenue or profits or
- * other special, indirect and consequential damages.
- *
- * Revision History:
- * 26-Jan-2002: First version.
- * 31-Jul-2004: Fractal Wizard Plugin version.
- */
+///////////////////////////////////////////////////////////////////////////////
+// Fractal Wizard -- a free fractal renderer for Linux
+// Copyright (C) 1987-2005  Thomas Okken
+//
+// This program is free software; you can redistribute it and/or modify
+// it under the terms of the GNU General Public License, version 2,
+// as published by the Free Software Foundation.
+//
+// This program is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with this program; if not, write to the Free Software
+// Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
+///////////////////////////////////////////////////////////////////////////////
 
 #include <stdlib.h>
 #include <string.h>
