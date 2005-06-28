@@ -737,10 +737,12 @@ ColormapEditor::input2(XEvent *event) {
 	    selectColor(0);
 	    return;
 	}
-	// TODO: Yuck, hard-coded keycodes and mask bits.
-	// Where the #@$%^&*! is this stuff defined?!?
+	// TODO: Yuck, hard-coded keycodes.
+	// Use XLookupKeysym() or XLookupString() to get a KeySym,
+	// and use that instead of the non-portable constants below
+	// (98, 100, 102, 104).
 	unsigned int keycode = event->xkey.keycode;
-	bool shift = (event->xkey.state & 1) != 0;
+	bool shift = (event->xkey.state & ShiftMask) != 0;
 	int c;
 	switch (keycode) {
 	    case 98: // Up
