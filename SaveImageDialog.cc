@@ -18,7 +18,6 @@
 
 #include <Xm/Form.h>
 #include <Xm/RowColumn.h>
-#include <Xm/FileSB.h>
 #include <stdlib.h>
 
 #include "SaveImageDialog.h"
