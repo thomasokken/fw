@@ -1123,7 +1123,8 @@ ColorPicker::modifyVerify(Widget w, XtPointer ud, XtPointer cd) {
     char buf[64];
     strncpy(buf, rgbs, cbs->startPos);
     buf[cbs->startPos] = 0;
-    strcat(buf, cbs->text->ptr);
+    if (cbs->text->length > 0)
+	strcat(buf, cbs->text->ptr);
     strcat(buf, rgbs + cbs->endPos);
 
     int v;
