@@ -350,7 +350,7 @@ Menu::makeItem(Widget parent, ItemNode *item) {
     } else if (item->type == ITEM_COMMAND) {
 	// Regular menu item
 	item->widget = XtCreateManagedWidget(
-		"Command",
+		"Cmd", // Motif does not like the name "Command"!
 		xmPushButtonWidgetClass,
 		parent,
 		args, nargs);
