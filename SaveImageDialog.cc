@@ -44,13 +44,19 @@ SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
 
     this->listener = listener;
 
-    Arg args[2];
-    Widget pulldown = XmCreatePulldownMenu(fsb, "TypeList", NULL, 0);
+    Widget form = XtCreateManagedWidget("TypeForm", xmFormWidgetClass,
+					fsb, NULL, 0);
+
+    Arg args[5];
+    Widget pulldown = XmCreatePulldownMenu(form, "TypeList", NULL, 0);
     XmString label = XmStringCreateLocalized("File Type:");
     XtSetArg(args[0], XmNlabelString, label);
     XtSetArg(args[1], XmNsubMenuId, pulldown);
+    XtSetArg(args[2], XmNtopAttachment, XmATTACH_FORM);
+    XtSetArg(args[3], XmNleftAttachment, XmATTACH_FORM);
+    XtSetArg(args[4], XmNbottomAttachment, XmATTACH_FORM);
 
-    Widget option = XmCreateOptionMenu(fsb, "Type", args, 2);
+    Widget option = XmCreateOptionMenu(form, "Type", args, 5);
     XtManageChild(option);
 
     Widget cascadebutton = XtNameToWidget(option, "OptionButton");
