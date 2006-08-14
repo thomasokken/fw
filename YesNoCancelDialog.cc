@@ -61,7 +61,7 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
     setTitle("Yes, No, Cancel?");
     
     Widget form = getContainer();
-    Widget bb = bb = XtVaCreateManagedWidget(
+    Widget bb = XtVaCreateManagedWidget(
 	    "BulletinBoard",
 	    xmBulletinBoardWidgetClass,
 	    form,

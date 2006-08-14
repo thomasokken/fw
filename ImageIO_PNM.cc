@@ -269,8 +269,10 @@ ImageIO_PNM::read(const char *filename, char **plugin_name,
 		for (int v = 0; v < pm->height; v++) {
 		    unsigned char *p = pm->pixels + v * pm->bytesperline;
 		    fread(p, 1, pm->width, pnm);
-		    for (int h = 0; h < pm->width; h++)
-			*p++ = (((int) *p) * 255) / maxval;
+		    for (int h = 0; h < pm->width; h++) {
+			*p = (((int) *p) * 255) / maxval;
+			p++;
+		    }
 		}
 	    } else {
 		unsigned char *p = pm->pixels;
