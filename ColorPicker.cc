@@ -251,9 +251,10 @@ ColorPicker::ColorPicker(Frame *parent, Listener *listener, unsigned char r,
 
     disable_rgbChanged = true;
     char buf[64];
-    rs = strclone("");
-    gs = strclone("");
-    bs = strclone("");
+    rs = XtMalloc(1);
+    gs = XtMalloc(1);
+    bs = XtMalloc(1);
+    *rs = *gs = *bs = 0;
     snprintf(buf, 64, "%d", R);
     XmTextSetString(red, buf);
     rs = XmTextGetString(red);
