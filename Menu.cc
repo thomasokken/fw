@@ -319,8 +319,11 @@ Menu::setSelected(const char *id) {
 Menu::makeItem(Widget parent, ItemNode *item) {
     Arg args[10];
     int nargs = 0;
-    XmString label = XmStringCreateLocalized((char *) item->name);
-    XtSetArg(args[nargs], XmNlabelString, label); nargs++;
+    XmString label = NULL;
+    if (item->type != ITEM_SEPARATOR) {
+	label = XmStringCreateLocalized((char *) item->name);
+	XtSetArg(args[nargs], XmNlabelString, label); nargs++;
+    }
     KeySym ks = item->mnemonic != NULL ?
 		XStringToKeysym(item->mnemonic) : NoSymbol;
     XtSetArg(args[nargs], XmNmnemonic, ks); nargs++;
@@ -396,7 +399,8 @@ Menu::makeItem(Widget parent, ItemNode *item) {
 	    XtVaSetValues(parent, XmNmenuHelpWidget, item->widget, NULL);
 	item->menu->makeWidgets(submenu);
     }
-    XmStringFree(label);
+    if (label != NULL)
+	XmStringFree(label);
     if (item->accelerator != NULL) {
 	XmStringFree(acc);
 	delete[] accKey;

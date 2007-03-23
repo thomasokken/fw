@@ -16,11 +16,11 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 ###############################################################################
 
-CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include
+CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include -fno-rtti -fno-exceptions
 LDFLAGS = -L/usr/X11R6/lib -Xlinker --export-dynamic
 
 # This works on Red Hat 7.3
-LOADLIBES = -lXm -lXpm -ljpeg -lpng
+LOADLIBES = -lXm -lXpm -ljpeg -lpng -lXmu
 # If that doesn't do it for you, try this:
 # LOADLIBES = -lXm -lXp -lXt -lX11 -lXmu -lXpm -ldl -ljpeg -lpng -lz
 

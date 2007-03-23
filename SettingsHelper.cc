@@ -46,8 +46,8 @@ class Field {
 	    this->helper = helper;
 	}
 	char *align(char *addr, int n) {
-	    unsigned int a = (unsigned int) addr;
-	    unsigned int r = a % (unsigned int) n;
+	    unsigned long a = (unsigned long) addr;
+	    unsigned long r = a % (unsigned int) n;
 	    if (r == 0)
 		return addr;
 	    else

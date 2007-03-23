@@ -900,7 +900,7 @@ ColormapEditor::activate(Widget w, XtPointer ud, XtPointer cd) {
     XtPointer userData;
     XtSetArg(arg, XmNuserData, &userData);
     XtGetValues(w, &arg, 1);
-    int button = (int) userData;
+    long button = (long) userData;
 
     ColormapEditor *This = (ColormapEditor *) ud;
     switch (button) {
