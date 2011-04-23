@@ -1394,7 +1394,7 @@ Viewer::save(const char *name, const char *type) {
 	    char idbuf[1024];
 	    snprintf(idbuf, 1024, "Windows.X.%d", id);
 	    const char *pluginname = plugin->name();
-	    char *label = basename(name);
+	    const char *label = basename(name);
 	    char labelbuf[1024];
 
 	    if (strcmp(pluginname, "Null") == 0)
@@ -1403,7 +1403,7 @@ Viewer::save(const char *name, const char *type) {
 		strcpy(labelbuf, "Fractal Wizard");
 	    else
 		snprintf(labelbuf, 1024, "%s (%s)", label, pluginname);
-	    free(label);
+	    free((char *) label);
 
 	    Iterator *iter = instances->iterator();
 	    while (iter->hasNext()) {
