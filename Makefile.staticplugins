@@ -16,8 +16,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 ###############################################################################
 
-CXXFLAGS = -MMD -Wall -Wno-parentheses -Wno-sometimes-uninitialized -Wno-int-to-void-pointer-cast -g -I/usr/X11R6/include -I/opt/local/include -DSTATICPLUGINS -fno-rtti -fno-exceptions
-LDFLAGS = -L/usr/X11R6/lib -L/opt/local/lib
+CXXFLAGS = -MMD -Wall -Wno-parentheses -Wno-sometimes-uninitialized -Wno-int-to-void-pointer-cast -g -I/opt/local/include -DSTATICPLUGINS -fno-rtti -fno-exceptions
+LDFLAGS = -L/opt/local/lib
 
 # This works on Red Hat 7.3
 # LOADLIBES = -lXm -lXpm -ljpeg -lpng
