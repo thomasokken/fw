@@ -39,18 +39,18 @@ SaveImageDialog::Listener::~Listener() {
 
 /* public */
 SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
-				 const char *filetype, Listener *listener)
-	: FileDialog(parent, true, this) {
+                                 const char *filetype, Listener *listener)
+        : FileDialog(parent, true, this) {
 
     this->listener = listener;
 
     Arg args[2];
-    Widget pulldown = XmCreatePulldownMenu(fsb, "TypeList", NULL, 0);
-    XmString label = XmStringCreateLocalized("File Type:");
+    Widget pulldown = XmCreatePulldownMenu(fsb, (char *) "TypeList", NULL, 0);
+    XmString label = XmStringCreateLocalized((char *) "File Type:");
     XtSetArg(args[0], XmNlabelString, label);
     XtSetArg(args[1], XmNsubMenuId, pulldown);
 
-    Widget option = XmCreateOptionMenu(fsb, "Type", args, 2);
+    Widget option = XmCreateOptionMenu(fsb, (char *) "Type", args, 2);
     XtManageChild(option);
 
     Widget cascadebutton = XtNameToWidget(option, "OptionButton");
@@ -62,39 +62,38 @@ SaveImageDialog::SaveImageDialog(Frame *parent, const char *filename,
     Iterator *iter = ImageIO::list();
     type = NULL;
     while (iter->hasNext()) {
-	const char *t = (const char *) iter->next();
-	typeMenu->addCommand(t, NULL, NULL, t);
-	if (type == NULL)
-	    type = t;
+        const char *t = (const char *) iter->next();
+        typeMenu->addCommand(t, NULL, NULL, t);
+        if (type == NULL)
+            type = t;
     }
     delete iter;
     typeMenu->setCommandListener(typeMenuCB, this);
     typeMenu->makeWidgets(pulldown);
 
     if (filename != NULL) {
-	char *dirname;
-	if (isDirectory(filename))
-	    dirname = (char *) filename;
-	else {
-	    dirname = strclone(filename);
-	    char *lastslash = strrchr(dirname, '/');
-	    if (lastslash != NULL)
-		lastslash[1] = 0;
-	}
-	XmString d = XmStringCreateLocalized(dirname);
-	XtSetArg(args[0], XmNdirectory, d);
-	XtSetValues(fsb, args, 1);
-	XmStringFree(d);
-	if (dirname != filename)
-	    free(dirname);
+        char *dirname;
+        if (isDirectory(filename))
+            dirname = (char *) filename;
+        else {
+            dirname = strclone(filename);
+            char *lastslash = strrchr(dirname, '/');
+            if (lastslash != NULL)
+                lastslash[1] = 0;
+        }
+        XmString d = XmStringCreateLocalized(dirname);
+        XtSetArg(args[0], XmNdirectory, d);
+        XtSetValues(fsb, args, 1);
+        XmStringFree(d);
+        if (dirname != filename)
+            free(dirname);
 
-	Widget text = XtNameToWidget(fsb, "Text");
-	XtSetArg(args[0], XmNvalue, filename);
-	XtSetArg(args[1], XmNcursorPosition, strlen(filename));
-	XtSetValues(text, args, 2);
+        Widget text = XtNameToWidget(fsb, "Text");
+        XtSetArg(args[0], XmNvalue, filename);
+        XtSetArg(args[1], XmNcursorPosition, strlen(filename));
+        XtSetValues(text, args, 2);
 
-	typeMenu->setSelected(type);
-	this->type = type;
+        typeMenu->setSelected(type);
     }
 }
 

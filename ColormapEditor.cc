@@ -51,228 +51,228 @@
 
 class PickAction : public UndoableAction {
     private:
-	ColormapEditor::Listener *listener;
-	FWPixmap *pm;
-	int index;
-	unsigned char old_r, old_g, old_b;
-	unsigned char new_r, new_g, new_b;
+        ColormapEditor::Listener *listener;
+        FWPixmap *pm;
+        int index;
+        unsigned char old_r, old_g, old_b;
+        unsigned char new_r, new_g, new_b;
     public:
-	PickAction(ColormapEditor::Listener *listener, FWPixmap *pm, int index,
-		   unsigned char new_r,
-		   unsigned char new_g,
-		   unsigned char new_b) {
-	    this->listener = listener;
-	    this->pm = pm;
-	    this->index = index;
-	    old_r = pm->cmap[index].r;
-	    old_g = pm->cmap[index].g;
-	    old_b = pm->cmap[index].b;
-	    this->new_r = new_r;
-	    this->new_g = new_g;
-	    this->new_b = new_b;
-	}
-	virtual void undo() {
-	    pm->cmap[index].r = old_r;
-	    pm->cmap[index].g = old_g;
-	    pm->cmap[index].b = old_b;
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(index, index);
-	    listener->colormapChanged();
-	}
-	virtual void redo() {
-	    pm->cmap[index].r = new_r;
-	    pm->cmap[index].g = new_g;
-	    pm->cmap[index].b = new_b;
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(index, index);
-	    listener->colormapChanged();
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Pick Color";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Pick Color";
-	}
+        PickAction(ColormapEditor::Listener *listener, FWPixmap *pm, int index,
+                   unsigned char new_r,
+                   unsigned char new_g,
+                   unsigned char new_b) {
+            this->listener = listener;
+            this->pm = pm;
+            this->index = index;
+            old_r = pm->cmap[index].r;
+            old_g = pm->cmap[index].g;
+            old_b = pm->cmap[index].b;
+            this->new_r = new_r;
+            this->new_g = new_g;
+            this->new_b = new_b;
+        }
+        virtual void undo() {
+            pm->cmap[index].r = old_r;
+            pm->cmap[index].g = old_g;
+            pm->cmap[index].b = old_b;
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(index, index);
+            listener->colormapChanged();
+        }
+        virtual void redo() {
+            pm->cmap[index].r = new_r;
+            pm->cmap[index].g = new_g;
+            pm->cmap[index].b = new_b;
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(index, index);
+            listener->colormapChanged();
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Pick Color";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Pick Color";
+        }
 };
 
 class ChangeRangeAction : public UndoableAction {
     private:
-	ColormapEditor::Listener *listener;
-	FWPixmap *pm;
-	int startindex, endindex;
-	FWColor *oldcolors;
+        ColormapEditor::Listener *listener;
+        FWPixmap *pm;
+        int startindex, endindex;
+        FWColor *oldcolors;
     protected:
-	FWColor *newcolors;
+        FWColor *newcolors;
     public:
-	ChangeRangeAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-			  int startindex,
-			  int endindex) {
-	    this->listener = listener;
-	    this->pm = pm;
-	    this->startindex = startindex;
-	    this->endindex = endindex;
-	    oldcolors = new FWColor[endindex - startindex + 1];
-	    newcolors = new FWColor[endindex - startindex + 1];
-	    for (int i = startindex; i <= endindex; i++)
-		oldcolors[i - startindex] = pm->cmap[i];
-	}
-	virtual ~ChangeRangeAction() {
-	    delete[] oldcolors;
-	    delete[] newcolors;
-	}
-	virtual void undo() {
-	    for (int i = startindex; i <= endindex; i++)
-		pm->cmap[i] = oldcolors[i - startindex];
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(startindex, endindex);
-	    listener->colormapChanged();
-	}
-	virtual void redo() {
-	    for (int i = startindex; i <= endindex; i++)
-		pm->cmap[i] = newcolors[i - startindex];
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(startindex, endindex);
-	    listener->colormapChanged();
-	}
+        ChangeRangeAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                          int startindex,
+                          int endindex) {
+            this->listener = listener;
+            this->pm = pm;
+            this->startindex = startindex;
+            this->endindex = endindex;
+            oldcolors = new FWColor[endindex - startindex + 1];
+            newcolors = new FWColor[endindex - startindex + 1];
+            for (int i = startindex; i <= endindex; i++)
+                oldcolors[i - startindex] = pm->cmap[i];
+        }
+        virtual ~ChangeRangeAction() {
+            delete[] oldcolors;
+            delete[] newcolors;
+        }
+        virtual void undo() {
+            for (int i = startindex; i <= endindex; i++)
+                pm->cmap[i] = oldcolors[i - startindex];
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(startindex, endindex);
+            listener->colormapChanged();
+        }
+        virtual void redo() {
+            for (int i = startindex; i <= endindex; i++)
+                pm->cmap[i] = newcolors[i - startindex];
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(startindex, endindex);
+            listener->colormapChanged();
+        }
 };
 
 class BlendAction : public ChangeRangeAction {
     public:
-	BlendAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-		    int startindex, int endindex)
-		: ChangeRangeAction(listener, pm, startindex, endindex) {
-	    int rstart, gstart, bstart, rend, gend, bend;
-	    rstart = pm->cmap[startindex].r;
-	    gstart = pm->cmap[startindex].g;
-	    bstart = pm->cmap[startindex].b;
-	    rend = pm->cmap[endindex].r;
-	    gend = pm->cmap[endindex].g;
-	    bend = pm->cmap[endindex].b;
-	    for (int i = startindex; i <= endindex; i++) {
-		newcolors[i - startindex].r =
-		    rstart + ((int) rend - (int) rstart) * (i - startindex)
-				/ (endindex - startindex);
-		newcolors[i - startindex].g =
-		    gstart + ((int) gend - (int) gstart) * (i - startindex)
-				/ (endindex - startindex);
-		newcolors[i - startindex].b =
-		    bstart + ((int) bend - (int) bstart) * (i - startindex)
-				/ (endindex - startindex);
-	    }
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Blend Colors";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Blend Colors";
-	}
+        BlendAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                    int startindex, int endindex)
+                : ChangeRangeAction(listener, pm, startindex, endindex) {
+            int rstart, gstart, bstart, rend, gend, bend;
+            rstart = pm->cmap[startindex].r;
+            gstart = pm->cmap[startindex].g;
+            bstart = pm->cmap[startindex].b;
+            rend = pm->cmap[endindex].r;
+            gend = pm->cmap[endindex].g;
+            bend = pm->cmap[endindex].b;
+            for (int i = startindex; i <= endindex; i++) {
+                newcolors[i - startindex].r =
+                    rstart + ((int) rend - (int) rstart) * (i - startindex)
+                                / (endindex - startindex);
+                newcolors[i - startindex].g =
+                    gstart + ((int) gend - (int) gstart) * (i - startindex)
+                                / (endindex - startindex);
+                newcolors[i - startindex].b =
+                    bstart + ((int) bend - (int) bstart) * (i - startindex)
+                                / (endindex - startindex);
+            }
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Blend Colors";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Blend Colors";
+        }
 };
 
 class SwapAction : public ChangeRangeAction {
     public:
-	SwapAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-		   int startindex, int endindex)
-		: ChangeRangeAction(listener, pm, startindex, endindex) {
-	    for (int i = startindex; i <= endindex; i++)
-		newcolors[i - startindex] =
-			pm->cmap[startindex + endindex - i];
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Swap Colors";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Swap Colors";
-	}
+        SwapAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                   int startindex, int endindex)
+                : ChangeRangeAction(listener, pm, startindex, endindex) {
+            for (int i = startindex; i <= endindex; i++)
+                newcolors[i - startindex] =
+                        pm->cmap[startindex + endindex - i];
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Swap Colors";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Swap Colors";
+        }
 };
 
 class MixAction : public ChangeRangeAction {
     public:
-	MixAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-		  int startindex, int endindex)
-		: ChangeRangeAction(listener, pm, startindex, endindex) {
-	    int k = (endindex - startindex + 1) / 2;
-	    for (int i = 0; i < k; i++) {
-		newcolors[2 * i] =
-			pm->cmap[startindex + k + i];
-		newcolors[2 * i + 1] =
-			pm->cmap[startindex + i];
-	    }
-	    if ((endindex - startindex) % 2 == 0)
-		newcolors[endindex - startindex] = pm->cmap[endindex];
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Mix Colors";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Mix Colors";
-	}
+        MixAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                  int startindex, int endindex)
+                : ChangeRangeAction(listener, pm, startindex, endindex) {
+            int k = (endindex - startindex + 1) / 2;
+            for (int i = 0; i < k; i++) {
+                newcolors[2 * i] =
+                        pm->cmap[startindex + k + i];
+                newcolors[2 * i + 1] =
+                        pm->cmap[startindex + i];
+            }
+            if ((endindex - startindex) % 2 == 0)
+                newcolors[endindex - startindex] = pm->cmap[endindex];
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Mix Colors";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Mix Colors";
+        }
 };
 
 class PasteAction : public ChangeRangeAction {
     public:
-	PasteAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-		    int startindex, int endindex, int color_clipboard_size,
-		    FWColor *color_clipboard)
-		: ChangeRangeAction(listener, pm, startindex, endindex) {
+        PasteAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                    int startindex, int endindex, int color_clipboard_size,
+                    FWColor *color_clipboard)
+                : ChangeRangeAction(listener, pm, startindex, endindex) {
 
-	    if (color_clipboard_size == 1 || startindex == 255) {
-		for (int i = startindex; i <= endindex; i++)
-		    newcolors[i - startindex] = color_clipboard[0];
-	    } else if (endindex - startindex + 1 == color_clipboard_size) {
-		for (int i = 0; i <= endindex - startindex; i++)
-		    newcolors[i] = color_clipboard[i];
-	    } else if (endindex - startindex + 1 < color_clipboard_size) {
-		for (int i = startindex; i <= endindex; i++)
-		    newcolors[i - startindex] = color_clipboard[
-				(i - startindex) * (color_clipboard_size - 1)
-				    / (endindex - startindex)];
-	    } else {
-		for (int i = startindex; i < endindex; i++) {
-		    float cn = (i - startindex) * (color_clipboard_size - 1)
-				    / ((float) (endindex - startindex));
-		    int c1 = (int) cn;
-		    int c2 = c1 + 1;
-		    float w2 = cn - c1;
-		    float w1 = 1 - w2;
-		    FWColor mc;
-		    mc.r = (unsigned char) (w1 * color_clipboard[c1].r
-					  + w2 * color_clipboard[c2].r);
-		    mc.g = (unsigned char) (w1 * color_clipboard[c1].g
-					  + w2 * color_clipboard[c2].g);
-		    mc.b = (unsigned char) (w1 * color_clipboard[c1].b
-					  + w2 * color_clipboard[c2].b);
-		    newcolors[i - startindex] = mc;
-		}
-		newcolors[endindex - startindex] = color_clipboard[
-						color_clipboard_size - 1];
-	    }
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Paste Colors";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Paste Colors";
-	}
+            if (color_clipboard_size == 1 || startindex == 255) {
+                for (int i = startindex; i <= endindex; i++)
+                    newcolors[i - startindex] = color_clipboard[0];
+            } else if (endindex - startindex + 1 == color_clipboard_size) {
+                for (int i = 0; i <= endindex - startindex; i++)
+                    newcolors[i] = color_clipboard[i];
+            } else if (endindex - startindex + 1 < color_clipboard_size) {
+                for (int i = startindex; i <= endindex; i++)
+                    newcolors[i - startindex] = color_clipboard[
+                                (i - startindex) * (color_clipboard_size - 1)
+                                    / (endindex - startindex)];
+            } else {
+                for (int i = startindex; i < endindex; i++) {
+                    float cn = (i - startindex) * (color_clipboard_size - 1)
+                                    / ((float) (endindex - startindex));
+                    int c1 = (int) cn;
+                    int c2 = c1 + 1;
+                    float w2 = cn - c1;
+                    float w1 = 1 - w2;
+                    FWColor mc;
+                    mc.r = (unsigned char) (w1 * color_clipboard[c1].r
+                                          + w2 * color_clipboard[c2].r);
+                    mc.g = (unsigned char) (w1 * color_clipboard[c1].g
+                                          + w2 * color_clipboard[c2].g);
+                    mc.b = (unsigned char) (w1 * color_clipboard[c1].b
+                                          + w2 * color_clipboard[c2].b);
+                    newcolors[i - startindex] = mc;
+                }
+                newcolors[endindex - startindex] = color_clipboard[
+                                                color_clipboard_size - 1];
+            }
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Paste Colors";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Paste Colors";
+        }
 };
     
 class CancelAction : public ChangeRangeAction {
     public:
-	CancelAction(ColormapEditor::Listener *listener, FWPixmap *pm,
-		     FWColor *restore_cmap)
-		: ChangeRangeAction(listener, pm, 0, 255) {
-	    for (int i = 0; i <= 255; i++)
-		newcolors[i] = restore_cmap[i];
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Cancel Color Edits";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Cancel Color Edits";
-	}
+        CancelAction(ColormapEditor::Listener *listener, FWPixmap *pm,
+                     FWColor *restore_cmap)
+                : ChangeRangeAction(listener, pm, 0, 255) {
+            for (int i = 0; i <= 255; i++)
+                newcolors[i] = restore_cmap[i];
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Cancel Color Edits";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Cancel Color Edits";
+        }
 };
 
 
@@ -285,8 +285,8 @@ ColormapEditor::color_clipboard_size = 0;
 
 /* public */
 ColormapEditor::ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
-			       UndoManager *undomanager, Colormap colormap)
-				    : Frame(parent, false) {
+                               UndoManager *undomanager, Colormap colormap)
+                                    : Frame(parent, false) {
     setTitle("Colormap Editor");
     setIconTitle("Colormap Editor");
 
@@ -297,7 +297,7 @@ ColormapEditor::ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
 
     initial_cmap = new FWColor[256];
     for (int i = 0; i < 256; i++)
-	initial_cmap[i] = pm->cmap[i];
+        initial_cmap[i] = pm->cmap[i];
     initial_undo_id = undomgr->getCurrentId();
 
     Widget form = getContainer();
@@ -305,38 +305,38 @@ ColormapEditor::ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
     imagesize = 16 * CELL_SIZE + 17 * CELL_SPACING;
 
     XtTranslations translations = XtParseTranslationTable(
-		"<KeyDown>: DrawingAreaInput()\n"
-		"<KeyUp>: DrawingAreaInput()\n"
-		"<BtnDown>: DrawingAreaInput()\n"
-		"<BtnUp>: DrawingAreaInput()\n"
-		"<Motion>: DrawingAreaInput()\n");
+                "<KeyDown>: DrawingAreaInput()\n"
+                "<KeyUp>: DrawingAreaInput()\n"
+                "<BtnDown>: DrawingAreaInput()\n"
+                "<BtnUp>: DrawingAreaInput()\n"
+                "<Motion>: DrawingAreaInput()\n");
 
     drawingarea = XtVaCreateManagedWidget(
-	    "DrawingArea",
-	    xmDrawingAreaWidgetClass,
-	    form,
-	    XmNwidth, imagesize,
-	    XmNheight, imagesize,
-	    XmNtranslations, translations,
-	    XmNtopAttachment, XmATTACH_FORM,
-	    XmNleftAttachment, XmATTACH_FORM,
-	    NULL);
+            "DrawingArea",
+            xmDrawingAreaWidgetClass,
+            form,
+            XmNwidth, imagesize,
+            XmNheight, imagesize,
+            XmNtranslations, translations,
+            XmNtopAttachment, XmATTACH_FORM,
+            XmNleftAttachment, XmATTACH_FORM,
+            NULL);
 
     XtAddCallback(drawingarea, XmNexposeCallback, expose, (XtPointer) this);
     XtAddCallback(drawingarea, XmNinputCallback, input, (XtPointer) this);
 
     Widget rowcolumn = XtVaCreateManagedWidget(
-	    "ButtonGrid",
-	    xmRowColumnWidgetClass,
-	    form,
-	    XmNnumColumns, 6,
-	    XmNorientation, XmHORIZONTAL,
-	    XmNpacking, XmPACK_COLUMN,
-	    XmNentryAlignment, XmALIGNMENT_CENTER,
-	    XmNtopAttachment, XmATTACH_FORM,
-	    XmNleftAttachment, XmATTACH_WIDGET,
-	    XmNleftWidget, drawingarea,
-	    NULL);
+            "ButtonGrid",
+            xmRowColumnWidgetClass,
+            form,
+            XmNnumColumns, 6,
+            XmNorientation, XmHORIZONTAL,
+            XmNpacking, XmPACK_COLUMN,
+            XmNentryAlignment, XmALIGNMENT_CENTER,
+            XmNtopAttachment, XmATTACH_FORM,
+            XmNleftAttachment, XmATTACH_WIDGET,
+            XmNleftWidget, drawingarea,
+            NULL);
 
     addButton(rowcolumn, "Pick", BTN_PICK);
     addButton(rowcolumn, "Blend", BTN_BLEND);
@@ -359,12 +359,12 @@ ColormapEditor::ColormapEditor(Frame *parent, Listener *listener, FWPixmap *pm,
     values.background = g_black;
 
     image = XCreateImage(g_display, g_visual, g_depth, ZPixmap, 0, NULL,
-			 imagesize, imagesize, 32, 0);
+                         imagesize, imagesize, 32, 0);
     image->data = (char *) malloc(image->bytes_per_line * image->height);
 
     this->colormap = colormap;
     if (colormap != g_colormap)
-	setColormap(colormap);
+        setColormap(colormap);
 
     colorpicker = NULL;
 
@@ -378,7 +378,7 @@ ColormapEditor::~ColormapEditor() {
     free(image->data);
     XFree(image);
     if (colorpicker != NULL)
-	colorpicker->close();
+        colorpicker->close();
 }
 
 /* public */ void
@@ -386,11 +386,11 @@ ColormapEditor::colormapChanged(Colormap colormap) {
     Colormap prevcolormap = this->colormap;
     this->colormap = colormap;
     if (colormap != prevcolormap)
-	setColormap(colormap);
+        setColormap(colormap);
     if (colormap == g_colormap || colormap != prevcolormap) {
-	update_image();
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  0, 0, 0, 0, imagesize, imagesize);
+        update_image();
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  0, 0, 0, 0, imagesize, imagesize);
     }
 
     // NOTE: we don't assume responsibility for this colormap. When our
@@ -409,166 +409,166 @@ ColormapEditor::colorsChanged(int startindex, int endindex) {
     // Fix color grid. Note that this is a no-op if we're using a private
     // colormap.
     if (colormap == g_colormap) {
-	for (int i = startindex; i <= endindex; i++)
-	    update_cell(i);
+        for (int i = startindex; i <= endindex; i++)
+            update_cell(i);
 
-	// Repair selection, if appropriate
-	if (sel_start != -1) {
-	    int start, end;
-	    if (sel_start < sel_end) {
-		start = sel_start;
-		end = sel_end;
-	    } else {
-		start = sel_end;
-		end = sel_start;
-	    }
-	    for (int i = start; i <= end; i++)
-		if (i >= startindex && i <= endindex)
-		    select_cell(i);
-	}
-	redraw_cells(startindex, endindex);
+        // Repair selection, if appropriate
+        if (sel_start != -1) {
+            int start, end;
+            if (sel_start < sel_end) {
+                start = sel_start;
+                end = sel_end;
+            } else {
+                start = sel_end;
+                end = sel_start;
+            }
+            for (int i = start; i <= end; i++)
+                if (i >= startindex && i <= endindex)
+                    select_cell(i);
+        }
+        redraw_cells(startindex, endindex);
     }
 }
 
 class CPListener : public ColorPicker::Listener {
     private:
-	ColormapEditor *cme;
-	int index;
+        ColormapEditor *cme;
+        int index;
     public:
-	CPListener(ColormapEditor *cme, int index) {
-	    this->cme = cme;
-	    this->index = index;
-	}
-	virtual ~CPListener() {
-	    cme->colorpicker = NULL;
-	}
-	virtual void colorPicked(unsigned char r,
-				 unsigned char g,
-				 unsigned char b) {
-	    PickAction *action = new PickAction(cme->listener, cme->pm,
-						index, r, g, b);
-	    cme->undomgr->addAction(action);
-	    action->redo();
-	}
+        CPListener(ColormapEditor *cme, int index) {
+            this->cme = cme;
+            this->index = index;
+        }
+        virtual ~CPListener() {
+            cme->colorpicker = NULL;
+        }
+        virtual void colorPicked(unsigned char r,
+                                 unsigned char g,
+                                 unsigned char b) {
+            PickAction *action = new PickAction(cme->listener, cme->pm,
+                                                index, r, g, b);
+            cme->undomgr->addAction(action);
+            action->redo();
+        }
 };
 
 /* private */ void
 ColormapEditor::doPick() {
     if (sel_start == -1 || sel_start != sel_end)
-	beep();
+        beep();
     else {
-	if (colorpicker != NULL)
-	    colorpicker->close();
-	colorpicker = new ColorPicker(
-		    this,
-		    new CPListener(this, sel_start),
-		    pm->cmap[sel_start].r,
-		    pm->cmap[sel_start].g,
-		    pm->cmap[sel_start].b,
-		    colormap != g_colormap);
-	colorpicker->raise();
+        if (colorpicker != NULL)
+            colorpicker->close();
+        colorpicker = new ColorPicker(
+                    this,
+                    new CPListener(this, sel_start),
+                    pm->cmap[sel_start].r,
+                    pm->cmap[sel_start].g,
+                    pm->cmap[sel_start].b,
+                    colormap != g_colormap);
+        colorpicker->raise();
     }
 }
 
 /* private */ void
 ColormapEditor::doBlend() {
     if (sel_start == -1 || sel_start == sel_end)
-	beep();
+        beep();
     else {
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	BlendAction *action = new BlendAction(listener, pm, start, end);
-	undomgr->addAction(action);
-	action->redo();
+        int start, end;
+        if (sel_start < sel_end) {
+            start = sel_start;
+            end = sel_end;
+        } else {
+            start = sel_end;
+            end = sel_start;
+        }
+        BlendAction *action = new BlendAction(listener, pm, start, end);
+        undomgr->addAction(action);
+        action->redo();
     }
 }
 
 /* private */ void
 ColormapEditor::doSwap() {
     if (sel_start == -1 || sel_start == sel_end)
-	beep();
+        beep();
     else {
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	SwapAction *action = new SwapAction(listener, pm, start, end);
-	undomgr->addAction(action);
-	action->redo();
+        int start, end;
+        if (sel_start < sel_end) {
+            start = sel_start;
+            end = sel_end;
+        } else {
+            start = sel_end;
+            end = sel_start;
+        }
+        SwapAction *action = new SwapAction(listener, pm, start, end);
+        undomgr->addAction(action);
+        action->redo();
     }
 }
 
 /* private */ void
 ColormapEditor::doMix() {
     if (sel_start == -1 || sel_start == sel_end)
-	beep();
+        beep();
     else {
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	MixAction *action = new MixAction(listener, pm, start, end);
-	undomgr->addAction(action);
-	action->redo();
+        int start, end;
+        if (sel_start < sel_end) {
+            start = sel_start;
+            end = sel_end;
+        } else {
+            start = sel_end;
+            end = sel_start;
+        }
+        MixAction *action = new MixAction(listener, pm, start, end);
+        undomgr->addAction(action);
+        action->redo();
     }
 }
 
 /* private */ void
 ColormapEditor::doCopy() {
     if (sel_start == -1)
-	beep();
+        beep();
     else {
-	for (int i = sel_start; i <= sel_end; i++)
-	    color_clipboard[i - sel_start] = pm->cmap[i];
-	color_clipboard_size = sel_end - sel_start + 1;
+        for (int i = sel_start; i <= sel_end; i++)
+            color_clipboard[i - sel_start] = pm->cmap[i];
+        color_clipboard_size = sel_end - sel_start + 1;
     }
 }
 
 /* private */ void
 ColormapEditor::doPaste() {
     if (sel_start == -1 || color_clipboard_size == 0)
-	beep();
+        beep();
     else {
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	if (start == end) {
-	    // If exactly one cell is selected, while the color clipboard
-	    // contains more than one color, we paste the entire range from
-	    // the color clipboard, starting at the selected cell, and
-	    // continuing for as many colors as are in the color clipboard
-	    // (or until index 255, whichever comes first). The idea is to
-	    // mimic the behavior of an "insertion point" in a word processor,
-	    // kind of. Only it's more like an "overwriting point" here since
-	    // I don't move anything out of the way first.
-	    end = start + color_clipboard_size - 1;
-	    if (end > 255)
-		end = 255;
-	}
-	PasteAction *action = new PasteAction(listener, pm, start, end,
-					ColormapEditor::color_clipboard_size,
-					ColormapEditor::color_clipboard);
-	undomgr->addAction(action);
-	action->redo();
+        int start, end;
+        if (sel_start < sel_end) {
+            start = sel_start;
+            end = sel_end;
+        } else {
+            start = sel_end;
+            end = sel_start;
+        }
+        if (start == end) {
+            // If exactly one cell is selected, while the color clipboard
+            // contains more than one color, we paste the entire range from
+            // the color clipboard, starting at the selected cell, and
+            // continuing for as many colors as are in the color clipboard
+            // (or until index 255, whichever comes first). The idea is to
+            // mimic the behavior of an "insertion point" in a word processor,
+            // kind of. Only it's more like an "overwriting point" here since
+            // I don't move anything out of the way first.
+            end = start + color_clipboard_size - 1;
+            if (end > 255)
+                end = 255;
+        }
+        PasteAction *action = new PasteAction(listener, pm, start, end,
+                                        ColormapEditor::color_clipboard_size,
+                                        ColormapEditor::color_clipboard);
+        undomgr->addAction(action);
+        action->redo();
     }
 }
 
@@ -600,9 +600,9 @@ ColormapEditor::doOK() {
 /* private */ void
 ColormapEditor::doCancel() {
     if (undomgr->getCurrentId() != initial_undo_id) {
-	CancelAction *action = new CancelAction(listener, pm, initial_cmap);
-	undomgr->addAction(action);
-	action->redo();
+        CancelAction *action = new CancelAction(listener, pm, initial_cmap);
+        undomgr->addAction(action);
+        action->redo();
     }
     close();
 }
@@ -611,7 +611,7 @@ ColormapEditor::doCancel() {
 ColormapEditor::update_image() {
     update_image_gridlines();
     for (int i = 0; i < 256; i++)
-	update_cell(i);
+        update_cell(i);
 }
 
 /* private */ void
@@ -621,11 +621,11 @@ ColormapEditor::update_image_gridlines() {
     XtSetArg(arg, XmNbackground, &background);
     XtGetValues(drawingarea, &arg, 1);
     for (int i = 0; i < imagesize; i += CELL_SIZE + CELL_SPACING)
-	for (int x = i; x < i + CELL_SPACING; x++)
-	    for (int y = 0; y < imagesize; y++) {
-		XPutPixel(image, x, y, background);
-		XPutPixel(image, y, x, background);
-	    }
+        for (int x = i; x < i + CELL_SPACING; x++)
+            for (int y = 0; y < imagesize; y++) {
+                XPutPixel(image, x, y, background);
+                XPutPixel(image, y, x, background);
+            }
 }
 
 /* private */ void
@@ -633,28 +633,28 @@ ColormapEditor::select_cell(int c) {
     int x = (c & 15) * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
     int y = (c >> 4) * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
     for (int i = 0; i < CELL_HIGHLIGHT; i++) {
-	int xo = x + i;
-	int yo = y + i;
-	int so = CELL_SIZE - 2 * i;
-	for (int xx = xo; xx < xo + so; xx++) {
-	    XPutPixel(image, xx, yo, g_black);
-	    XPutPixel(image, xx, yo + so - 1, g_black);
-	}
-	for (int yy = yo + 1; yy < yo + so - 1; yy++) {
-	    XPutPixel(image, xo, yy, g_black);
-	    XPutPixel(image, xo + so - 1, yy, g_black);
-	}
-	int xi = x + i + CELL_HIGHLIGHT;
-	int yi = y + i + CELL_HIGHLIGHT;
-	int si = CELL_SIZE - 2 * (i + CELL_HIGHLIGHT);
-	for (int xx = xi; xx < xi + si; xx++) {
-	    XPutPixel(image, xx, yi, g_white);
-	    XPutPixel(image, xx, yi + si - 1, g_white);
-	}
-	for (int yy = yi + 1; yy < yi + si - 1; yy++) {
-	    XPutPixel(image, xi, yy, g_white);
-	    XPutPixel(image, xi + si - 1, yy, g_white);
-	}
+        int xo = x + i;
+        int yo = y + i;
+        int so = CELL_SIZE - 2 * i;
+        for (int xx = xo; xx < xo + so; xx++) {
+            XPutPixel(image, xx, yo, g_black);
+            XPutPixel(image, xx, yo + so - 1, g_black);
+        }
+        for (int yy = yo + 1; yy < yo + so - 1; yy++) {
+            XPutPixel(image, xo, yy, g_black);
+            XPutPixel(image, xo + so - 1, yy, g_black);
+        }
+        int xi = x + i + CELL_HIGHLIGHT;
+        int yi = y + i + CELL_HIGHLIGHT;
+        int si = CELL_SIZE - 2 * (i + CELL_HIGHLIGHT);
+        for (int xx = xi; xx < xi + si; xx++) {
+            XPutPixel(image, xx, yi, g_white);
+            XPutPixel(image, xx, yi + si - 1, g_white);
+        }
+        for (int yy = yi + 1; yy < yi + si - 1; yy++) {
+            XPutPixel(image, xi, yy, g_white);
+            XPutPixel(image, xi + si - 1, yy, g_white);
+        }
     }
 }
 
@@ -663,51 +663,51 @@ ColormapEditor::update_cell(int c) {
     int x = (c & 15) * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
     int y = (c >> 4) * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
     if (colormap != g_colormap) {
-	for (int xx = x; xx < x + CELL_SIZE; xx++)
-	    for (int yy = y; yy < y + CELL_SIZE; yy++)
-		XPutPixel(image, xx, yy, c);
+        for (int xx = x; xx < x + CELL_SIZE; xx++)
+            for (int yy = y; yy < y + CELL_SIZE; yy++)
+                XPutPixel(image, xx, yy, c);
     } else if (g_grayramp != NULL) {
-	// Greyscale halftoning
-	unsigned char r = pm->cmap[c].r;
-	unsigned char g = pm->cmap[c].g;
-	unsigned char b = pm->cmap[c].b;
-	unsigned long pixels[2];
-	CopyBits::rgb2nearestgrays(&r, &g, &b, pixels);
-	for (int xx = x; xx < x + CELL_SIZE; xx++)
-	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
-		int index = CopyBits::halftone(r, xx - x, yy - y);
-		XPutPixel(image, xx, yy, pixels[index]);
-	    }
+        // Greyscale halftoning
+        unsigned char r = pm->cmap[c].r;
+        unsigned char g = pm->cmap[c].g;
+        unsigned char b = pm->cmap[c].b;
+        unsigned long pixels[2];
+        CopyBits::rgb2nearestgrays(&r, &g, &b, pixels);
+        for (int xx = x; xx < x + CELL_SIZE; xx++)
+            for (int yy = y; yy < y + CELL_SIZE; yy++) {
+                int index = CopyBits::halftone(r, xx - x, yy - y);
+                XPutPixel(image, xx, yy, pixels[index]);
+            }
     } else {
-	// Color halftoning
-	unsigned char r = pm->cmap[c].r;
-	unsigned char g = pm->cmap[c].g;
-	unsigned char b = pm->cmap[c].b;
-	unsigned long pixels[8];
-	CopyBits::rgb2nearestcolors(&r, &g, &b, pixels);
-	for (int xx = x; xx < x + CELL_SIZE; xx++)
-	    for (int yy = y; yy < y + CELL_SIZE; yy++) {
-		int index = (CopyBits::halftone(r, xx - x, yy - y) << 2)
-			    | (CopyBits::halftone(g, xx - x, yy - y) << 1)
-			    | CopyBits::halftone(b, xx - x, yy - y);
-		XPutPixel(image, xx, yy, pixels[index]);
-	    }
+        // Color halftoning
+        unsigned char r = pm->cmap[c].r;
+        unsigned char g = pm->cmap[c].g;
+        unsigned char b = pm->cmap[c].b;
+        unsigned long pixels[8];
+        CopyBits::rgb2nearestcolors(&r, &g, &b, pixels);
+        for (int xx = x; xx < x + CELL_SIZE; xx++)
+            for (int yy = y; yy < y + CELL_SIZE; yy++) {
+                int index = (CopyBits::halftone(r, xx - x, yy - y) << 2)
+                            | (CopyBits::halftone(g, xx - x, yy - y) << 1)
+                            | CopyBits::halftone(b, xx - x, yy - y);
+                XPutPixel(image, xx, yy, pixels[index]);
+            }
     }
     if (sel_start != -1 && c >= sel_start && c <= sel_end)
-	select_cell(c);
+        select_cell(c);
 }
 
 /* private */ void
 ColormapEditor::addButton(Widget parent, const char *label, int id) {
     XmString s = XmStringCreateLocalized((char *) label);
     Widget button = XtVaCreateManagedWidget(
-	    label,
-	    xmPushButtonWidgetClass,
-	    parent,
-	    XmNlabelString, s,
-	    XmNuserData, (XtPointer) id,
-	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
-	    NULL);
+            label,
+            xmPushButtonWidgetClass,
+            parent,
+            XmNlabelString, s,
+            XmNuserData, (XtPointer) id,
+            XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+            NULL);
     XmStringFree(s);
     XtAddCallback(button, XmNactivateCallback, activate, (XtPointer) this);
 }
@@ -718,7 +718,7 @@ ColormapEditor::expose(Widget w, XtPointer ud, XtPointer cd) {
     XExposeEvent ev = cbs->event->xexpose;
     ColormapEditor *This = (ColormapEditor *) ud;
     XPutImage(g_display, XtWindow(This->drawingarea), g_gc, This->image,
-	      ev.x, ev.y, ev.x, ev.y, ev.width, ev.height);
+              ev.x, ev.y, ev.x, ev.y, ev.width, ev.height);
 }
 
 /* private static */ void
@@ -732,91 +732,91 @@ ColormapEditor::input(Widget w, XtPointer ud, XtPointer cd) {
 /* private */ void
 ColormapEditor::input2(XEvent *event) {
     if (event->type == KeyPress) {
-	if (sel_start == -1) {
-	    // No selection; let's get one started first
-	    selectColor(0);
-	    return;
-	}
-	// TODO: Yuck, hard-coded keycodes.
-	// Use XLookupKeysym() or XLookupString() to get a KeySym,
-	// and use that instead of the non-portable constants below
-	// (98, 100, 102, 104).
-	unsigned int keycode = event->xkey.keycode;
-	bool shift = (event->xkey.state & ShiftMask) != 0;
-	int c;
-	switch (keycode) {
-	    case 98: // Up
-		if (sel_end < 16)
-		    return;
-		c = sel_end - 16;
-		break;
-	    case 100: // Left
-		if (sel_end % 16 == 0)
-		    return;
-		c = sel_end - 1;
-		break;
-	    case 102: // Right
-		if (sel_end % 16 == 15)
-		    return;
-		c = sel_end + 1;
-		break;
-	    case 104: // Down
-		if (sel_end >= 240)
-		    return;
-		c = sel_end + 16;
-		break;
-	    default:
-		return;
-	}
-	if (shift)
-	    extendSelection(c);
-	else
-	    selectColor(c);
+        if (sel_start == -1) {
+            // No selection; let's get one started first
+            selectColor(0);
+            return;
+        }
+        // TODO: Yuck, hard-coded keycodes.
+        // Use XLookupKeysym() or XLookupString() to get a KeySym,
+        // and use that instead of the non-portable constants below
+        // (98, 100, 102, 104).
+        unsigned int keycode = event->xkey.keycode;
+        bool shift = (event->xkey.state & ShiftMask) != 0;
+        int c;
+        switch (keycode) {
+            case 98: // Up
+                if (sel_end < 16)
+                    return;
+                c = sel_end - 16;
+                break;
+            case 100: // Left
+                if (sel_end % 16 == 0)
+                    return;
+                c = sel_end - 1;
+                break;
+            case 102: // Right
+                if (sel_end % 16 == 15)
+                    return;
+                c = sel_end + 1;
+                break;
+            case 104: // Down
+                if (sel_end >= 240)
+                    return;
+                c = sel_end + 16;
+                break;
+            default:
+                return;
+        }
+        if (shift)
+            extendSelection(c);
+        else
+            selectColor(c);
     }
-	
+        
     if (event->type != ButtonPress
-	    && event->type != ButtonRelease
-	    && event->type != MotionNotify)
-	return;
+            && event->type != ButtonRelease
+            && event->type != MotionNotify)
+        return;
 
     int x = (event->xbutton.x - CELL_SPACING / 2) / (CELL_SIZE + CELL_SPACING);
     if (x < 0)
-	x = 0;
+        x = 0;
     else if (x > 15)
-	x = 15;
+        x = 15;
     int y = (event->xbutton.y - CELL_SPACING / 2) / (CELL_SIZE + CELL_SPACING);
     if (y < 0)
-	y = 0;
+        y = 0;
     else if (y > 15)
-	y = 15;
+        y = 15;
 
     int c = x + 16 * y;
 
     if (event->type == ButtonPress && !sel_in_progress) {
-	selectColor(c);
+        selectColor(c);
     } else if (sel_in_progress) {
-	extendSelection(c);
-	if (event->type == ButtonRelease)
-	    sel_in_progress = false;
+        extendSelection(c);
+        if (event->type == ButtonRelease)
+            sel_in_progress = false;
     }
 }
 
 /* public */ void
 ColormapEditor::selectColor(int c) {
     if (sel_start != -1) {
-	// A selection existed already; it needs to be erased
-	int start, end;
-	if (sel_start < sel_end) {
-	    start = sel_start;
-	    end = sel_end;
-	} else {
-	    start = sel_end;
-	    end = sel_start;
-	}
-	sel_start = -1;
-	for (int i = start; i <= end; i++)
-	    update_cell(i);
-	redraw_cells(start, end);
+        // A selection existed already; it needs to be erased
+        int start, end;
+        if (sel_start < sel_end) {
+            start = sel_start;
+            end = sel_end;
+        } else {
+            start = sel_end;
+            end = sel_start;
+        }
+        sel_start = -1;
+        for (int i = start; i <= end; i++)
+            update_cell(i);
+        redraw_cells(start, end);
     }
     sel_in_progress = true;
     sel_start = sel_end = c;
@@ -828,47 +828,47 @@ ColormapEditor::selectColor(int c) {
 ColormapEditor::extendSelection(int c) {
     // Selection in progress; first let's take care of painting it
     if (c != sel_end) {
-	int old_sel_end = sel_end;
-	sel_end = c;
-	if (old_sel_end >= sel_start) {
-	    if (sel_end > old_sel_end) {
-		// Selection grows
-		for (int i = old_sel_end + 1; i <= sel_end; i++)
-		    select_cell(i);
-		redraw_cells(old_sel_end + 1, sel_end);
-	    } else if (sel_end >= sel_start) {
-		// Selection shrinks
-		for (int i = sel_end + 1; i <= old_sel_end; i++)
-		    update_cell(i);
-		redraw_cells(sel_end + 1, old_sel_end);
-	    } else {
-		// Selection crossed over its anchor
-		for (int i = sel_end; i < sel_start; i++)
-		    select_cell(i);
-		for (int i = sel_start + 1; i <= old_sel_end; i++)
-		    update_cell(i);
-		redraw_cells(sel_end, old_sel_end);
-	    }
-	} else {
-	    if (sel_end < old_sel_end) {
-		// Selection grows
-		for (int i = sel_end; i < old_sel_end; i++)
-		    select_cell(i);
-		redraw_cells(sel_end, old_sel_end - 1);
-	    } else if (sel_end <= sel_start) {
-		// Selection shrinks
-		for (int i = old_sel_end; i < sel_end; i++)
-		    update_cell(i);
-		redraw_cells(old_sel_end, sel_end - 1);
-	    } else {
-		// Selection crossed over its anchor
-		for (int i = sel_start + 1; i <= sel_end; i++)
-		    select_cell(i);
-		for (int i = old_sel_end; i < sel_start; i++)
-		    update_cell(i);
-		redraw_cells(old_sel_end, sel_end);
-	    }
-	}
+        int old_sel_end = sel_end;
+        sel_end = c;
+        if (old_sel_end >= sel_start) {
+            if (sel_end > old_sel_end) {
+                // Selection grows
+                for (int i = old_sel_end + 1; i <= sel_end; i++)
+                    select_cell(i);
+                redraw_cells(old_sel_end + 1, sel_end);
+            } else if (sel_end >= sel_start) {
+                // Selection shrinks
+                for (int i = sel_end + 1; i <= old_sel_end; i++)
+                    update_cell(i);
+                redraw_cells(sel_end + 1, old_sel_end);
+            } else {
+                // Selection crossed over its anchor
+                for (int i = sel_end; i < sel_start; i++)
+                    select_cell(i);
+                for (int i = sel_start + 1; i <= old_sel_end; i++)
+                    update_cell(i);
+                redraw_cells(sel_end, old_sel_end);
+            }
+        } else {
+            if (sel_end < old_sel_end) {
+                // Selection grows
+                for (int i = sel_end; i < old_sel_end; i++)
+                    select_cell(i);
+                redraw_cells(sel_end, old_sel_end - 1);
+            } else if (sel_end <= sel_start) {
+                // Selection shrinks
+                for (int i = old_sel_end; i < sel_end; i++)
+                    update_cell(i);
+                redraw_cells(old_sel_end, sel_end - 1);
+            } else {
+                // Selection crossed over its anchor
+                for (int i = sel_start + 1; i <= sel_end; i++)
+                    select_cell(i);
+                for (int i = old_sel_end; i < sel_start; i++)
+                    update_cell(i);
+                redraw_cells(old_sel_end, sel_end);
+            }
+        }
     }
 }
 
@@ -884,8 +884,8 @@ ColormapEditor::redraw_cells(int begin, int end) {
     int xe = end & 15;
     int ye = end >> 4;
     if (ye > yb) {
-	xb = 0;
-	xe = 15;
+        xb = 0;
+        xe = 15;
     }
     int x = xb * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
     int y = yb * (CELL_SIZE + CELL_SPACING) + CELL_SPACING;
@@ -904,17 +904,17 @@ ColormapEditor::activate(Widget w, XtPointer ud, XtPointer cd) {
 
     ColormapEditor *This = (ColormapEditor *) ud;
     switch (button) {
-	case BTN_PICK:   This->doPick();   break;
-	case BTN_BLEND:  This->doBlend();  break;
-	case BTN_SWAP:   This->doSwap();   break;
-	case BTN_MIX:    This->doMix();    break;
-	case BTN_COPY:   This->doCopy();   break;
-	case BTN_PASTE:  This->doPaste();  break;
-	case BTN_LOAD:   This->doLoad();   break;
-	case BTN_SAVE:   This->doSave();   break;
-	case BTN_UNDO:   This->doUndo();   break;
-	case BTN_REDO:   This->doRedo();   break;
-	case BTN_OK:     This->doOK();     break;
-	case BTN_CANCEL: This->doCancel(); break;
+        case BTN_PICK:   This->doPick();   break;
+        case BTN_BLEND:  This->doBlend();  break;
+        case BTN_SWAP:   This->doSwap();   break;
+        case BTN_MIX:    This->doMix();    break;
+        case BTN_COPY:   This->doCopy();   break;
+        case BTN_PASTE:  This->doPaste();  break;
+        case BTN_LOAD:   This->doLoad();   break;
+        case BTN_SAVE:   This->doSave();   break;
+        case BTN_UNDO:   This->doUndo();   break;
+        case BTN_REDO:   This->doRedo();   break;
+        case BTN_OK:     This->doOK();     break;
+        case BTN_CANCEL: This->doCancel(); break;
     }
 }

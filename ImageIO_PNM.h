@@ -23,17 +23,17 @@
 
 class ImageIO_PNM : public ImageIO {
     public:
-	ImageIO_PNM() {}
-	virtual ~ImageIO_PNM() {}
+        ImageIO_PNM() {}
+        virtual ~ImageIO_PNM() {}
 
-	virtual const char *name() { return "PBM/PGM/PPM"; };
-	virtual bool can_read(const char *filename);
-	virtual bool read(const char *filename, char **plugin_name,
-			  void **plugin_data, int *plugin_data_length,
-			  FWPixmap *pm, char **message);
-	virtual bool write(const char *filename, const char *plugin_name,
-			   const void *plugin_data, int plugin_data_length,
-			   const FWPixmap *pm, char **message);
+        virtual const char *name() { return "PBM/PGM/PPM"; };
+        virtual bool can_read(const char *filename);
+        virtual bool read(const char *filename, char **plugin_name,
+                          void **plugin_data, int *plugin_data_length,
+                          FWPixmap *pm, char **message);
+        virtual bool write(const char *filename, const char *plugin_name,
+                           const void *plugin_data, int plugin_data_length,
+                           const FWPixmap *pm, char **message);
 };
 
 #endif

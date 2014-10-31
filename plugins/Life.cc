@@ -63,15 +63,15 @@ static unsigned short crc16[] = {
 #define PATIENCE 100
 
 #define swap_bytes(x) (((x) >> 24) \
-		     | (((x) & 0xff0000) >> 8) \
-		     | (((x) & 0xff00) << 8) \
-		     | ((x) << 24))
+                     | (((x) & 0xff0000) >> 8) \
+                     | (((x) & 0xff00) << 8) \
+                     | ((x) << 24))
 
 static const char *my_settings_layout[] = {
-    "WIDTH 'Width'",	// width
-    "HEIGHT 'Height'",	// height
-    "int",		// repeats
-    "REPEAT 32",	// history[HISTORY]
+    "WIDTH 'Width'",    // width
+    "HEIGHT 'Height'",  // height
+    "int",              // repeats
+    "REPEAT 32",        // history[HISTORY]
     "int",
     "ENDREP",
     NULL
@@ -80,247 +80,247 @@ static const char *my_settings_layout[] = {
 
 class Life : public Plugin {
     private:
-	int repeats;
-	unsigned int history[HISTORY];
-	bool initialized;
-	int hwords;
-	int bitmapsize;
-	unsigned *bitmap1, *bitmap2;
-	unsigned int rightedgemask;
-	bool bigendian;
+        int repeats;
+        unsigned int history[HISTORY];
+        bool initialized;
+        int hwords;
+        int bitmapsize;
+        unsigned *bitmap1, *bitmap2;
+        unsigned int rightedgemask;
+        bool bigendian;
 
     public:
-	Life(void *dl) : Plugin(dl) {
-	    register_for_serialization(my_settings_layout, &repeats);
-	    initialized = false;
-	    bitmap1 = NULL;
-	    bitmap2 = NULL;
+        Life(void *dl) : Plugin(dl) {
+            register_for_serialization(my_settings_layout, &repeats);
+            initialized = false;
+            bitmap1 = NULL;
+            bitmap2 = NULL;
 
-	    int foo = 0x01020304;
-	    bigendian = *((char *) &foo) == 0x01;
-	}
+            int foo = 0x01020304;
+            bigendian = *((char *) &foo) == 0x01;
+        }
 
-	virtual ~Life() {
-	    if (bitmap1 != NULL && bitmap1 != (unsigned int *) pm->pixels)
-		free(bitmap1);
-	    if (bitmap2 != NULL && bitmap2 != (unsigned int *) pm->pixels)
-		free(bitmap2);
-	}
+        virtual ~Life() {
+            if (bitmap1 != NULL && bitmap1 != (unsigned int *) pm->pixels)
+                free(bitmap1);
+            if (bitmap2 != NULL && bitmap2 != (unsigned int *) pm->pixels)
+                free(bitmap2);
+        }
 
-	virtual const char *name() {
-	    return "Life";
-	}
+        virtual const char *name() {
+            return "Life";
+        }
 
-	virtual bool does_depth(int depth) {
-	    return depth == 1;
-	}
+        virtual bool does_depth(int depth) {
+            return depth == 1;
+        }
 
-	virtual void init_new() {
-	    pm->width = 300;
-	    pm->height = 300;
-	    get_settings_dialog();
-	}
+        virtual void init_new() {
+            pm->width = 300;
+            pm->height = 300;
+            get_settings_dialog();
+        }
 
-	virtual void get_settings_ok() {
-	    pm->bytesperline = (pm->width + 31 >> 3) & ~3;
-	    int size = pm->bytesperline * pm->height;
-	    pm->pixels = (unsigned char *) malloc(size);
-	    memset(pm->pixels, 0, size);
-	    init_proceed();
-	}
+        virtual void get_settings_ok() {
+            pm->bytesperline = (pm->width + 31 >> 3) & ~3;
+            int size = pm->bytesperline * pm->height;
+            pm->pixels = (unsigned char *) malloc(size);
+            memset(pm->pixels, 0, size);
+            init_proceed();
+        }
 
-	virtual bool start() {
-	    hwords = pm->width + 31 >> 5;
-	    bitmapsize = hwords * sizeof(unsigned int) * pm->height;
-	    if (bigendian)
-		bitmap1 = (unsigned int *) malloc(bitmapsize);
-	    else
-		bitmap1 = (unsigned int *) pm->pixels;
-	    bitmap2 = (unsigned int *) malloc(bitmapsize);
+        virtual bool start() {
+            hwords = pm->width + 31 >> 5;
+            bitmapsize = hwords * sizeof(unsigned int) * pm->height;
+            if (bigendian)
+                bitmap1 = (unsigned int *) malloc(bitmapsize);
+            else
+                bitmap1 = (unsigned int *) pm->pixels;
+            bitmap2 = (unsigned int *) malloc(bitmapsize);
 
-	    repeats = 0;
-	    rightedgemask = 0xffffffff >> 31 - (pm->width - 1 & 31);
-	    start_working();
-	    return false;
-	}
+            repeats = 0;
+            rightedgemask = 0xffffffff >> 31 - (pm->width - 1 & 31);
+            start_working();
+            return false;
+        }
 
-	virtual void stop() {
-	    stop_working();
-	}
-	
-	virtual bool restart() {
-	    if (!initialized) {
-		// Only pm->pixels is saved when FW serializes a plugin;
-		// we need to reallocate and repopulate our other dynamic
-		// arrays.
-		hwords = pm->width + 31 >> 5;
-		bitmapsize = hwords * sizeof(unsigned int) * pm->height;
-		if (bigendian) {
-		    bitmap1 = (unsigned int *) malloc(bitmapsize);
-		    for (int i = 0; i < bitmapsize >> 2; i++) {
-			unsigned int tmp = ((unsigned int *) pm->pixels)[i];
-			bitmap1[i] = swap_bytes(tmp);
-		    }
-		} else
-		    bitmap1 = (unsigned int *) pm->pixels;
-		bitmap2 = (unsigned int *) malloc(bitmapsize);
-		rightedgemask = 0xffffffff >> 31 - (pm->width - 1 & 31);
-	    }
+        virtual void stop() {
+            stop_working();
+        }
+        
+        virtual bool restart() {
+            if (!initialized) {
+                // Only pm->pixels is saved when FW serializes a plugin;
+                // we need to reallocate and repopulate our other dynamic
+                // arrays.
+                hwords = pm->width + 31 >> 5;
+                bitmapsize = hwords * sizeof(unsigned int) * pm->height;
+                if (bigendian) {
+                    bitmap1 = (unsigned int *) malloc(bitmapsize);
+                    for (int i = 0; i < bitmapsize >> 2; i++) {
+                        unsigned int tmp = ((unsigned int *) pm->pixels)[i];
+                        bitmap1[i] = swap_bytes(tmp);
+                    }
+                } else
+                    bitmap1 = (unsigned int *) pm->pixels;
+                bitmap2 = (unsigned int *) malloc(bitmapsize);
+                rightedgemask = 0xffffffff >> 31 - (pm->width - 1 & 31);
+            }
 
-	    start_working();
-	    return false;
-	}
+            start_working();
+            return false;
+        }
 
-	virtual bool work() {
-	    int index, aboveindex, belowindex, x, y, i, hit;
-	    unsigned short crc;
-	    unsigned int *temp;
-	    int notattop, notatbottom;
+        virtual bool work() {
+            int index, aboveindex, belowindex, x, y, i, hit;
+            unsigned short crc;
+            unsigned int *temp;
+            int notattop, notatbottom;
 
-	    if (repeats == 0) {
-		repeats = PATIENCE;
-		memset(bitmap1, 0, bitmapsize);
-		memset(history, 0, HISTORY * sizeof(unsigned int));
+            if (repeats == 0) {
+                repeats = PATIENCE;
+                memset(bitmap1, 0, bitmapsize);
+                memset(history, 0, HISTORY * sizeof(unsigned int));
 
-		for (y = 0; y < pm->height; y++)
-		    for (x = 0; x < pm->width; x++)
-			if (rand() < RAND_MAX >> 1) {
-			    int a = (x >> 5) + y * hwords;
-			    int b = x & 31;
-			    bitmap1[a] |= 1 << b;
-			}
-		if (bigendian)
-		    for (i = 0; i < bitmapsize >> 2; i++) {
-			unsigned int tmp = bitmap1[i];
-			((unsigned int *) pm->pixels)[i] = swap_bytes(tmp);
-		    }
+                for (y = 0; y < pm->height; y++)
+                    for (x = 0; x < pm->width; x++)
+                        if (rand() < RAND_MAX >> 1) {
+                            int a = (x >> 5) + y * hwords;
+                            int b = x & 31;
+                            bitmap1[a] |= 1 << b;
+                        }
+                if (bigendian)
+                    for (i = 0; i < bitmapsize >> 2; i++) {
+                        unsigned int tmp = bitmap1[i];
+                        ((unsigned int *) pm->pixels)[i] = swap_bytes(tmp);
+                    }
 
-		paint();
-		return false;
-	    }
+                paint();
+                return false;
+            }
 
-	    crc = 0;
-	    index = 0;
-	    aboveindex = -hwords;
-	    belowindex = hwords;
-	    for (y = 0; y < pm->height; y++) {
-		notattop = y != 0;
-		notatbottom = y != pm->height - 1;
-		for (x = 0; x < hwords; x++) {
-		    unsigned int s0, s1, s2, s3, r;
-		    unsigned int w00, w01, w02, w10, w11, w12, w20, w21, w22;
-		    w10 = notattop ? bitmap1[aboveindex] : 0;
-		    w11 = bitmap1[index];
-		    w12 = notatbottom ? bitmap1[belowindex] : 0;
-		    w00 = w10 << 1;
-		    w01 = w11 << 1;
-		    w02 = w12 << 1;
-		    if (x != 0) {
-			if (notattop && bitmap1[aboveindex - 1] & 0x80000000)
-			    w00 |= 1;
-			if (bitmap1[index - 1] & 0x80000000)
-			    w01 |= 1;
-			if (notatbottom && bitmap1[belowindex - 1] & 0x80000000)
-			    w02 |= 1;
-		    }
-		    w20 = w10 >> 1;
-		    w21 = w11 >> 1;
-		    w22 = w12 >> 1;
-		    if (x != hwords - 1) {
-			if (notattop && bitmap1[aboveindex + 1] & 1)
-			    w20 |= 0x80000000;
-			if (bitmap1[index + 1] & 1)
-			    w21 |= 0x80000000;
-			if (notatbottom && bitmap1[belowindex + 1] & 1)
-			    w22 |= 0x80000000;
-		    }
+            crc = 0;
+            index = 0;
+            aboveindex = -hwords;
+            belowindex = hwords;
+            for (y = 0; y < pm->height; y++) {
+                notattop = y != 0;
+                notatbottom = y != pm->height - 1;
+                for (x = 0; x < hwords; x++) {
+                    unsigned int s0, s1, s2, s3, r;
+                    unsigned int w00, w01, w02, w10, w11, w12, w20, w21, w22;
+                    w10 = notattop ? bitmap1[aboveindex] : 0;
+                    w11 = bitmap1[index];
+                    w12 = notatbottom ? bitmap1[belowindex] : 0;
+                    w00 = w10 << 1;
+                    w01 = w11 << 1;
+                    w02 = w12 << 1;
+                    if (x != 0) {
+                        if (notattop && bitmap1[aboveindex - 1] & 0x80000000)
+                            w00 |= 1;
+                        if (bitmap1[index - 1] & 0x80000000)
+                            w01 |= 1;
+                        if (notatbottom && bitmap1[belowindex - 1] & 0x80000000)
+                            w02 |= 1;
+                    }
+                    w20 = w10 >> 1;
+                    w21 = w11 >> 1;
+                    w22 = w12 >> 1;
+                    if (x != hwords - 1) {
+                        if (notattop && bitmap1[aboveindex + 1] & 1)
+                            w20 |= 0x80000000;
+                        if (bitmap1[index + 1] & 1)
+                            w21 |= 0x80000000;
+                        if (notatbottom && bitmap1[belowindex + 1] & 1)
+                            w22 |= 0x80000000;
+                    }
 
-		    s1 =      w00;
-		    s0 =                 ~w00;
+                    s1 =      w00;
+                    s0 =                 ~w00;
 
-		    s2 = s1 & w01;
-		    s1 = s0 & w01 | s1 & ~w01;
-		    s0 =            s0 & ~w01;
+                    s2 = s1 & w01;
+                    s1 = s0 & w01 | s1 & ~w01;
+                    s0 =            s0 & ~w01;
 
-		    s3 = s2 & w02;
-		    s2 = s1 & w02 | s2 & ~w02;
-		    s1 = s0 & w02 | s1 & ~w02;
-		    s0 =            s0 & ~w02;
+                    s3 = s2 & w02;
+                    s2 = s1 & w02 | s2 & ~w02;
+                    s1 = s0 & w02 | s1 & ~w02;
+                    s0 =            s0 & ~w02;
 
-		    s3 = s2 & w10 | s3 & ~w10;
-		    s2 = s1 & w10 | s2 & ~w10;
-		    s1 = s0 & w10 | s1 & ~w10;
-		    s0 =            s0 & ~w10;
+                    s3 = s2 & w10 | s3 & ~w10;
+                    s2 = s1 & w10 | s2 & ~w10;
+                    s1 = s0 & w10 | s1 & ~w10;
+                    s0 =            s0 & ~w10;
 
-		    s3 = s2 & w12 | s3 & ~w12;
-		    s2 = s1 & w12 | s2 & ~w12;
-		    s1 = s0 & w12 | s1 & ~w12;
-		    s0 =            s0 & ~w12;
+                    s3 = s2 & w12 | s3 & ~w12;
+                    s2 = s1 & w12 | s2 & ~w12;
+                    s1 = s0 & w12 | s1 & ~w12;
+                    s0 =            s0 & ~w12;
 
-		    s3 = s2 & w20 | s3 & ~w20;
-		    s2 = s1 & w20 | s2 & ~w20;
-		    s1 = s0 & w20 | s1 & ~w20;
-		    s0 =            s0 & ~w20;
+                    s3 = s2 & w20 | s3 & ~w20;
+                    s2 = s1 & w20 | s2 & ~w20;
+                    s1 = s0 & w20 | s1 & ~w20;
+                    s0 =            s0 & ~w20;
 
-		    s3 = s2 & w21 | s3 & ~w21;
-		    s2 = s1 & w21 | s2 & ~w21;
-		    s1 = s0 & w21 | s1 & ~w21;
+                    s3 = s2 & w21 | s3 & ~w21;
+                    s2 = s1 & w21 | s2 & ~w21;
+                    s1 = s0 & w21 | s1 & ~w21;
 
-		    s3 = s2 & w22 | s3 & ~w22;
-		    s2 = s1 & w22 | s2 & ~w22;
-		    
-		    r = s3 | s2 & w11;
-		    if (x == hwords - 1)
-			r &= rightedgemask;
-		    bitmap2[index] = r;
-		    if (bigendian)
-			((unsigned int *) pm->pixels)[index] = swap_bytes(r);
+                    s3 = s2 & w22 | s3 & ~w22;
+                    s2 = s1 & w22 | s2 & ~w22;
+                    
+                    r = s3 | s2 & w11;
+                    if (x == hwords - 1)
+                        r &= rightedgemask;
+                    bitmap2[index] = r;
+                    if (bigendian)
+                        ((unsigned int *) pm->pixels)[index] = swap_bytes(r);
 
-		    for (i = 0; i < 4; i++) {
-			crc = crc >> 8 ^ crc16[crc & 0xFF ^ r & 0xFF];
-			r >>= 8;
-		    }
-		    index++;
-		    aboveindex++;
-		    belowindex++;
-		}
-	    }
-	    if (!bigendian)
-		pm->pixels = (unsigned char *) bitmap2;
+                    for (i = 0; i < 4; i++) {
+                        crc = crc >> 8 ^ crc16[crc & 0xFF ^ r & 0xFF];
+                        r >>= 8;
+                    }
+                    index++;
+                    aboveindex++;
+                    belowindex++;
+                }
+            }
+            if (!bigendian)
+                pm->pixels = (unsigned char *) bitmap2;
 
-	    temp = bitmap1;
-	    bitmap1 = bitmap2;
-	    bitmap2 = temp;
+            temp = bitmap1;
+            bitmap1 = bitmap2;
+            bitmap2 = temp;
 
-	    /* I use 16-bit CRCs to detect loops.
-	     * Finding a matching CRC is not an absolute guarantee that a loop
-	     * is occurring; for this reason, I wait until I detect PATIENCE
-	     * consecutive matches. The maximum loop length that I detect is
-	     * given by HISTORY. Don't set this to a too-high value; long loops
-	     * are bound to be interesting so you don't want to miss them just
-	     * because you left the room for a minute.
-	     * TODO: how about setting HISTORY to something way high, and
-	     * adding some code that checks game and loop length after
-	     * termination, and saves the initial state for games with long
-	     * durations and/or long loops?
-	    */
-	    hit = 0;
-	    for (i = 0; i < HISTORY; i++) {
-		if (crc == history[i])
-		    hit = 1;
-		if (i == HISTORY - 1)
-		    history[i] = crc;
-		else
-		    history[i] = history[i + 1];
-	    }
-	    if (hit)
-		repeats--;
-	    else
-		repeats = PATIENCE;
+            /* I use 16-bit CRCs to detect loops.
+             * Finding a matching CRC is not an absolute guarantee that a loop
+             * is occurring; for this reason, I wait until I detect PATIENCE
+             * consecutive matches. The maximum loop length that I detect is
+             * given by HISTORY. Don't set this to a too-high value; long loops
+             * are bound to be interesting so you don't want to miss them just
+             * because you left the room for a minute.
+             * TODO: how about setting HISTORY to something way high, and
+             * adding some code that checks game and loop length after
+             * termination, and saves the initial state for games with long
+             * durations and/or long loops?
+            */
+            hit = 0;
+            for (i = 0; i < HISTORY; i++) {
+                if (crc == history[i])
+                    hit = 1;
+                if (i == HISTORY - 1)
+                    history[i] = crc;
+                else
+                    history[i] = history[i + 1];
+            }
+            if (hit)
+                repeats--;
+            else
+                repeats = PATIENCE;
 
-	    paint();
-	    return false;
-	}
+            paint();
+            return false;
+        }
 };
 
 #ifndef STATICPLUGINS

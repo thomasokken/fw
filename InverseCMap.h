@@ -52,23 +52,23 @@ class FWColor;
 class InverseCMap {
     private:
 
-	// Inverse color mapping
-	int *nnearest;
-	unsigned char **nearest;
+        // Inverse color mapping
+        int *nnearest;
+        unsigned char **nearest;
 
-	// Inverse grayscale mapping
-	unsigned char *invmap;
+        // Inverse grayscale mapping
+        unsigned char *invmap;
 
-	// Common stuff
-	FWColor *cmap;
-	long long nsearches;
-	long long ncomparisons;
+        // Common stuff
+        FWColor *cmap;
+        long long nsearches;
+        long long ncomparisons;
 
     public:
-	InverseCMap(FWColor *cmap);
-	~InverseCMap();
-	unsigned char rgb2index(unsigned char r, unsigned char g,
-				unsigned char b);
+        InverseCMap(FWColor *cmap);
+        ~InverseCMap();
+        unsigned char rgb2index(unsigned char r, unsigned char g,
+                                unsigned char b);
 };
 
 #endif

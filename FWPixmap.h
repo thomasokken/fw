@@ -21,7 +21,7 @@
 
 class FWColor;
 
-struct FWPixmap {
+class FWPixmap {
     // NOTE: 'pixels' should be allocated using malloc() and freed using
     // free(); 'cmap' should be allocated using new FWColor[] and freed
     // using delete[].
@@ -34,33 +34,35 @@ struct FWPixmap {
     // never fewer. If there are more than 256 elements in the array, the
     // excess is ignored.
 
+    public:
+
     unsigned char *pixels;
     FWColor *cmap;
     int depth;
     int width, height, bytesperline;
 
     FWPixmap() {
-	pixels = NULL;
-	cmap = NULL;
+        pixels = NULL;
+        cmap = NULL;
     }
 
     void put_pixel(int x, int y, unsigned long p) {
-	if (depth == 1) {
-	    unsigned char m = 1 << (x & 7);
-	    unsigned char *b = pixels + y * bytesperline + (x >> 3);
-	    if (p == 0)
-		*b &= ~m;
-	    else
-		*b |= m;
-	} else if (depth == 8) {
-	    pixels[y * bytesperline + x] = p;
-	} else if (depth == 24) {
-	    unsigned char *ptr = pixels + y * bytesperline + 4 * x;
-	    *ptr++ = 0;
-	    *ptr++ = p >> 16;
-	    *ptr++ = p >> 8;
-	    *ptr = p;
-	}
+        if (depth == 1) {
+            unsigned char m = 1 << (x & 7);
+            unsigned char *b = pixels + y * bytesperline + (x >> 3);
+            if (p == 0)
+                *b &= ~m;
+            else
+                *b |= m;
+        } else if (depth == 8) {
+            pixels[y * bytesperline + x] = p;
+        } else if (depth == 24) {
+            unsigned char *ptr = pixels + y * bytesperline + 4 * x;
+            *ptr++ = 0;
+            *ptr++ = p >> 16;
+            *ptr++ = p >> 8;
+            *ptr = p;
+        }
     }
 };
 

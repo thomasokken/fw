@@ -95,8 +95,8 @@ Viewer::Viewer(Plugin *clonee)
 
 /* public */
 Viewer::Viewer(const char *pluginname, void *plugin_data,
-	               int plugin_data_length, FWPixmap *fpm,
-		       const char *filename, const char *filetype)
+                       int plugin_data_length, FWPixmap *fpm,
+                       const char *filename, const char *filetype)
     : Frame(true, false, true) {
 
     // This constructor is called in response to "File->Open"
@@ -109,44 +109,44 @@ Viewer::Viewer(const char *pluginname, void *plugin_data,
 
 class UndoManagerListener : public UndoManager::Listener {
     private:
-	Viewer *viewer;
+        Viewer *viewer;
     public:
-	UndoManagerListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	virtual void titleChanged(const char *undo, const char *redo) {
-	    viewer->editmenu->changeLabel("Edit.Undo", undo);
-	    viewer->editmenu->changeLabel("Edit.Redo", redo);
-	}
+        UndoManagerListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        virtual void titleChanged(const char *undo, const char *redo) {
+            viewer->editmenu->changeLabel("Edit.Undo", undo);
+            viewer->editmenu->changeLabel("Edit.Redo", redo);
+        }
 };
 
 class ColormapEditorListener : public ColormapEditor::Listener {
     private:
-	Viewer *viewer;
+        Viewer *viewer;
     public:
-	ColormapEditorListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	virtual void cmeClosed() {
-	    viewer->cme = NULL;
-	}
-	virtual void colormapChanged() {
-	    viewer->colormapChanged();
-	}
-	virtual void loadColors() {
-	    viewer->doLoadColors();
-	}
-	virtual void saveColors() {
-	    viewer->doSaveColors();
-	}
-	virtual ColormapEditor *getCME() {
-	    return viewer->cme;
-	}
+        ColormapEditorListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        virtual void cmeClosed() {
+            viewer->cme = NULL;
+        }
+        virtual void colormapChanged() {
+            viewer->colormapChanged();
+        }
+        virtual void loadColors() {
+            viewer->doLoadColors();
+        }
+        virtual void saveColors() {
+            viewer->doSaveColors();
+        }
+        virtual ColormapEditor *getCME() {
+            return viewer->cme;
+        }
 };
 
 /* private */ void
 Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
-	     int plugin_data_length, FWPixmap *fpm) {
+             int plugin_data_length, FWPixmap *fpm) {
     id = idcount++;
     image = NULL;
     colormap = g_colormap;
@@ -172,71 +172,71 @@ Viewer::init(const char *pluginname, Plugin *clonee, void *plugin_data,
     dirty = false;
 
     if (clonee != NULL)
-	pluginname = clonee->name();
+        pluginname = clonee->name();
 
     bool nullplugin = pluginname == NULL;
 
     plugin = Plugin::get(pluginname);
     if (plugin == NULL) {
-	if (fpm != NULL) {
-	    // We're here because a file has been opened, and we're going to
-	    // display it, whether we have a matching plugin or not.
-	    // TODO: error reporting!
-	    // Since the plugin was not found, we're falling back on the Null
-	    // plugin.
-	    plugin = Plugin::get("Null");
-	    nullplugin = true;
-	    finished = true;
-	    plugin->setFinished();
-	} else {
-	    delete this;
-	    return;
-	}
+        if (fpm != NULL) {
+            // We're here because a file has been opened, and we're going to
+            // display it, whether we have a matching plugin or not.
+            // TODO: error reporting!
+            // Since the plugin was not found, we're falling back on the Null
+            // plugin.
+            plugin = Plugin::get("Null");
+            nullplugin = true;
+            finished = true;
+            plugin->setFinished();
+        } else {
+            delete this;
+            return;
+        }
     }
     plugin->setViewer(this);
     plugin->setPixmap(&pm);
     if (fpm != NULL) {
-	pm = *fpm;
-	if (!nullplugin)
-	    plugin->deserialize(plugin_data, plugin_data_length);
-	finish_init();
+        pm = *fpm;
+        if (!nullplugin)
+            plugin->deserialize(plugin_data, plugin_data_length);
+        finish_init();
     } else if (clonee != NULL) {
-	plugin->init_clone(clonee);
-	// The plugin must call Plugin::init_proceed() (which calls
-	// Viewer::finish_init()) or Plugin::init_abort() (which calls
-	// Viewer::deleteLater()).
+        plugin->init_clone(clonee);
+        // The plugin must call Plugin::init_proceed() (which calls
+        // Viewer::finish_init()) or Plugin::init_abort() (which calls
+        // Viewer::deleteLater()).
     } else {
-	plugin->init_new();
-	// The plugin must call Plugin::init_proceed() (which calls
-	// Viewer::finish_init()) or Plugin::init_abort() (which calls
-	// Viewer::deleteLater()).
+        plugin->init_new();
+        // The plugin must call Plugin::init_proceed() (which calls
+        // Viewer::finish_init()) or Plugin::init_abort() (which calls
+        // Viewer::deleteLater()).
     }
 }
 
 /* public */ void
 Viewer::finish_init() {
     if (strcmp(plugin->name(), "About") == 0) {
-	setTitle("Fractal Wizard");
-	setIconTitle("Fractal Wizard");
+        setTitle("Fractal Wizard");
+        setIconTitle("Fractal Wizard");
     } else if (strcmp(plugin->name(), "Null") == 0) {
-	// No check if filename == NULL. The Null plugin is *only*
-	// used when opening files; you can't do File->New->Null.
-	char *name = basename(filename);
-	setTitle(name);
-	setIconTitle(name);
-	free(name);
+        // No check if filename == NULL. The Null plugin is *only*
+        // used when opening files; you can't do File->New->Null.
+        char *name = basename(filename);
+        setTitle(name);
+        setIconTitle(name);
+        free(name);
     } else {
-	char buf[1024];
-	if (filename == NULL) {
-	    untitled = ++untitledcount;
-	    snprintf(buf, 1024, "Untitled #%d (%s)", untitled, plugin->name());
-	} else {
-	    char *name = basename(filename);
-	    snprintf(buf, 1024, "%s (%s)", name, plugin->name());
-	    free(name);
-	}
-	setTitle(buf);
-	setIconTitle(buf);
+        char buf[1024];
+        if (filename == NULL) {
+            untitled = ++untitledcount;
+            snprintf(buf, 1024, "Untitled #%d (%s)", untitled, plugin->name());
+        } else {
+            char *name = basename(filename);
+            snprintf(buf, 1024, "%s (%s)", name, plugin->name());
+            free(name);
+        }
+        setTitle(buf);
+        setIconTitle(buf);
     }
 
     Menu *topmenu = new Menu;
@@ -246,15 +246,15 @@ Viewer::finish_init() {
     pluginmenu->addSeparator();
     char **plugins = Plugin::list();
     if (plugins == NULL)
-	pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
+        pluginmenu->addCommand("No Plugins", NULL, NULL, "File.Beep");
     else {
-	for (char **p = plugins; *p != NULL; p++) {
-	    char id[100];
-	    snprintf(id, 100, "File.New.%s", *p);
-	    pluginmenu->addCommand(*p, NULL, NULL, id);
-	}
+        for (char **p = plugins; *p != NULL; p++) {
+            char id[100];
+            snprintf(id, 100, "File.New.%s", *p);
+            pluginmenu->addCommand(*p, NULL, NULL, id);
+        }
     }
-	
+        
     Menu *filemenu = new Menu;
     filemenu->addMenu("New", NULL, NULL, "File.New", pluginmenu);
     filemenu->addCommand("Open...", NULL, "Ctrl+O", "File.Open");
@@ -326,10 +326,10 @@ Viewer::finish_init() {
     windowsmenu->addMenu("Scale", NULL, NULL, "Scale", scalemenu);
     windowsmenu->addSeparator();
     for (int i = 0; i < instances->size(); i++) {
-	Viewer *vw = (Viewer *) instances->get(i);
-	char buf[64];
-	snprintf(buf, 256, "Windows.X.%d", vw->id);
-	windowsmenu->addCommand(vw->getTitle(), NULL, NULL, buf);
+        Viewer *vw = (Viewer *) instances->get(i);
+        char buf[64];
+        snprintf(buf, 256, "Windows.X.%d", vw->id);
+        windowsmenu->addCommand(vw->getTitle(), NULL, NULL, buf);
     }
     topmenu->addMenu("Windows", NULL, NULL, "Windows", windowsmenu);
 
@@ -337,14 +337,14 @@ Viewer::finish_init() {
     helpmenu->addCommand("About Fractal Wizard", NULL, NULL, "File.New.About");
     helpmenu->addCommand("General", NULL, NULL, "Help.General");
     if (plugins != NULL) {
-	helpmenu->addSeparator();
-	for (char **p = plugins; *p != NULL; p++) {
-	    char id[100];
-	    snprintf(id, 100, "Help.X.%s", *p);
-	    helpmenu->addCommand(*p, NULL, NULL, id);
-	    free(*p);
-	}
-	free(plugins);
+        helpmenu->addSeparator();
+        for (char **p = plugins; *p != NULL; p++) {
+            char id[100];
+            snprintf(id, 100, "Help.X.%s", *p);
+            helpmenu->addCommand(*p, NULL, NULL, id);
+            free(*p);
+        }
+        free(plugins);
     }
     topmenu->addMenu("Help", NULL, NULL, "Help", helpmenu);
 
@@ -354,51 +354,51 @@ Viewer::finish_init() {
     setMenu(topmenu);
 
     Widget scroll = XtVaCreateManagedWidget("ScrolledWindow",
-					    xmScrolledWindowWidgetClass,
-					    getContainer(),
-					    XmNscrollingPolicy, XmAUTOMATIC,
-					    XmNscrollBarDisplayPolicy, XmSTATIC,
-					    XmNtopAttachment, XmATTACH_FORM,
-					    XmNtopOffset, 0,
-					    XmNleftAttachment, XmATTACH_FORM,
-					    XmNleftOffset, 0,
-					    XmNrightAttachment, XmATTACH_FORM,
-					    XmNrightOffset, 0,
-					    XmNbottomAttachment, XmATTACH_FORM,
-					    XmNbottomOffset, 0,
-					    NULL);
+                                            xmScrolledWindowWidgetClass,
+                                            getContainer(),
+                                            XmNscrollingPolicy, XmAUTOMATIC,
+                                            XmNscrollBarDisplayPolicy, XmSTATIC,
+                                            XmNtopAttachment, XmATTACH_FORM,
+                                            XmNtopOffset, 0,
+                                            XmNleftAttachment, XmATTACH_FORM,
+                                            XmNleftOffset, 0,
+                                            XmNrightAttachment, XmATTACH_FORM,
+                                            XmNrightOffset, 0,
+                                            XmNbottomAttachment, XmATTACH_FORM,
+                                            XmNbottomOffset, 0,
+                                            NULL);
 
     clipwindow = XtNameToWidget(scroll, "ClipWindow");
     if (clipwindow == NULL)
-	// Lesstif, I presume?
-	clipwindow = XtNameToWidget(scroll, "ScrolledWindowClipWindow");
+        // Lesstif, I presume?
+        clipwindow = XtNameToWidget(scroll, "ScrolledWindowClipWindow");
 
     scale = 1; // get from preferences!
     int image_width, image_height;
     if (scale > 0) {
-	image_width = scale * pm.width;
-	image_height = scale * pm.height;
+        image_width = scale * pm.width;
+        image_height = scale * pm.height;
     } else {
-	int s = -scale;
-	image_width = (pm.width + s - 1) / s;
-	image_height = (pm.height + s - 1) / s;
+        int s = -scale;
+        image_width = (pm.width + s - 1) / s;
+        image_height = (pm.height + s - 1) / s;
     }
 
     drawingarea = XtVaCreateManagedWidget("DrawingArea",
-					  xmDrawingAreaWidgetClass,
-					  scroll,
-					  XmNwidth, (Dimension) image_width,
-					  XmNheight, (Dimension) image_height,
-					  NULL);
+                                          xmDrawingAreaWidgetClass,
+                                          scroll,
+                                          XmNwidth, (Dimension) image_width,
+                                          XmNheight, (Dimension) image_height,
+                                          NULL);
 
     Arg args[7];
 
     XtTranslations translations = XtParseTranslationTable(
-		"<KeyDown>: DrawingAreaInput()\n"
-		"<KeyUp>: DrawingAreaInput()\n"
-		"<BtnDown>: DrawingAreaInput()\n"
-		"<BtnUp>: DrawingAreaInput()\n"
-		"<Motion>: DrawingAreaInput()\n");
+                "<KeyDown>: DrawingAreaInput()\n"
+                "<KeyUp>: DrawingAreaInput()\n"
+                "<BtnDown>: DrawingAreaInput()\n"
+                "<BtnUp>: DrawingAreaInput()\n"
+                "<Motion>: DrawingAreaInput()\n");
     XtSetArg(args[0], XmNtranslations, translations);
     XtSetValues(drawingarea, args, 1);
 
@@ -475,9 +475,9 @@ Viewer::finish_init() {
     Dimension mysteryBorder = 2; // see above...
 
     Dimension sw = 2 * (borderWidth + marginwidth + mysteryBorder
-	    + shadowThickness + vsbborder) + vsbwidth + spacing + image_width;
+            + shadowThickness + vsbborder) + vsbwidth + spacing + image_width;
     Dimension sh = 2 * (borderWidth + marginheight + mysteryBorder
-	    + shadowThickness + hsbborder) + hsbheight + spacing + image_height;
+            + shadowThickness + hsbborder) + hsbheight + spacing + image_height;
     XtSetArg(args[0], XmNwidth, sw);
     XtSetArg(args[1], XmNheight, sh);
     XtSetValues(scroll, args, 2);
@@ -489,18 +489,18 @@ Viewer::finish_init() {
 
 
     if (!inner_decor_known) {
-	// Find out the difference in size between the ScrolledWindow's
-	// ClipWindow and the overall window size
-	Dimension clipwidth, clipheight;
-	Arg args[2];
-	XtSetArg(args[0], XmNwidth, &clipwidth);
-	XtSetArg(args[1], XmNheight, &clipheight);
-	XtGetValues(clipwindow, args, 2);
-	int windowwidth, windowheight;
-	getSize(&windowwidth, &windowheight);
-	inner_decor_width = windowwidth - clipwidth;
-	inner_decor_height = windowheight - clipheight;
-	inner_decor_known = true;
+        // Find out the difference in size between the ScrolledWindow's
+        // ClipWindow and the overall window size
+        Dimension clipwidth, clipheight;
+        Arg args[2];
+        XtSetArg(args[0], XmNwidth, &clipwidth);
+        XtSetArg(args[1], XmNheight, &clipheight);
+        XtGetValues(clipwindow, args, 2);
+        int windowwidth, windowheight;
+        getSize(&windowwidth, &windowheight);
+        inner_decor_width = windowwidth - clipwidth;
+        inner_decor_height = windowheight - clipheight;
+        inner_decor_known = true;
     }
 
 
@@ -511,9 +511,9 @@ Viewer::finish_init() {
 
 
     if (g_visual->c_class == PseudoColor || g_visual->c_class == StaticColor)
-	dithering = true;
+        dithering = true;
     else
-	dithering = CopyBits::realdepth() < 5;
+        dithering = CopyBits::realdepth() < 5;
 
     optionsmenu->setToggleValue("Options.Dither", dithering, false);
     char buf[3];
@@ -525,58 +525,59 @@ Viewer::finish_init() {
 
     bool use_bitmap = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
-			 g_visual,
-			 use_bitmap ? 1 : g_depth,
-			 use_bitmap ? XYBitmap : ZPixmap,
-			 0,
-			 NULL,
-			 image_width,
-			 image_height,
-			 32,
-			 0);
+                         g_visual,
+                         use_bitmap ? 1 : g_depth,
+                         use_bitmap ? XYBitmap : ZPixmap,
+                         0,
+                         NULL,
+                         image_width,
+                         image_height,
+                         32,
+                         0);
 
     bool want_priv_cmap = false; // get from preferences!
     optionsmenu->setToggleValue("Options.PrivateColormap", want_priv_cmap, false);
     if (want_priv_cmap
-	    && g_depth == 8
-	    && g_visual->c_class == PseudoColor
-	    && (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))) {
-	colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	setColormap(colormap);
-	colormapChanged();
+            && g_depth == 8
+            && g_visual->c_class == PseudoColor
+            && (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))) {
+        colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+        setColormap(colormap);
+        colormapChanged();
     }
 
     direct_copy = canIDoDirectCopy();
     if (direct_copy)
-	image->data = (char *) pm.pixels;
+        image->data = (char *) pm.pixels;
     else
-	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_verbosity >= 1)
-	if (direct_copy)
-	    fprintf(stderr, "Using direct copy.\n");
-	else
-	    fprintf(stderr, "Not using direct copy.\n");
+        image->data = (char *) malloc(image->bytes_per_line * image->height);
+    if (g_verbosity >= 1) {
+        if (direct_copy)
+            fprintf(stderr, "Using direct copy.\n");
+        else
+            fprintf(stderr, "Not using direct copy.\n");
+    }
 
     if (is_brand_new) {
-	if (plugin->start()) {
-	    finished = true;
-	    plugin->setFinished();
-	} else
-	    dirty = true;
+        if (plugin->start()) {
+            finished = true;
+            plugin->setFinished();
+        } else
+            dirty = true;
     } else {
-	paint(0, 0, pm.height, pm.width);
-	if (!finished) {
-	    if (plugin->restart()) {
-		finished = true;
-		plugin->setFinished();
-	    } else {
-		dirty = true;
-		// The user may not be aware that the document they just opened
-		// is an unfinished one, so in this case we turn on
-		// notifications automagically.
-		optionsmenu->setToggleValue("Options.Notify", true, false);
-	    }
-	}
+        paint(0, 0, pm.height, pm.width);
+        if (!finished) {
+            if (plugin->restart()) {
+                finished = true;
+                plugin->setFinished();
+            } else {
+                dirty = true;
+                // The user may not be aware that the document they just opened
+                // is an unfinished one, so in this case we turn on
+                // notifications automagically.
+                optionsmenu->setToggleValue("Options.Notify", true, false);
+            }
+        }
     }
 
     addViewer(this);
@@ -585,39 +586,39 @@ Viewer::finish_init() {
 /* public */
 Viewer::~Viewer() {
     if (cme != NULL) {
-	cme->close();
-	cme = NULL;
+        cme->close();
+        cme = NULL;
     }
     if (plugin != NULL) {
-	Plugin::release(plugin);
-	plugin = NULL;
+        Plugin::release(plugin);
+        plugin = NULL;
     }
     delete undomanager;
     if (cmelistener != NULL)
-	delete cmelistener;
+        delete cmelistener;
     if (colormap != g_colormap) {
-	XFreeColormap(g_display, colormap);
-	setColormap(g_colormap);
+        XFreeColormap(g_display, colormap);
+        setColormap(g_colormap);
     }
     if (filename != NULL)
-	free(filename);
+        free(filename);
     if (filetype != NULL)
-	free(filetype);
+        free(filetype);
     if (image != NULL) {
-	if (!direct_copy)
-	    free(image->data);
-	XFree(image);
+        if (!direct_copy)
+            free(image->data);
+        XFree(image);
     }
     if (pm.pixels != NULL)
-	free(pm.pixels);
+        free(pm.pixels);
     if (pm.cmap != NULL)
-	delete[] pm.cmap;
+        delete[] pm.cmap;
     if (invcmap != NULL)
-	delete invcmap;
+        delete invcmap;
 
     removeViewer(this);
     if (instances->size() == 0)
-	exit(0);
+        exit(0);
 }
 
 /* public */ void
@@ -652,8 +653,8 @@ Viewer::addViewer(Viewer *viewer) {
     snprintf(buf, 64, "Windows.X.%d", viewer->id);
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
-	Viewer *v = (Viewer *) iter->next();
-	v->windowsmenu->addCommand(viewer->getTitle(), NULL, NULL, buf);
+        Viewer *v = (Viewer *) iter->next();
+        v->windowsmenu->addCommand(viewer->getTitle(), NULL, NULL, buf);
     }
     delete iter;
 }
@@ -664,8 +665,8 @@ Viewer::removeViewer(Viewer *viewer) {
     snprintf(buf, 64, "Windows.X.%d", viewer->id);
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
-	Viewer *v = (Viewer *) iter->next();
-	v->windowsmenu->remove(buf);
+        Viewer *v = (Viewer *) iter->next();
+        v->windowsmenu->remove(buf);
     }
     delete iter;
     instances->remove(viewer);
@@ -675,7 +676,7 @@ Viewer::removeViewer(Viewer *viewer) {
 Viewer::getTopmostViewer() {
     int nviewers = instances->size();
     if (nviewers == 0)
-	return NULL;
+        return NULL;
 
     Window windows[nviewers];
 
@@ -683,28 +684,28 @@ Viewer::getTopmostViewer() {
     // a special value to distinguish from the case where getWindow()
     // returns None (which I don't think should ever happen, but hey).
     for (int i = 0; i < nviewers; i++)
-	windows[i] = g_rootwindow;
+        windows[i] = g_rootwindow;
 
     Window root;
     Window parent;
     Window *children;
     unsigned int nchildren;
     if (XQueryTree(g_display, g_rootwindow, &root, &parent,
-		&children, &nchildren) == 0)
-	// Whoa! Harsh.
-	// Just take a wild guess, then.
-	return (Viewer *) instances->get(0);
+                &children, &nchildren) == 0)
+        // Whoa! Harsh.
+        // Just take a wild guess, then.
+        return (Viewer *) instances->get(0);
 
     for (int i = nchildren - 1; i >= 0; i--) {
-	Window w = children[i];
-	for (int j = 0; j < nviewers; j++) {
-	    if (windows[j] == g_rootwindow)
-		windows[j] = ((Viewer *) instances->get(j))->getWindow();
-	    if (windows[j] == w) {
-		XFree(children);
-		return (Viewer *) instances->get(j);
-	    }
-	}
+        Window w = children[i];
+        for (int j = 0; j < nviewers; j++) {
+            if (windows[j] == g_rootwindow)
+                windows[j] = ((Viewer *) instances->get(j))->getWindow();
+            if (windows[j] == w) {
+                XFree(children);
+                return (Viewer *) instances->get(j);
+            }
+        }
     }
 
     // No match found. Weird.
@@ -726,81 +727,81 @@ Viewer::pluginFinished(bool notify) {
     // Even if it's 'true', we won't actually do anything to attract the user's
     // attention unless they have requested we do so.
     if (notify && optionsmenu->getToggleValue("Options.Notify")) {
-	char buf[1024];
-	if (filename == NULL)
-	    snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"Untitled #%d\" has been completed.", plugin->name(), untitled);
-	else {
-	    char *name = basename(filename);
-	    snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), name);
-	    free(name);
-	}
-	TextViewer *tv = new TextViewer(buf);
-	tv->raise();
-	beep();
+        char buf[1024];
+        if (filename == NULL)
+            snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"Untitled #%d\" has been completed.", plugin->name(), untitled);
+        else {
+            char *name = basename(filename);
+            snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), name);
+            free(name);
+        }
+        TextViewer *tv = new TextViewer(buf);
+        tv->raise();
+        beep();
     }
 }
 
 /* public */ void
 Viewer::paint(int top, int left, int bottom, int right) {
     if (direct_copy) {
-	image->data = (char *) pm.pixels;
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  left, top, left, top,
-		  right - left, bottom - top);
+        image->data = (char *) pm.pixels;
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  left, top, left, top,
+                  right - left, bottom - top);
     } else if (scale == 1) {
-	CopyBits::copy_unscaled(&pm, image, colormap != g_colormap, false,
-				dithering, top, left, bottom, right);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  left, top, left, top, right - left, bottom - top);
+        CopyBits::copy_unscaled(&pm, image, colormap != g_colormap, false,
+                                dithering, top, left, bottom, right);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  left, top, left, top, right - left, bottom - top);
     } else if (scale > 1) {
-	CopyBits::copy_enlarged(scale, &pm, image, colormap != g_colormap,
-				false, dithering, top, left, bottom, right);
-	int TOP = top * scale;
-	int BOTTOM = bottom * scale;
-	int LEFT = left * scale;
-	int RIGHT = right * scale;
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  LEFT, TOP, LEFT, TOP,
-		  RIGHT - LEFT, BOTTOM - TOP);
+        CopyBits::copy_enlarged(scale, &pm, image, colormap != g_colormap,
+                                false, dithering, top, left, bottom, right);
+        int TOP = top * scale;
+        int BOTTOM = bottom * scale;
+        int LEFT = left * scale;
+        int RIGHT = right * scale;
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  LEFT, TOP, LEFT, TOP,
+                  RIGHT - LEFT, BOTTOM - TOP);
     } else {
-	if (colormap != g_colormap && pm.depth == 8 && invcmap == NULL)
-	    invcmap = new InverseCMap(pm.cmap);
-	CopyBits::copy_reduced(-scale, &pm, image, colormap != g_colormap,
-			       false, dithering, top, left, bottom, right,
-			       invcmap);
-	int s = -scale;
-	int TOP = top / s;
-	int BOTTOM = (bottom + s - 1) / s;
-	if (BOTTOM > image->height)
-	    BOTTOM = image->height;
-	int LEFT = left / s;
-	int RIGHT = (right + s - 1) / s;
-	if (RIGHT > image->width)
-	    RIGHT = image->width;
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  LEFT, TOP, LEFT, TOP,
-		  RIGHT - LEFT, BOTTOM - TOP);
+        if (colormap != g_colormap && pm.depth == 8 && invcmap == NULL)
+            invcmap = new InverseCMap(pm.cmap);
+        CopyBits::copy_reduced(-scale, &pm, image, colormap != g_colormap,
+                               false, dithering, top, left, bottom, right,
+                               invcmap);
+        int s = -scale;
+        int TOP = top / s;
+        int BOTTOM = (bottom + s - 1) / s;
+        if (BOTTOM > image->height)
+            BOTTOM = image->height;
+        int LEFT = left / s;
+        int RIGHT = (right + s - 1) / s;
+        if (RIGHT > image->width)
+            RIGHT = image->width;
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  LEFT, TOP, LEFT, TOP,
+                  RIGHT - LEFT, BOTTOM - TOP);
     }
 
     if (selection_visible) {
-	int s_top, s_left, s_bottom, s_right;
-	if (sel_x1 > sel_x2) {
-	    s_left = sel_x2;
-	    s_right = sel_x1;
-	} else {
-	    s_left = sel_x1;
-	    s_right = sel_x2;
-	}
-	if (sel_y1 > sel_y2) {
-	    s_top = sel_y2;
-	    s_bottom = sel_y1;
-	} else {
-	    s_top = sel_y1;
-	    s_bottom = sel_y2;
-	}
-	if (top <= s_bottom && s_top <= bottom
-		&& left <= s_right && s_left <= right)
-	    draw_selection();
+        int s_top, s_left, s_bottom, s_right;
+        if (sel_x1 > sel_x2) {
+            s_left = sel_x2;
+            s_right = sel_x1;
+        } else {
+            s_left = sel_x1;
+            s_right = sel_x2;
+        }
+        if (sel_y1 > sel_y2) {
+            s_top = sel_y2;
+            s_bottom = sel_y1;
+        } else {
+            s_top = sel_y1;
+            s_bottom = sel_y2;
+        }
+        if (top <= s_bottom && s_top <= bottom
+                && left <= s_right && s_left <= right)
+            draw_selection();
     }
 }
 
@@ -815,9 +816,9 @@ Viewer::get_recommended_size(int *width, int *height) {
     getDecorSize(&outer_decor_width, &outer_decor_height);
 
     *width = XWidthOfScreen(g_screen) - taskbar_width - inner_decor_width
-			    - outer_decor_width;
+                            - outer_decor_width;
     *height = XHeightOfScreen(g_screen) - taskbar_height - inner_decor_height
-			      - outer_decor_height;
+                              - outer_decor_height;
 }
 
 /* public */ void
@@ -829,22 +830,22 @@ Viewer::get_screen_size(int *width, int *height) {
 /* public */ void
 Viewer::get_selection(int *x, int *y, int *width, int *height) {
     if (selection_visible) {
-	if (sel_x1 < sel_x2) {
-	    *x = sel_x1;
-	    *width = sel_x2 - sel_x1;
-	} else {
-	    *x = sel_x2;
-	    *width = sel_x1 - sel_x2;
-	}
-	if (sel_y1 < sel_y2) {
-	    *y = sel_y1;
-	    *height = sel_y2 - sel_y1;
-	} else {
-	    *y = sel_y2;
-	    *height = sel_y1 - sel_y2;
-	}
+        if (sel_x1 < sel_x2) {
+            *x = sel_x1;
+            *width = sel_x2 - sel_x1;
+        } else {
+            *x = sel_x2;
+            *width = sel_x1 - sel_x2;
+        }
+        if (sel_y1 < sel_y2) {
+            *y = sel_y1;
+            *height = sel_y2 - sel_y1;
+        } else {
+            *y = sel_y2;
+            *height = sel_y1 - sel_y2;
+        }
     } else {
-	*x = *y = *width = *height = -1;
+        *x = *y = *width = *height = -1;
     }
 }
 
@@ -856,57 +857,57 @@ Viewer::get_scale() {
 /* private */ void
 Viewer::draw_selection() {
     if (gc == None)
-	gc = XCreateGC(g_display, g_rootwindow, 0, NULL);
+        gc = XCreateGC(g_display, g_rootwindow, 0, NULL);
     int s_top, s_left, s_bottom, s_right;
     if (sel_x1 > sel_x2) {
-	s_left = sel_x2;
-	s_right = sel_x1;
+        s_left = sel_x2;
+        s_right = sel_x1;
     } else {
-	s_left = sel_x1;
-	s_right = sel_x2;
+        s_left = sel_x1;
+        s_right = sel_x2;
     }
     if (sel_y1 > sel_y2) {
-	s_top = sel_y2;
-	s_bottom = sel_y1;
+        s_top = sel_y2;
+        s_bottom = sel_y1;
     } else {
-	s_top = sel_y1;
-	s_bottom = sel_y2;
+        s_top = sel_y1;
+        s_bottom = sel_y2;
     }
     int x, y, w, h;
     if (scale <= 1) {
-	if (scale == 1) {
-	    x = s_left;
-	    y = s_top;
-	    w = s_right - s_left;
-	    h = s_bottom - s_top;
-	} else {
-	    int s = -scale;
-	    x = s_left / s;
-	    y = s_top / s;
-	    w = (s_right / s) - x;
-	    h = (s_bottom / s) - y;
-	}
-	XSetLineAttributes(g_display, gc, 1, LineOnOffDash, CapButt, JoinMiter);
-	XSetDashes(g_display, gc, 0, "\004\004", 2);
-	XSetForeground(g_display, gc, g_white);
-	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
-	XSetDashes(g_display, gc, 4, "\004\004", 2);
-	XSetForeground(g_display, gc, g_black);
-	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+        if (scale == 1) {
+            x = s_left;
+            y = s_top;
+            w = s_right - s_left;
+            h = s_bottom - s_top;
+        } else {
+            int s = -scale;
+            x = s_left / s;
+            y = s_top / s;
+            w = (s_right / s) - x;
+            h = (s_bottom / s) - y;
+        }
+        XSetLineAttributes(g_display, gc, 1, LineOnOffDash, CapButt, JoinMiter);
+        XSetDashes(g_display, gc, 0, "\004\004", 2);
+        XSetForeground(g_display, gc, g_white);
+        XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+        XSetDashes(g_display, gc, 4, "\004\004", 2);
+        XSetForeground(g_display, gc, g_black);
+        XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
     } else {
-	x = s_left * scale + scale / 2;
-	y = s_top * scale + scale / 2;
-	w = (s_right - s_left) * scale;
-	h = (s_bottom - s_top) * scale;
-	XSetLineAttributes(g_display, gc, scale, LineOnOffDash, CapButt, JoinMiter);
-	char dashes[2];
-	dashes[0] = dashes[1] = 4 * scale;
-	XSetDashes(g_display, gc, 0, dashes, 2);
-	XSetForeground(g_display, gc, g_white);
-	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
-	XSetDashes(g_display, gc, 4 * scale, dashes, 2);
-	XSetForeground(g_display, gc, g_black);
-	XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+        x = s_left * scale + scale / 2;
+        y = s_top * scale + scale / 2;
+        w = (s_right - s_left) * scale;
+        h = (s_bottom - s_top) * scale;
+        XSetLineAttributes(g_display, gc, scale, LineOnOffDash, CapButt, JoinMiter);
+        char dashes[2];
+        dashes[0] = dashes[1] = 4 * scale;
+        XSetDashes(g_display, gc, 0, dashes, 2);
+        XSetForeground(g_display, gc, g_white);
+        XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
+        XSetDashes(g_display, gc, 4 * scale, dashes, 2);
+        XSetForeground(g_display, gc, g_black);
+        XDrawRectangle(g_display, XtWindow(drawingarea), gc, x, y, w, h);
     }
 }
 
@@ -914,54 +915,54 @@ Viewer::draw_selection() {
 Viewer::erase_selection() {
     int s_top, s_left, s_bottom, s_right;
     if (sel_x1 > sel_x2) {
-	s_left = sel_x2;
-	s_right = sel_x1;
+        s_left = sel_x2;
+        s_right = sel_x1;
     } else {
-	s_left = sel_x1;
-	s_right = sel_x2;
+        s_left = sel_x1;
+        s_right = sel_x2;
     }
     if (sel_y1 > sel_y2) {
-	s_top = sel_y2;
-	s_bottom = sel_y1;
+        s_top = sel_y2;
+        s_bottom = sel_y1;
     } else {
-	s_top = sel_y1;
-	s_bottom = sel_y2;
+        s_top = sel_y1;
+        s_bottom = sel_y2;
     }
     int x, y, w, h;
     if (scale <= 1) {
-	if (scale == 1) {
-	    x = s_left;
-	    y = s_top;
-	    w = s_right - s_left + 1;
-	    h = s_bottom - s_top + 1;
-	} else {
-	    int s = -scale;
-	    x = s_left / s;
-	    y = s_top / s;
-	    w = (s_right / s) - x + 1;
-	    h = (s_bottom / s) - y + 1;
-	}
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x, y, x, y, w, 1);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x + w - 1, y + 1, x + w - 1, y + 1, 1, h - 1);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x, y + 1, x, y + 1, 1, h - 1);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x + 1, y + h - 1, x + 1, y + h - 1, w - 2, 1);
+        if (scale == 1) {
+            x = s_left;
+            y = s_top;
+            w = s_right - s_left + 1;
+            h = s_bottom - s_top + 1;
+        } else {
+            int s = -scale;
+            x = s_left / s;
+            y = s_top / s;
+            w = (s_right / s) - x + 1;
+            h = (s_bottom / s) - y + 1;
+        }
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x, y, x, y, w, 1);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x + w - 1, y + 1, x + w - 1, y + 1, 1, h - 1);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x, y + 1, x, y + 1, 1, h - 1);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x + 1, y + h - 1, x + 1, y + h - 1, w - 2, 1);
     } else {
-	x = s_left * scale;
-	y = s_top * scale;
-	w = (s_right - s_left + 1) * scale;
-	h = (s_bottom - s_top + 1) * scale;
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x, y, x, y, w, scale);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x + w - scale, y + scale, x + w - scale, y + scale, scale, h - scale);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x, y + scale, x, y + scale, scale, h - scale);
-	XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
-		  x + scale, y + h - scale, x + scale, y + h - scale, w - 2, scale);
+        x = s_left * scale;
+        y = s_top * scale;
+        w = (s_right - s_left + 1) * scale;
+        h = (s_bottom - s_top + 1) * scale;
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x, y, x, y, w, scale);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x + w - scale, y + scale, x + w - scale, y + scale, scale, h - scale);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x, y + scale, x, y + scale, scale, h - scale);
+        XPutImage(g_display, XtWindow(drawingarea), g_gc, image,
+                  x + scale, y + h - scale, x + scale, y + h - scale, w - 2, scale);
     }
 }
 
@@ -970,20 +971,20 @@ Viewer::screen2pixmap(int *x, int *y) {
     int X = *x;
     int Y = *y;
     if (scale <= -1) {
-	X *= -scale;
-	Y *= -scale;
+        X *= -scale;
+        Y *= -scale;
     } else if (scale > 1) {
-	X /= scale;
-	Y /= scale;
+        X /= scale;
+        Y /= scale;
     }
     if (X < 0)
-	X = 0;
+        X = 0;
     else if (X >= pm.width)
-	X = pm.width - 1;
+        X = pm.width - 1;
     if (Y < 0)
-	Y = 0;
+        Y = 0;
     else if (Y >= pm.height)
-	Y = pm.height - 1;
+        Y = pm.height - 1;
     *x = X;
     *y = Y;
 }
@@ -993,11 +994,11 @@ Viewer::pixmap2screen(int *x, int *y) {
     int X = *x;
     int Y = *y;
     if (scale <= -1) {
-	X /= -scale;
-	Y /= -scale;
+        X /= -scale;
+        Y /= -scale;
     } else if (scale > 1) {
-	X *= scale;
-	Y *= scale;
+        X *= scale;
+        Y *= scale;
     }
     *x = X;
     *y = Y;
@@ -1006,136 +1007,136 @@ Viewer::pixmap2screen(int *x, int *y) {
 /* public */ void
 Viewer::colormapChanged() {
     if (invcmap != NULL) {
-	delete invcmap;
-	invcmap = NULL;
+        delete invcmap;
+        invcmap = NULL;
     }
     if (colormap == g_colormap) {
-	paint(0, 0, pm.height, pm.width);
+        paint(0, 0, pm.height, pm.width);
     } else {
-	XColor colors[256];
-	if (pm.depth == 1) {
-	    for (int i = 0; i < 256; i++) {
-		colors[i].pixel = i;
-		int k = 257 * i;
-		colors[i].red = k;
-		colors[i].green = k;
-		colors[i].blue = k;
-		colors[i].flags = DoRed | DoGreen | DoBlue;
-	    }
-	} else if (pm.depth == 8) {
-	    for (int i = 0; i < 256; i++) {
-		colors[i].pixel = i;
-		colors[i].red = 257 * pm.cmap[i].r;
-		colors[i].green = 257 * pm.cmap[i].g;
-		colors[i].blue = 257 * pm.cmap[i].b;
-		colors[i].flags = DoRed | DoGreen | DoBlue;
-	    }
-	} else {
-	    int i = 0;
-	    for (int r = 0; r < 6; r++)
-		for (int g = 0; g < 6; g++)
-		    for (int b = 0; b < 6; b++) {
-			colors[i].pixel = i;
-			colors[i].red = 13107 * r;
-			colors[i].green = 13107 * g;
-			colors[i].blue = 13107 * b;
-			colors[i].flags = DoRed | DoGreen | DoBlue;
-			i++;
-		    }
-	    for (int m = 0; m < 5; m++)
-		for (int n = 1; n < 9; n++) {
-		    int p = 13107 * m + (4369 * n) / 3;
-		    colors[i].pixel = i;
-		    colors[i].red = p;
-		    colors[i].green = p;
-		    colors[i].blue = p;
-		    colors[i].flags = DoRed | DoGreen | DoBlue;
-		    i++;
-		}
-	}
-	XStoreColors(g_display, colormap, colors, 256);
-	if (pm.depth == 8 && scale <= -1)
-	    paint(0, 0, pm.height, pm.width);
+        XColor colors[256];
+        if (pm.depth == 1) {
+            for (int i = 0; i < 256; i++) {
+                colors[i].pixel = i;
+                int k = 257 * i;
+                colors[i].red = k;
+                colors[i].green = k;
+                colors[i].blue = k;
+                colors[i].flags = DoRed | DoGreen | DoBlue;
+            }
+        } else if (pm.depth == 8) {
+            for (int i = 0; i < 256; i++) {
+                colors[i].pixel = i;
+                colors[i].red = 257 * pm.cmap[i].r;
+                colors[i].green = 257 * pm.cmap[i].g;
+                colors[i].blue = 257 * pm.cmap[i].b;
+                colors[i].flags = DoRed | DoGreen | DoBlue;
+            }
+        } else {
+            int i = 0;
+            for (int r = 0; r < 6; r++)
+                for (int g = 0; g < 6; g++)
+                    for (int b = 0; b < 6; b++) {
+                        colors[i].pixel = i;
+                        colors[i].red = 13107 * r;
+                        colors[i].green = 13107 * g;
+                        colors[i].blue = 13107 * b;
+                        colors[i].flags = DoRed | DoGreen | DoBlue;
+                        i++;
+                    }
+            for (int m = 0; m < 5; m++)
+                for (int n = 1; n < 9; n++) {
+                    int p = 13107 * m + (4369 * n) / 3;
+                    colors[i].pixel = i;
+                    colors[i].red = p;
+                    colors[i].green = p;
+                    colors[i].blue = p;
+                    colors[i].flags = DoRed | DoGreen | DoBlue;
+                    i++;
+                }
+        }
+        XStoreColors(g_display, colormap, colors, 256);
+        if (pm.depth == 8 && scale <= -1)
+            paint(0, 0, pm.height, pm.width);
     }
 }
 
 class SaveBeforeClosingListener : public SaveImageDialog::Listener {
     private:
-	Viewer *viewer;
-	SaveImageDialog *sid;
+        Viewer *viewer;
+        SaveImageDialog *sid;
     public:
-	SaveBeforeClosingListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setSID(SaveImageDialog *sid) {
-	    this->sid = sid;
-	}
-	virtual void save(const char *filename, const char *filetype) {
-	    sid->hide();
-	    if (viewer->save(filename, filetype)) {
-		delete viewer;
-	    }
-	    delete sid;
-	    delete this;
-	}
-	virtual void cancel() {
-	    delete sid;
-	    delete this;
-	}
+        SaveBeforeClosingListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setSID(SaveImageDialog *sid) {
+            this->sid = sid;
+        }
+        virtual void save(const char *filename, const char *filetype) {
+            sid->hide();
+            if (viewer->save(filename, filetype)) {
+                delete viewer;
+            }
+            delete sid;
+            delete this;
+        }
+        virtual void cancel() {
+            delete sid;
+            delete this;
+        }
 };
-		
+                
 class YesNoCancelBeforeClosingListener : public YesNoCancelDialog::Listener {
     private:
-	Viewer *viewer;
-	YesNoCancelDialog *ync;
+        Viewer *viewer;
+        YesNoCancelDialog *ync;
     public:
-	YesNoCancelBeforeClosingListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setYNC(YesNoCancelDialog *ync) {
-	    this->ync = ync;
-	}
-	virtual void yes() {
-	    delete ync;
-	    if (viewer->filename == NULL) {
-		SaveBeforeClosingListener *sidlistener = new SaveBeforeClosingListener(viewer);
-		SaveImageDialog *sid = new SaveImageDialog(
-			viewer,
-			viewer->filename,
-			viewer->filetype,
-			sidlistener);
-		sidlistener->setSID(sid);
-		sid->setTitle("Save File");
-		sid->setDirectory(&viewer->file_directory);
-		sid->raise();
-	    } else {
-		if (viewer->save(viewer->filename, viewer->filetype))
-		    delete viewer;
-	    }
-	    delete this;
-	}
-	virtual void no() {
-	    delete ync;
-	    delete viewer;
-	    delete this;
-	}
-	virtual void cancel() {
-	    delete ync;
-	    delete this;
-	}
+        YesNoCancelBeforeClosingListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setYNC(YesNoCancelDialog *ync) {
+            this->ync = ync;
+        }
+        virtual void yes() {
+            delete ync;
+            if (viewer->filename == NULL) {
+                SaveBeforeClosingListener *sidlistener = new SaveBeforeClosingListener(viewer);
+                SaveImageDialog *sid = new SaveImageDialog(
+                        viewer,
+                        viewer->filename,
+                        viewer->filetype,
+                        sidlistener);
+                sidlistener->setSID(sid);
+                sid->setTitle("Save File");
+                sid->setDirectory(&viewer->file_directory);
+                sid->raise();
+            } else {
+                if (viewer->save(viewer->filename, viewer->filetype))
+                    delete viewer;
+            }
+            delete this;
+        }
+        virtual void no() {
+            delete ync;
+            delete viewer;
+            delete this;
+        }
+        virtual void cancel() {
+            delete ync;
+            delete this;
+        }
 };
 
 /* private virtual */ void
 Viewer::close() {
     if (!dirty && undomanager->getCurrentId() == saved_undo_id) {
-	delete this;
-	return;
+        delete this;
+        return;
     }
     YesNoCancelBeforeClosingListener *ynclistener = new YesNoCancelBeforeClosingListener(this);
     YesNoCancelDialog *ync = new YesNoCancelDialog(
-	    this,
-	    "Save changes before closing?",
-	    ynclistener);
+            this,
+            "Save changes before closing?",
+            ynclistener);
     ynclistener->setYNC(ync);
     ync->setTitle("Save Changes?");
     ync->raise();
@@ -1145,26 +1146,26 @@ Viewer::close() {
 /* private */ bool
 Viewer::canIDoDirectCopy() {
     if (scale != 1)
-	return false;
+        return false;
     if (pm.depth == 1)
-	return image->bytes_per_line == pm.bytesperline
-		&& image->byte_order == LSBFirst
-		&& image->bitmap_bit_order == LSBFirst;
+        return image->bytes_per_line == pm.bytesperline
+                && image->byte_order == LSBFirst
+                && image->bitmap_bit_order == LSBFirst;
     if (pm.depth == 8)
-	return colormap != g_colormap // implies 8-bit PseudoColor visual
-		&& image->bytes_per_line == pm.bytesperline
-		&& image->byte_order == LSBFirst;
+        return colormap != g_colormap // implies 8-bit PseudoColor visual
+                && image->bytes_per_line == pm.bytesperline
+                && image->byte_order == LSBFirst;
     // pm.depth == 24
     return image->depth == 32
-		&& image->bytes_per_line == pm.bytesperline
-		&& ((image->byte_order == LSBFirst
-			&& image->red_mask == 0x00FF0000
-			&& image->green_mask == 0x0000FF00
-			&& image->blue_mask == 0x000000FF)
-		    || (image->byte_order == MSBFirst
-			&& image->red_mask == 0x0000FF00
-			&& image->green_mask == 0x00FF0000
-			&& image->blue_mask == 0xFF000000));
+                && image->bytes_per_line == pm.bytesperline
+                && ((image->byte_order == LSBFirst
+                        && image->red_mask == 0x00FF0000
+                        && image->green_mask == 0x0000FF00
+                        && image->blue_mask == 0x000000FF)
+                    || (image->byte_order == MSBFirst
+                        && image->red_mask == 0x0000FF00
+                        && image->green_mask == 0x00FF0000
+                        && image->blue_mask == 0xFF000000));
 }
 
 /* private static */ void
@@ -1193,7 +1194,7 @@ Viewer::expose(Widget w, XtPointer ud, XtPointer cd) {
 Viewer::expose2(int x, int y, int w, int h) {
     XPutImage(g_display, XtWindow(drawingarea), g_gc, image, x, y, x, y, w, h);
     if (selection_visible)
-	draw_selection();
+        draw_selection();
 }
 
 /* private static */ void
@@ -1209,70 +1210,70 @@ Viewer::input2(XEvent *event) {
     // selection by double-clicking inside it; moving a selection by dragging
     // inside it; changing a selection by dragging its edges... Ugh...
     switch (event->type) {
-	case KeyPress:
-	    // event->xkey.state, event->xkey.keycode
-	    break;
-	case KeyRelease:
-	    // event->xkey.state, event->xkey.keycode
-	    break;
-	case ButtonPress: {
-	    // event->xbutton.x, event->xbutton.y,
-	    // event->xbutton.state, event->xbutton.button
-	    if (selection_visible)
-		erase_selection();
-	    int x = event->xbutton.x;
-	    int y = event->xbutton.y;
-	    screen2pixmap(&x, &y);
-	    sel_x1 = sel_x2 = x;
-	    sel_y1 = sel_y2 = y;
-	    draw_selection();
-	    selection_visible = true;
-	    selection_in_progress = true;
-	    if (cme != NULL)
-		cme->selectColor(pm.pixels[y * pm.bytesperline + x]);
-	    break;
-	}
-	case ButtonRelease: {
-	    // event->xbutton.x, event->xbutton.y,
-	    // event->xbutton.state, event->xbutton.button
-	    if (!selection_in_progress)
-		return;
-	    int x = event->xbutton.x;
-	    int y = event->xbutton.y;
-	    screen2pixmap(&x, &y);
-	    if (x == sel_x1 || y == sel_y1) {
-		erase_selection();
-		selection_visible = false;
-	    } else if (sel_x2 != x || sel_y2 != y) {
-		erase_selection();
-		sel_x2 = x;
-		sel_y2 = y;
-		draw_selection();
-	    }
-	    selection_in_progress = false;
-	    if (cme != NULL) {
-		cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
-		cme->finishSelection();
-	    }
-	    break;
-	}
-	case MotionNotify: {
-	    // event->xmotion.x, event->xmotion.y
-	    if (!selection_in_progress)
-		return;
-	    int x = event->xbutton.x;
-	    int y = event->xbutton.y;
-	    screen2pixmap(&x, &y);
-	    if (sel_x2 != x || sel_y2 != y) {
-		erase_selection();
-		sel_x2 = x;
-		sel_y2 = y;
-		draw_selection();
-	    }
-	    if (cme != NULL)
-		cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
-	    break;
-	}
+        case KeyPress:
+            // event->xkey.state, event->xkey.keycode
+            break;
+        case KeyRelease:
+            // event->xkey.state, event->xkey.keycode
+            break;
+        case ButtonPress: {
+            // event->xbutton.x, event->xbutton.y,
+            // event->xbutton.state, event->xbutton.button
+            if (selection_visible)
+                erase_selection();
+            int x = event->xbutton.x;
+            int y = event->xbutton.y;
+            screen2pixmap(&x, &y);
+            sel_x1 = sel_x2 = x;
+            sel_y1 = sel_y2 = y;
+            draw_selection();
+            selection_visible = true;
+            selection_in_progress = true;
+            if (cme != NULL)
+                cme->selectColor(pm.pixels[y * pm.bytesperline + x]);
+            break;
+        }
+        case ButtonRelease: {
+            // event->xbutton.x, event->xbutton.y,
+            // event->xbutton.state, event->xbutton.button
+            if (!selection_in_progress)
+                return;
+            int x = event->xbutton.x;
+            int y = event->xbutton.y;
+            screen2pixmap(&x, &y);
+            if (x == sel_x1 || y == sel_y1) {
+                erase_selection();
+                selection_visible = false;
+            } else if (sel_x2 != x || sel_y2 != y) {
+                erase_selection();
+                sel_x2 = x;
+                sel_y2 = y;
+                draw_selection();
+            }
+            selection_in_progress = false;
+            if (cme != NULL) {
+                cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
+                cme->finishSelection();
+            }
+            break;
+        }
+        case MotionNotify: {
+            // event->xmotion.x, event->xmotion.y
+            if (!selection_in_progress)
+                return;
+            int x = event->xbutton.x;
+            int y = event->xbutton.y;
+            screen2pixmap(&x, &y);
+            if (sel_x2 != x || sel_y2 != y) {
+                erase_selection();
+                sel_x2 = x;
+                sel_y2 = y;
+                draw_selection();
+            }
+            if (cme != NULL)
+                cme->extendSelection(pm.pixels[y * pm.bytesperline + x]);
+            break;
+        }
     }
 }
 
@@ -1284,65 +1285,65 @@ Viewer::menucallback(void *closure, const char *id) {
 /* private */ void
 Viewer::menucallback2(const char *id) {
     if (strcmp(id, "File.Beep") == 0)
-	beep();
+        beep();
     else if (strncmp(id, "File.New.", 9) == 0)
-	doNew(id + 9);
+        doNew(id + 9);
     else if (strcmp(id, "File.Clone") == 0)
-	doClone();
+        doClone();
     else if (strcmp(id, "File.Open") == 0)
-	doOpen();
+        doOpen();
     else if (strcmp(id, "File.Close") == 0)
-	doClose();
+        doClose();
     else if (strcmp(id, "File.Save") == 0)
-	doSave();
+        doSave();
     else if (strcmp(id, "File.SaveAs") == 0)
-	doSaveAs();
+        doSaveAs();
     else if (strcmp(id, "File.GetInfo") == 0)
-	doGetInfo();
+        doGetInfo();
     else if (strcmp(id, "File.Print") == 0)
-	doPrint();
+        doPrint();
     else if (strcmp(id, "File.Quit") == 0)
-	doQuit();
+        doQuit();
     else if (strcmp(id, "Edit.Undo") == 0)
-	doUndo();
+        doUndo();
     else if (strcmp(id, "Edit.Redo") == 0)
-	doRedo();
+        doRedo();
     else if (strcmp(id, "Edit.Cut") == 0)
-	doCut();
+        doCut();
     else if (strcmp(id, "Edit.Copy") == 0)
-	doCopy();
+        doCopy();
     else if (strcmp(id, "Edit.Paste") == 0)
-	doPaste();
+        doPaste();
     else if (strcmp(id, "Edit.Clear") == 0)
-	doClear();
+        doClear();
     else if (strcmp(id, "Color.LoadColors") == 0)
-	doLoadColors();
+        doLoadColors();
     else if (strcmp(id, "Color.SaveColors") == 0)
-	doSaveColors();
+        doSaveColors();
     else if (strcmp(id, "Color.EditColors") == 0)
-	doEditColors();
+        doEditColors();
     else if (strcmp(id, "Draw.StopOthers") == 0)
-	doStopOthers();
+        doStopOthers();
     else if (strcmp(id, "Draw.Stop") == 0)
-	doStop();
+        doStop();
     else if (strcmp(id, "Draw.StopAll") == 0)
-	doStopAll();
+        doStopAll();
     else if (strcmp(id, "Draw.Continue") == 0)
-	doContinue();
+        doContinue();
     else if (strcmp(id, "Draw.ContinueAll") == 0)
-	doContinueAll();
+        doContinueAll();
     else if (strcmp(id, "Draw.UpdateNow") == 0)
-	doUpdateNow();
+        doUpdateNow();
     else if (strcmp(id, "Windows.Enlarge") == 0)
-	doEnlarge();
+        doEnlarge();
     else if (strcmp(id, "Windows.Reduce") == 0)
-	doReduce();
+        doReduce();
     else if (strncmp(id, "Windows.X.", 10) == 0)
-	doWindows(id + 10);
+        doWindows(id + 10);
     else if (strcmp(id, "Help.General") == 0)
-	doGeneral();
+        doGeneral();
     else if (strncmp(id, "Help.X.", 7) == 0)
-	doHelp(id + 7);
+        doHelp(id + 7);
 }
 
 /* private static */ void
@@ -1353,13 +1354,13 @@ Viewer::togglecallback(void *closure, const char *id, bool value) {
 /* private */ void
 Viewer::togglecallback2(const char *id, bool value) {
     if (g_verbosity >= 1)
-	fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
+        fprintf(stderr, "Toggle \"%s\" set to '%s'.\n", id, value ? "true" : "false");
     if (strcmp(id, "Options.PrivateColormap") == 0)
-	doPrivateColormap(value);
+        doPrivateColormap(value);
     else if (strcmp(id, "Options.Dither") == 0)
-	doDither(value);
+        doDither(value);
     else if (strcmp(id, "Options.Notify") == 0)
-	doNotify(value);
+        doNotify(value);
 }
 
 /* private static */ void
@@ -1370,9 +1371,9 @@ Viewer::radiocallback(void *closure, const char *id, const char *value) {
 /* private */ void
 Viewer::radiocallback2(const char *id, const char *value) {
     if (g_verbosity >= 1)
-	fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
+        fprintf(stderr, "Radio \"%s\" set to '%s'.\n", id, value);
     if (strcmp(id, "Windows.Scale") == 0)
-	doScale(value);
+        doScale(value);
 }
 
 /* private */ bool
@@ -1381,101 +1382,101 @@ Viewer::save(const char *name, const char *type) {
     void *plugin_data;
     int plugin_data_length;
     if (strcmp(plugin_name, "Null") == 0 || strcmp(plugin_name, "About") == 0) {
-	plugin_data = NULL;
-	plugin_data_length = 0;
+        plugin_data = NULL;
+        plugin_data_length = 0;
     } else
-	plugin->serialize(&plugin_data, &plugin_data_length);
+        plugin->serialize(&plugin_data, &plugin_data_length);
     char *message = NULL;
 
     bool success;
     if (ImageIO::swrite(name, type, plugin_name, plugin_data,
-			 plugin_data_length, &pm, &message)) {
-	if (filename == NULL || strcmp(name, filename) != 0) {
-	    char idbuf[1024];
-	    snprintf(idbuf, 1024, "Windows.X.%d", id);
-	    const char *pluginname = plugin->name();
-	    const char *label = basename(name);
-	    char labelbuf[1024];
+                         plugin_data_length, &pm, &message)) {
+        if (filename == NULL || strcmp(name, filename) != 0) {
+            char idbuf[1024];
+            snprintf(idbuf, 1024, "Windows.X.%d", id);
+            const char *pluginname = plugin->name();
+            const char *label = basename(name);
+            char labelbuf[1024];
 
-	    if (strcmp(pluginname, "Null") == 0)
-		strcpy(labelbuf, label);
-	    else if (strcmp(pluginname, "About") == 0)
-		strcpy(labelbuf, "Fractal Wizard");
-	    else
-		snprintf(labelbuf, 1024, "%s (%s)", label, pluginname);
-	    free((char *) label);
+            if (strcmp(pluginname, "Null") == 0)
+                strcpy(labelbuf, label);
+            else if (strcmp(pluginname, "About") == 0)
+                strcpy(labelbuf, "Fractal Wizard");
+            else
+                snprintf(labelbuf, 1024, "%s (%s)", label, pluginname);
+            free((char *) label);
 
-	    Iterator *iter = instances->iterator();
-	    while (iter->hasNext()) {
-		Viewer *v = (Viewer *) iter->next();
-		v->windowsmenu->changeLabel(idbuf, labelbuf);
-	    }
-	    delete iter;
+            Iterator *iter = instances->iterator();
+            while (iter->hasNext()) {
+                Viewer *v = (Viewer *) iter->next();
+                v->windowsmenu->changeLabel(idbuf, labelbuf);
+            }
+            delete iter;
 
-	    setTitle(labelbuf);
-	    setIconTitle(labelbuf);
-	    saved_undo_id = undomanager->getCurrentId();
-	    dirty = false;
-	}
-	if (filename != NULL)
-	    free(filename);
-	filename = strclone(name);
-	if (filetype != NULL)
-	    free(filetype);
-	filetype = strclone(type);
-	success = true;
+            setTitle(labelbuf);
+            setIconTitle(labelbuf);
+            saved_undo_id = undomanager->getCurrentId();
+            dirty = false;
+        }
+        if (filename != NULL)
+            free(filename);
+        filename = strclone(name);
+        if (filetype != NULL)
+            free(filetype);
+        filetype = strclone(type);
+        success = true;
     } else {
-	char buf[1024];
-	snprintf(buf, 1024, "Saving \"%s\" failed (%s).\n", name, message);
-	TextViewer *tv = new TextViewer(buf);
-	tv->raise();
-	success = false;
+        char buf[1024];
+        snprintf(buf, 1024, "Saving \"%s\" failed (%s).\n", name, message);
+        TextViewer *tv = new TextViewer(buf);
+        tv->raise();
+        success = false;
     }
 
     if (plugin_data != NULL)
-	free(plugin_data);
+        free(plugin_data);
     if (message != NULL)
-	free(message);
+        free(message);
     return success;
 }
 
 class LoadColorsAction : public UndoableAction {
     private:
-	ColormapEditorListener *listener;
-	FWPixmap *pm;
-	FWColor oldcolors[256];
-	FWColor newcolors[256];
+        ColormapEditorListener *listener;
+        FWPixmap *pm;
+        FWColor oldcolors[256];
+        FWColor newcolors[256];
     public:
-	LoadColorsAction(ColormapEditorListener *listener, FWPixmap *pm, FWColor *nc) {
-	    this->listener = listener;
-	    this->pm = pm;
-	    for (int i = 0; i < 256; i++) {
-		oldcolors[i] = pm->cmap[i];
-		newcolors[i] = nc[i];
-	    }
-	}
-	virtual void undo() {
-	    for (int i = 0; i < 256; i++)
-		pm->cmap[i] = oldcolors[i];
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(0, 255);
-	    listener->colormapChanged();
-	}
-	virtual void redo() {
-	    for (int i = 0; i < 256; i++)
-		pm->cmap[i] = newcolors[i];
-	    ColormapEditor *cme = listener->getCME();
-	    if (cme != NULL)
-		cme->colorsChanged(0, 255);
-	    listener->colormapChanged();
-	}
-	virtual const char *getUndoTitle() {
-	    return "Undo Load Colors";
-	}
-	virtual const char *getRedoTitle() {
-	    return "Redo Load Colors";
-	}
+        LoadColorsAction(ColormapEditorListener *listener, FWPixmap *pm, FWColor *nc) {
+            this->listener = listener;
+            this->pm = pm;
+            for (int i = 0; i < 256; i++) {
+                oldcolors[i] = pm->cmap[i];
+                newcolors[i] = nc[i];
+            }
+        }
+        virtual void undo() {
+            for (int i = 0; i < 256; i++)
+                pm->cmap[i] = oldcolors[i];
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(0, 255);
+            listener->colormapChanged();
+        }
+        virtual void redo() {
+            for (int i = 0; i < 256; i++)
+                pm->cmap[i] = newcolors[i];
+            ColormapEditor *cme = listener->getCME();
+            if (cme != NULL)
+                cme->colorsChanged(0, 255);
+            listener->colormapChanged();
+        }
+        virtual const char *getUndoTitle() {
+            return "Undo Load Colors";
+        }
+        virtual const char *getRedoTitle() {
+            return "Redo Load Colors";
+        }
 };
 
 /* private */ void
@@ -1490,56 +1491,56 @@ Viewer::doClone() {
 
 class OpenListener : public FileDialog::Listener {
     private:
-	Viewer *viewer;
-	FileDialog *dialog;
+        Viewer *viewer;
+        FileDialog *dialog;
     public:
-	OpenListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setDialog(FileDialog *dialog) {
-	    this->dialog = dialog;
-	}
-	virtual void fileSelected(const char *filename) {
-	    dialog->hide();
-	    char *type = NULL;
-	    char *plugin_name = NULL;
-	    void *plugin_data = NULL;
-	    int plugin_data_length;
-	    FWPixmap pm;
-	    char *message = NULL;
-	    if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
-			    &plugin_data_length, &pm, &message)) {
-		// Read successful; open viewer
-		new Viewer(plugin_name, plugin_data,
-			plugin_data_length, &pm,
-			filename, type);
-		if (message != NULL) {
-		    TextViewer *tv = new TextViewer(message);
-		    tv->raise();
-		    beep();
-		}
-	    } else {
-		char buf[1024];
-		snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
-		TextViewer *tv = new TextViewer(buf);
-		tv->raise();
-		beep();
-	    }
-	    if (type != NULL)
-		free(type);
-	    if (plugin_name != NULL)
-		free(plugin_name);
-	    if (plugin_data != NULL)
-		free(plugin_data);
-	    if (message != NULL)
-		free(message);
-	    delete dialog;
-	    delete this;
-	}
-	virtual void cancelled() {
-	    delete dialog;
-	    delete this;
-	}
+        OpenListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setDialog(FileDialog *dialog) {
+            this->dialog = dialog;
+        }
+        virtual void fileSelected(const char *filename) {
+            dialog->hide();
+            char *type = NULL;
+            char *plugin_name = NULL;
+            void *plugin_data = NULL;
+            int plugin_data_length;
+            FWPixmap pm;
+            char *message = NULL;
+            if (ImageIO::sread(filename, &type, &plugin_name, &plugin_data,
+                            &plugin_data_length, &pm, &message)) {
+                // Read successful; open viewer
+                new Viewer(plugin_name, plugin_data,
+                        plugin_data_length, &pm,
+                        filename, type);
+                if (message != NULL) {
+                    TextViewer *tv = new TextViewer(message);
+                    tv->raise();
+                    beep();
+                }
+            } else {
+                char buf[1024];
+                snprintf(buf, 1024, "Can't open \"%s\" (%s).\n", filename, message);
+                TextViewer *tv = new TextViewer(buf);
+                tv->raise();
+                beep();
+            }
+            if (type != NULL)
+                free(type);
+            if (plugin_name != NULL)
+                free(plugin_name);
+            if (plugin_data != NULL)
+                free(plugin_data);
+            if (message != NULL)
+                free(message);
+            delete dialog;
+            delete this;
+        }
+        virtual void cancelled() {
+            delete dialog;
+            delete this;
+        }
 };
 
 /* private */ void
@@ -1561,32 +1562,32 @@ Viewer::doClose() {
 /* private */ void
 Viewer::doSave() {
     if (filename == NULL)
-	doSaveAs();
+        doSaveAs();
     else
-	save(filename, filetype);
+        save(filename, filetype);
 }
 
 class SaveAsListener : public SaveImageDialog::Listener {
     private:
-	Viewer *viewer;
-	SaveImageDialog *sid;
+        Viewer *viewer;
+        SaveImageDialog *sid;
     public:
-	SaveAsListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setSID(SaveImageDialog *sid) {
-	    this->sid = sid;
-	}
-	virtual void save(const char *filename, const char *filetype) {
-	    sid->hide();
-	    viewer->save(filename, filetype);
-	    delete sid;
-	    delete this;
-	}
-	virtual void cancel() {
-	    delete sid;
-	    delete this;
-	}
+        SaveAsListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setSID(SaveImageDialog *sid) {
+            this->sid = sid;
+        }
+        virtual void save(const char *filename, const char *filetype) {
+            sid->hide();
+            viewer->save(filename, filetype);
+            delete sid;
+            delete this;
+        }
+        virtual void cancel() {
+            delete sid;
+            delete this;
+        }
 };
 
 
@@ -1594,7 +1595,7 @@ class SaveAsListener : public SaveImageDialog::Listener {
 Viewer::doSaveAs() {
     SaveAsListener *sidlistener = new SaveAsListener(this);
     SaveImageDialog *sid = new SaveImageDialog(this, filename,
-					       filetype, sidlistener);
+                                               filetype, sidlistener);
     sidlistener->setSID(sid);
     sid->setTitle("Save File");
     sid->setDirectory(&file_directory);
@@ -1605,14 +1606,14 @@ Viewer::doSaveAs() {
 Viewer::doGetInfo() {
     char *info = plugin->dumpSettings();
     if (info == NULL) {
-	char buf[1024];
-	snprintf(buf, 1024, "The plugin \"%s\" does not have public settings.", plugin->name());
-	TextViewer *tv = new TextViewer(buf);
-	tv->raise();
+        char buf[1024];
+        snprintf(buf, 1024, "The plugin \"%s\" does not have public settings.", plugin->name());
+        TextViewer *tv = new TextViewer(buf);
+        tv->raise();
     } else {
-	TextViewer *tv = new TextViewer(info);
-	free(info);
-	tv->raise();
+        TextViewer *tv = new TextViewer(info);
+        free(info);
+        tv->raise();
     }
 }
 
@@ -1629,112 +1630,112 @@ Viewer::doQuit() {
 
 class SaveBeforeQuittingListener : public SaveImageDialog::Listener {
     private:
-	Viewer *viewer;
-	SaveImageDialog *sid;
+        Viewer *viewer;
+        SaveImageDialog *sid;
     public:
-	SaveBeforeQuittingListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setSID(SaveImageDialog *sid) {
-	    this->sid = sid;
-	}
-	virtual void save(const char *filename, const char *filetype) {
-	    sid->hide();
-	    if (viewer->save(filename, filetype)) {
-		delete viewer;
-		Viewer::doQuit2();
-	    }
-	    delete sid;
-	    delete this;
-	}
-	virtual void cancel() {
-	    delete sid;
-	    delete this;
-	}
+        SaveBeforeQuittingListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setSID(SaveImageDialog *sid) {
+            this->sid = sid;
+        }
+        virtual void save(const char *filename, const char *filetype) {
+            sid->hide();
+            if (viewer->save(filename, filetype)) {
+                delete viewer;
+                Viewer::doQuit2();
+            }
+            delete sid;
+            delete this;
+        }
+        virtual void cancel() {
+            delete sid;
+            delete this;
+        }
 };
 
-		
+                
 class YesNoCancelBeforeQuittingListener : public YesNoCancelDialog::Listener {
     private:
-	Viewer *viewer;
-	YesNoCancelDialog *ync;
+        Viewer *viewer;
+        YesNoCancelDialog *ync;
     public:
-	YesNoCancelBeforeQuittingListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setYNC(YesNoCancelDialog *ync) {
-	    this->ync = ync;
-	}
-	virtual void yes() {
-	    delete ync;
-	    if (viewer->filename == NULL) {
-		SaveBeforeQuittingListener *sidlistener = new SaveBeforeQuittingListener(viewer);
-		SaveImageDialog *sid = new SaveImageDialog(
-			viewer,
-			viewer->filename,
-			viewer->filetype,
-			sidlistener);
-		sidlistener->setSID(sid);
-		sid->setTitle("Save File");
-		sid->setDirectory(&viewer->file_directory);
-		viewer->raise();
-		sid->raise();
-		return;
-	    } else {
-		if (viewer->save(viewer->filename, viewer->filetype)) {
-		    delete viewer;
-		    Viewer::doQuit2();
-		}
-	    }
-	    delete this;
-	}
-	virtual void no() {
-	    delete ync;
-	    delete viewer;
-	    Viewer::doQuit2();
-	    delete this;
-	}
-	virtual void cancel() {
-	    delete ync;
-	    delete this;
-	}
+        YesNoCancelBeforeQuittingListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setYNC(YesNoCancelDialog *ync) {
+            this->ync = ync;
+        }
+        virtual void yes() {
+            delete ync;
+            if (viewer->filename == NULL) {
+                SaveBeforeQuittingListener *sidlistener = new SaveBeforeQuittingListener(viewer);
+                SaveImageDialog *sid = new SaveImageDialog(
+                        viewer,
+                        viewer->filename,
+                        viewer->filetype,
+                        sidlistener);
+                sidlistener->setSID(sid);
+                sid->setTitle("Save File");
+                sid->setDirectory(&viewer->file_directory);
+                viewer->raise();
+                sid->raise();
+                return;
+            } else {
+                if (viewer->save(viewer->filename, viewer->filetype)) {
+                    delete viewer;
+                    Viewer::doQuit2();
+                }
+            }
+            delete this;
+        }
+        virtual void no() {
+            delete ync;
+            delete viewer;
+            Viewer::doQuit2();
+            delete this;
+        }
+        virtual void cancel() {
+            delete ync;
+            delete this;
+        }
 };
 
 /* private static */ void
 Viewer::doQuit2() {
     while (true) {
-	Viewer *viewer = getTopmostViewer();
-	if (viewer == NULL)
-	    exit(0);
+        Viewer *viewer = getTopmostViewer();
+        if (viewer == NULL)
+            exit(0);
 
-	if (!viewer->dirty && viewer->undomanager->getCurrentId()
-				== viewer->saved_undo_id) {
-	    delete viewer;
-	    continue;
-	}
+        if (!viewer->dirty && viewer->undomanager->getCurrentId()
+                                == viewer->saved_undo_id) {
+            delete viewer;
+            continue;
+        }
 
-	// It may be the topmost viewer, but that doesn't mean it's also the
-	// topmost window...
-	viewer->raise();
+        // It may be the topmost viewer, but that doesn't mean it's also the
+        // topmost window...
+        viewer->raise();
 
-	char buf[1024];
-	if (viewer->filename == NULL) {
-	    snprintf(buf, 1024, "Save changes to \"Untitled #%d\" before quitting?", viewer->untitled);
-	} else {
-	    char *bn = basename(viewer->filename);
-	    snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
-	    free(bn);
-	}
+        char buf[1024];
+        if (viewer->filename == NULL) {
+            snprintf(buf, 1024, "Save changes to \"Untitled #%d\" before quitting?", viewer->untitled);
+        } else {
+            char *bn = basename(viewer->filename);
+            snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
+            free(bn);
+        }
 
-	YesNoCancelBeforeQuittingListener *ynclistener =
-			    new YesNoCancelBeforeQuittingListener(viewer);
-	YesNoCancelDialog *ync = new YesNoCancelDialog(viewer,
-					    buf, ynclistener);
-	ynclistener->setYNC(ync);
-	ync->setTitle("Save Changes?");
-	ync->raise();
-	beep();
-	return;
+        YesNoCancelBeforeQuittingListener *ynclistener =
+                            new YesNoCancelBeforeQuittingListener(viewer);
+        YesNoCancelDialog *ync = new YesNoCancelDialog(viewer,
+                                            buf, ynclistener);
+        ynclistener->setYNC(ync);
+        ync->setTitle("Save Changes?");
+        ync->raise();
+        beep();
+        return;
     }
 }
 
@@ -1770,72 +1771,72 @@ Viewer::doClear() {
 
 class LoadColorsListener : public FileDialog::Listener {
     private:
-	Viewer *viewer;
-	FileDialog *dialog;
+        Viewer *viewer;
+        FileDialog *dialog;
     public:
-	LoadColorsListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setDialog(FileDialog *dialog) {
-	    this->dialog = dialog;
-	}
-	void fileSelected(const char *filename) {
-	    dialog->hide();
-	    FILE *file = fopen(filename, "r");
-	    if (file == NULL) {
-		char buf[1024];
-		snprintf(buf, 1024, "Can't open \"%s\" for reading (%s).\n",
-				    filename, strerror(errno));
-		TextViewer *tv = new TextViewer(buf);
-		tv->raise();
-		beep();
-		delete dialog;
-		delete this;
-		return;
-	    }
+        LoadColorsListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setDialog(FileDialog *dialog) {
+            this->dialog = dialog;
+        }
+        void fileSelected(const char *filename) {
+            dialog->hide();
+            FILE *file = fopen(filename, "r");
+            if (file == NULL) {
+                char buf[1024];
+                snprintf(buf, 1024, "Can't open \"%s\" for reading (%s).\n",
+                                    filename, strerror(errno));
+                TextViewer *tv = new TextViewer(buf);
+                tv->raise();
+                beep();
+                delete dialog;
+                delete this;
+                return;
+            }
 
-	    FWColor newcmap[256];
-	    for (int i = 0; i < 256; i++) {
-		int r, g, b;
-		if (fscanf(file, "%d %d %d", &r, &g, &b) != 3
-			|| r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
-		    char buf[1024];
-		    snprintf(buf, 1024, "The file \"%s\" is not formatted correctly.\nIt should be a plain text file, containing 256 lines, with\neach line containing three decimal numbers in the range 0..255,\nrepresenting red, green, and blue intensities.", filename);
-		    TextViewer *tv = new TextViewer(buf);
-		    tv->raise();
-		    beep();
-		    fclose(file);
-		    delete dialog;
-		    delete this;
-		    return;
-		}
-		newcmap[i].r = r;
-		newcmap[i].g = g;
-		newcmap[i].b = b;
-	    }
+            FWColor newcmap[256];
+            for (int i = 0; i < 256; i++) {
+                int r, g, b;
+                if (fscanf(file, "%d %d %d", &r, &g, &b) != 3
+                        || r < 0 || r > 255 || g < 0 || g > 255 || b < 0 || b > 255) {
+                    char buf[1024];
+                    snprintf(buf, 1024, "The file \"%s\" is not formatted correctly.\nIt should be a plain text file, containing 256 lines, with\neach line containing three decimal numbers in the range 0..255,\nrepresenting red, green, and blue intensities.", filename);
+                    TextViewer *tv = new TextViewer(buf);
+                    tv->raise();
+                    beep();
+                    fclose(file);
+                    delete dialog;
+                    delete this;
+                    return;
+                }
+                newcmap[i].r = r;
+                newcmap[i].g = g;
+                newcmap[i].b = b;
+            }
 
-	    if (viewer->cmelistener == NULL)
-		viewer->cmelistener = new ColormapEditorListener(viewer);
-	    LoadColorsAction *action = new LoadColorsAction(
-				    viewer->cmelistener, &viewer->pm, newcmap);
-	    viewer->undomanager->addAction(action);
-	    action->redo();
+            if (viewer->cmelistener == NULL)
+                viewer->cmelistener = new ColormapEditorListener(viewer);
+            LoadColorsAction *action = new LoadColorsAction(
+                                    viewer->cmelistener, &viewer->pm, newcmap);
+            viewer->undomanager->addAction(action);
+            action->redo();
 
-	    fclose(file);
-	    delete dialog;
-	    delete this;
-	}
-	void cancelled() {
-	    delete dialog;
-	    delete this;
-	}
+            fclose(file);
+            delete dialog;
+            delete this;
+        }
+        void cancelled() {
+            delete dialog;
+            delete this;
+        }
 };
 
 /* private */ void
 Viewer::doLoadColors() {
     if (pm.cmap == NULL) {
-	beep();
-	return;
+        beep();
+        return;
     }
     LoadColorsListener *listener = new LoadColorsListener(this);
     FileDialog *loaddialog = new FileDialog(NULL, false, listener);
@@ -1848,47 +1849,47 @@ Viewer::doLoadColors() {
 
 class SaveColorsListener : public FileDialog::Listener {
     private:
-	Viewer *viewer;
-	FileDialog *dialog;
+        Viewer *viewer;
+        FileDialog *dialog;
     public:
-	SaveColorsListener(Viewer *viewer) {
-	    this->viewer = viewer;
-	}
-	void setDialog(FileDialog *dialog) {
-	    this->dialog = dialog;
-	}
-	virtual void fileSelected(const char *filename) {
-	    dialog->hide();
-	    FILE *file = fopen(filename, "w");
-	    if (file == NULL) {
-		char buf[1024];
-		snprintf(buf, 1024, "Can't open \"%s\" for writing (%s).\n",
-				    filename, strerror(errno));
-		TextViewer *tv = new TextViewer(buf);
-		tv->raise();
-		beep();
-		delete dialog;
-		delete this;
-		return;
-	    }
-	    for (int i = 0; i < 256; i++)
-		fprintf(file, "%d %d %d\n", viewer->pm.cmap[i].r,
-			viewer->pm.cmap[i].g, viewer->pm.cmap[i].b);
-	    delete dialog;
-	    fclose(file);
-	    delete this;
-	}
-	virtual void cancelled() {
-	    delete dialog;
-	    delete this;
-	}
+        SaveColorsListener(Viewer *viewer) {
+            this->viewer = viewer;
+        }
+        void setDialog(FileDialog *dialog) {
+            this->dialog = dialog;
+        }
+        virtual void fileSelected(const char *filename) {
+            dialog->hide();
+            FILE *file = fopen(filename, "w");
+            if (file == NULL) {
+                char buf[1024];
+                snprintf(buf, 1024, "Can't open \"%s\" for writing (%s).\n",
+                                    filename, strerror(errno));
+                TextViewer *tv = new TextViewer(buf);
+                tv->raise();
+                beep();
+                delete dialog;
+                delete this;
+                return;
+            }
+            for (int i = 0; i < 256; i++)
+                fprintf(file, "%d %d %d\n", viewer->pm.cmap[i].r,
+                        viewer->pm.cmap[i].g, viewer->pm.cmap[i].b);
+            delete dialog;
+            fclose(file);
+            delete this;
+        }
+        virtual void cancelled() {
+            delete dialog;
+            delete this;
+        }
 };
 
 /* private */ void
 Viewer::doSaveColors() {
     if (pm.cmap == NULL) {
-	beep();
-	return;
+        beep();
+        return;
     }
     SaveColorsListener *listener = new SaveColorsListener(this);
     FileDialog *savedialog = new FileDialog(NULL, true, listener);
@@ -1902,13 +1903,13 @@ Viewer::doSaveColors() {
 /* private */ void
 Viewer::doEditColors() {
     if (pm.depth != 8) {
-	beep();
-	return;
+        beep();
+        return;
     }
     if (cmelistener == NULL)
-	cmelistener = new ColormapEditorListener(this);
+        cmelistener = new ColormapEditorListener(this);
     if (cme == NULL)
-	cme = new ColormapEditor(this, cmelistener, &pm, undomanager, colormap);
+        cme = new ColormapEditor(this, cmelistener, &pm, undomanager, colormap);
     cme->raise();
 }
 
@@ -1916,9 +1917,9 @@ Viewer::doEditColors() {
 Viewer::doStopOthers() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
-	Viewer *viewer = (Viewer *) iter->next();
-	if (viewer != this && !viewer->finished)
-	    viewer->plugin->stop();
+        Viewer *viewer = (Viewer *) iter->next();
+        if (viewer != this && !viewer->finished)
+            viewer->plugin->stop();
     }
     delete iter;
 }
@@ -1926,18 +1927,18 @@ Viewer::doStopOthers() {
 /* private */ void
 Viewer::doStop() {
     if (finished)
-	beep();
+        beep();
     else
-	plugin->stop();
+        plugin->stop();
 }
 
 /* private */ void
 Viewer::doStopAll() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
-	Viewer *viewer = (Viewer *) iter->next();
-	if (!viewer->finished)
-	    viewer->plugin->stop();
+        Viewer *viewer = (Viewer *) iter->next();
+        if (!viewer->finished)
+            viewer->plugin->stop();
     }
     delete iter;
 }
@@ -1945,13 +1946,13 @@ Viewer::doStopAll() {
 /* private */ void
 Viewer::doContinue() {
     if (finished)
-	beep();
+        beep();
     else {
-	if (plugin->restart()) {
-	    finished = true;
-	    plugin->setFinished();
-	} else
-	    dirty = true;
+        if (plugin->restart()) {
+            finished = true;
+            plugin->setFinished();
+        } else
+            dirty = true;
     }
 }
 
@@ -1959,14 +1960,14 @@ Viewer::doContinue() {
 Viewer::doContinueAll() {
     Iterator *iter = instances->iterator();
     while (iter->hasNext()) {
-	Viewer *viewer = (Viewer *) iter->next();
-	if (!viewer->finished) {
-	    if (viewer->plugin->restart()) {
-		viewer->finished = true;
-		viewer->plugin->setFinished();
-	    } else
-		viewer->dirty = true;
-	}
+        Viewer *viewer = (Viewer *) iter->next();
+        if (!viewer->finished) {
+            if (viewer->plugin->restart()) {
+                viewer->finished = true;
+                viewer->plugin->setFinished();
+            } else
+                viewer->dirty = true;
+        }
     }
     delete iter;
 }
@@ -1979,60 +1980,60 @@ Viewer::doUpdateNow() {
 /* private */ void
 Viewer::doPrivateColormap(bool value) {
     if (!(g_depth == 8
-		&& g_visual->c_class == PseudoColor
-		&& (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))))
-	return;
+                && g_visual->c_class == PseudoColor
+                && (pm.depth == 8 || pm.depth == 24 || (pm.depth == 1 && scale <= -1))))
+        return;
 
     if (value) {
-	colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	setColormap(colormap);
-	if (canIDoDirectCopy()) {
-	    free(image->data);
-	    image->data = (char *) pm.pixels;
-	    direct_copy = true;
-	    if (g_verbosity >= 1)
-		fprintf(stderr, "Using direct copy.\n");
-	}
-	colormapChanged();
-	if (cme != NULL)
-	    cme->colormapChanged(colormap);
+        colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+        setColormap(colormap);
+        if (canIDoDirectCopy()) {
+            free(image->data);
+            image->data = (char *) pm.pixels;
+            direct_copy = true;
+            if (g_verbosity >= 1)
+                fprintf(stderr, "Using direct copy.\n");
+        }
+        colormapChanged();
+        if (cme != NULL)
+            cme->colormapChanged(colormap);
 
-	// When we switch to private colormap mode, the XImage needs to be
-	// repainted *once* so that the pixels correspond to indices into
-	// the private colormap; from then on, as long as we stay in private
-	// colormap mode, changes to the colormap do not require a repaint.
-	// WITH ONE EXCEPTION: if we have an 8-bit image and we're
-	// displaying it reduced, the pixels go through an averaging step
-	// first, followed by an error diffusion step (which is necessary
-	// because the averaging step will probably produce colors that do
-	// not exist in our private colormap). So, even though this is
-	// likely a very minor thing visually, in most cases, nonetheless
-	// the contents of the XImage *do* depend on the contents of the
-	// colormap in this case.
-	// For this reason, colormapChanged() will repaint the XImage if
-	// depth == 8 and scale <= -1, and because of that, *we* do not do
-	// it here, or we would be repainting the exact same thing twice.
-	// (And since reduced painting to an arbitrary colormap is a very
-	// expensive operation, we really do want to avoid needless
-	// repaints. Take a look at the InverseCMap class to
-	// get an idea of the problem.)
+        // When we switch to private colormap mode, the XImage needs to be
+        // repainted *once* so that the pixels correspond to indices into
+        // the private colormap; from then on, as long as we stay in private
+        // colormap mode, changes to the colormap do not require a repaint.
+        // WITH ONE EXCEPTION: if we have an 8-bit image and we're
+        // displaying it reduced, the pixels go through an averaging step
+        // first, followed by an error diffusion step (which is necessary
+        // because the averaging step will probably produce colors that do
+        // not exist in our private colormap). So, even though this is
+        // likely a very minor thing visually, in most cases, nonetheless
+        // the contents of the XImage *do* depend on the contents of the
+        // colormap in this case.
+        // For this reason, colormapChanged() will repaint the XImage if
+        // depth == 8 and scale <= -1, and because of that, *we* do not do
+        // it here, or we would be repainting the exact same thing twice.
+        // (And since reduced painting to an arbitrary colormap is a very
+        // expensive operation, we really do want to avoid needless
+        // repaints. Take a look at the InverseCMap class to
+        // get an idea of the problem.)
 
-	if (pm.depth != 8 || scale >= 1)
-	    paint(0, 0, pm.height, pm.width);
+        if (pm.depth != 8 || scale >= 1)
+            paint(0, 0, pm.height, pm.width);
 
     } else {
-	XFreeColormap(g_display, colormap);
-	colormap = g_colormap;
-	setColormap(g_colormap);
-	if (direct_copy) {
-	    image->data = (char *) malloc(image->bytes_per_line * image->height);
-	    if (g_verbosity >= 1 && direct_copy)
-		fprintf(stderr, "Not using direct copy.\n");
-	    direct_copy = false;
-	}
-	colormapChanged();
-	if (cme != NULL)
-	    cme->colormapChanged(colormap);
+        XFreeColormap(g_display, colormap);
+        colormap = g_colormap;
+        setColormap(g_colormap);
+        if (direct_copy) {
+            image->data = (char *) malloc(image->bytes_per_line * image->height);
+            if (g_verbosity >= 1 && direct_copy)
+                fprintf(stderr, "Not using direct copy.\n");
+            direct_copy = false;
+        }
+        colormapChanged();
+        if (cme != NULL)
+            cme->colormapChanged(colormap);
     }
 }
 
@@ -2052,46 +2053,46 @@ Viewer::doNotify(bool) {
 /* private */ void
 Viewer::doEnlarge() {
     if (scale < 8) {
-	scale++;
-	if (scale == -1)
-	    scale = 1;
-	char buf[3];
-	sprintf(buf, "%d", scale);
-	scalemenu->setRadioValue("Windows.Scale", buf, true);
+        scale++;
+        if (scale == -1)
+            scale = 1;
+        char buf[3];
+        sprintf(buf, "%d", scale);
+        scalemenu->setRadioValue("Windows.Scale", buf, true);
     } else
-	beep();
+        beep();
 }
 
 /* private */ void
 Viewer::doReduce() {
     if (scale > -8) {
-	scale--;
-	if (scale == 0)
-	    scale = -2;
-	char buf[3];
-	sprintf(buf, "%d", scale);
-	scalemenu->setRadioValue("Windows.Scale", buf, true);
+        scale--;
+        if (scale == 0)
+            scale = -2;
+        char buf[3];
+        sprintf(buf, "%d", scale);
+        scalemenu->setRadioValue("Windows.Scale", buf, true);
     } else
-	beep();
+        beep();
 }
 
 /* private */ void
 Viewer::doWindows(const char *sid) {
     int nid;
     if (sscanf(sid, "%d", &nid) != 1)
-	beep();
+        beep();
     else {
-	Iterator *iter = instances->iterator();
-	while (iter->hasNext()) {
-	    Viewer *viewer = (Viewer *) iter->next();
-	    if (viewer->id == nid) {
-		delete iter;
-		viewer->raise();
-		return;
-	    }
-	}
-	delete iter;
-	beep();
+        Iterator *iter = instances->iterator();
+        while (iter->hasNext()) {
+            Viewer *viewer = (Viewer *) iter->next();
+            if (viewer->id == nid) {
+                delete iter;
+                viewer->raise();
+                return;
+            }
+        }
+        delete iter;
+        beep();
     }
 }
 
@@ -2102,12 +2103,12 @@ Viewer::doScale(const char *value) {
     // Compute scaled image size
     int w, h;
     if (scale > 0) {
-	w = pm.width * scale;
-	h = pm.height * scale;
+        w = pm.width * scale;
+        h = pm.height * scale;
     } else {
-	int s = -scale;
-	w = (pm.width + s - 1) / s;
-	h = (pm.height + s - 1) / s;
+        int s = -scale;
+        w = (pm.width + s - 1) / s;
+        h = (pm.height + s - 1) / s;
     }
 
     // Resize the DrawingArea
@@ -2121,47 +2122,48 @@ Viewer::doScale(const char *value) {
     fitToScreen();
 
     if (!direct_copy)
-	free(image->data);
+        free(image->data);
     XFree(image);
     bool use_bitmap = pm.depth == 1 && scale >= 1;
     image = XCreateImage(g_display,
-			 g_visual,
-			 use_bitmap ? 1 : g_depth,
-			 use_bitmap ? XYBitmap : ZPixmap,
-			 0,
-			 NULL,
-			 w,
-			 h,
-			 32,
-			 0);
+                         g_visual,
+                         use_bitmap ? 1 : g_depth,
+                         use_bitmap ? XYBitmap : ZPixmap,
+                         0,
+                         NULL,
+                         w,
+                         h,
+                         32,
+                         0);
 
     if (pm.depth == 1) {
-	bool want_priv_cmap = scale <= -1
-		&& optionsmenu->getToggleValue("Options.PrivateColormap");
-	bool have_priv_cmap = colormap != g_colormap;
-	
-	if (want_priv_cmap && !have_priv_cmap) {
-	    colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
-	    setColormap(colormap);
-	    colormapChanged();
-	} else if (!want_priv_cmap && have_priv_cmap) {
-	    XFreeColormap(g_display, colormap);
-	    colormap = g_colormap;
-	    setColormap(g_colormap);
-	}
+        bool want_priv_cmap = scale <= -1
+                && optionsmenu->getToggleValue("Options.PrivateColormap");
+        bool have_priv_cmap = colormap != g_colormap;
+        
+        if (want_priv_cmap && !have_priv_cmap) {
+            colormap = XCreateColormap(g_display, g_rootwindow, g_visual, AllocAll);
+            setColormap(colormap);
+            colormapChanged();
+        } else if (!want_priv_cmap && have_priv_cmap) {
+            XFreeColormap(g_display, colormap);
+            colormap = g_colormap;
+            setColormap(g_colormap);
+        }
     }
     
     bool old_direct_copy = direct_copy;
     direct_copy = canIDoDirectCopy();
     if (direct_copy)
-	image->data = (char *) pm.pixels;
+        image->data = (char *) pm.pixels;
     else
-	image->data = (char *) malloc(image->bytes_per_line * image->height);
-    if (g_verbosity >= 1 && old_direct_copy != direct_copy)
-	if (direct_copy)
-	    fprintf(stderr, "Using direct copy.\n");
-	else
-	    fprintf(stderr, "Not using direct copy.\n");
+        image->data = (char *) malloc(image->bytes_per_line * image->height);
+    if (g_verbosity >= 1 && old_direct_copy != direct_copy) {
+        if (direct_copy)
+            fprintf(stderr, "Using direct copy.\n");
+        else
+            fprintf(stderr, "Not using direct copy.\n");
+    }
 
     paint(0, 0, pm.height, pm.width);
 }
@@ -2176,23 +2178,23 @@ Viewer::doGeneral() {
 Viewer::doHelp(const char *id) {
     Plugin *plugin = Plugin::get(id);
     if (plugin == NULL) {
-	char buf[1024];
-	snprintf(buf, 1024, "The plugin \"%s\" could not be loaded.\n"
-			    "Please check $HOME/.fw to see if it is missing.",
-			    id);
-	TextViewer *tv = new TextViewer(buf);
-	tv->raise();
+        char buf[1024];
+        snprintf(buf, 1024, "The plugin \"%s\" could not be loaded.\n"
+                            "Please check $HOME/.fw to see if it is missing.",
+                            id);
+        TextViewer *tv = new TextViewer(buf);
+        tv->raise();
     } else {
-	const char *help = plugin->help();
-	if (help == NULL) {
-	    char buf[1024];
-	    snprintf(buf, 1024, "The plugin \"%s\" does not provide help.", id);
-	    TextViewer *tv = new TextViewer(buf);
-	    tv->raise();
-	} else {
-	    TextViewer *tv = new TextViewer(help);
-	    tv->raise();
-	}
-	Plugin::release(plugin);
+        const char *help = plugin->help();
+        if (help == NULL) {
+            char buf[1024];
+            snprintf(buf, 1024, "The plugin \"%s\" does not provide help.", id);
+            TextViewer *tv = new TextViewer(buf);
+            tv->raise();
+        } else {
+            TextViewer *tv = new TextViewer(help);
+            tv->raise();
+        }
+        Plugin::release(plugin);
     }
 }

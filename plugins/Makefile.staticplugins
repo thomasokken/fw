@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 ###############################################################################
 
-CXXFLAGS = -MMD -Wall -g -I.. -DSTATICPLUGINS -fno-rtti -fno-exceptions
+CXXFLAGS = -MMD -Wall -Wno-parentheses -g -I.. -DSTATICPLUGINS -fno-rtti -fno-exceptions
 
 SRCS := $(wildcard *.cc)
 OBJS := $(SRCS:.cc=.o)

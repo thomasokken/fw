@@ -76,116 +76,116 @@ static unsigned char cool_colors[] = {
 };
 
 static const char *my_settings_layout[] = {
-    "int 'Maximum Iterations'",		// maxiter
-    "double 'Convergence Limit'",	// conv
+    "int 'Maximum Iterations'",         // maxiter
+    "double 'Convergence Limit'",       // conv
     "double 'Root (real)'",             // root_re
     "double 'Root (imaginary)'",        // root_im
-    "double",		// conv2
+    "double",           // conv2
     NULL
 };
 
 class Newton : public MarianiSilver {
     private:
-	int maxiter;
-	double conv;
-	double root_re, root_im;
-	double conv2;
-	// End of serialized data
-	
-	bool i_am_a_clone;
+        int maxiter;
+        double conv;
+        double root_re, root_im;
+        double conv2;
+        // End of serialized data
+        
+        bool i_am_a_clone;
 
     public:
-	Newton(void *dl) : MarianiSilver(dl) {
-	    register_for_serialization(my_settings_layout, &maxiter);
-	}
+        Newton(void *dl) : MarianiSilver(dl) {
+            register_for_serialization(my_settings_layout, &maxiter);
+        }
 
-	virtual ~Newton() {}
+        virtual ~Newton() {}
 
-	virtual const char *name() {
-	    return "Newton";
-	}
+        virtual const char *name() {
+            return "Newton";
+        }
 
-	virtual void ms_init_new() {
-	    // MarianiSilver stuff
-	    // pm->width = 700;
-	    // pm->height = 500;
-	    xmin = -1.0 * pm->width / pm->height;
-	    xmax = 1.0 * pm->width / pm->height;
-	    ymin = -1;
-	    ymax = 1;
-	    bands = 1;
+        virtual void ms_init_new() {
+            // MarianiSilver stuff
+            // pm->width = 700;
+            // pm->height = 500;
+            xmin = -1.0 * pm->width / pm->height;
+            xmax = 1.0 * pm->width / pm->height;
+            ymin = -1;
+            ymax = 1;
+            bands = 1;
 
-	    // Our stuff
-	    maxiter = 25;
-	    conv = 0.001;
-	    root_re = 1;
-	    root_im = 0;
-	    i_am_a_clone = false;
-	}
+            // Our stuff
+            maxiter = 25;
+            conv = 0.001;
+            root_re = 1;
+            root_im = 0;
+            i_am_a_clone = false;
+        }
 
-	virtual void ms_init_clone(MarianiSilver *src) {
-	    Newton *clonee = (Newton *) src;
+        virtual void ms_init_clone(MarianiSilver *src) {
+            Newton *clonee = (Newton *) src;
 
-	    maxiter = clonee->maxiter;
-	    conv = clonee->conv;
-	    root_re = clonee->root_re;
-	    root_im = clonee->root_im;
+            maxiter = clonee->maxiter;
+            conv = clonee->conv;
+            root_re = clonee->root_re;
+            root_im = clonee->root_im;
 
-	    i_am_a_clone = true;
-	}
+            i_am_a_clone = true;
+        }
 
-	virtual void ms_start() {
-	    conv2 = conv * conv;
-	    maxValue = maxiter * 2;
+        virtual void ms_start() {
+            conv2 = conv * conv;
+            maxValue = maxiter * 2;
 
-	    if (!i_am_a_clone) {
-		// If we're a clone, we get the colormap from our original,
-		// but if we're not, we get a boring grayscale colormap.
-		// Let's use something funkier.
-		for (int i = 0; i < 256; i++) {
-		    pm->cmap[i].r = cool_colors[3 * i];
-		    pm->cmap[i].g = cool_colors[3 * i + 1];
-		    pm->cmap[i].b = cool_colors[3 * i + 2];
-		}
-	    }
-	}
+            if (!i_am_a_clone) {
+                // If we're a clone, we get the colormap from our original,
+                // but if we're not, we get a boring grayscale colormap.
+                // Let's use something funkier.
+                for (int i = 0; i < 256; i++) {
+                    pm->cmap[i].r = cool_colors[3 * i];
+                    pm->cmap[i].g = cool_colors[3 * i + 1];
+                    pm->cmap[i].b = cool_colors[3 * i + 2];
+                }
+            }
+        }
 
-	virtual int ms_calc_pixel(double re, double im) {
-	    double re2, im2, a, b, c, d, e, re_p, im_p;
-	    int count;
-	    bool converged;
+        virtual int ms_calc_pixel(double re, double im) {
+            double re2, im2, a, b, c, d, e, re_p, im_p;
+            int count;
+            bool converged;
 
-	    count = 0;
-	    do {
-		count = count + 1;
-		re_p = re;
-		im_p = im;
-		re2 = re * re;
-		im2 = im * im;
-		a = 2 * re * (re2 - 3 * im2) + 1;   // (a,b) = 2*z^3+1
-		b = 2 * im * (3 * re2 - im2);
-		c = 3 * (re2 - im2);                // (c,d) = 3z^2
-		d = 6 * re * im;
-		e = c * c + d * d;
-		re = (a * c + b * d) / e;           // z = (a,b)/(c,d)
-		im = (b * c - a * d) / e;
-		a = re - re_p;
-		b = im - im_p;
-		converged = (a * a + b * b) <= conv2;
-	    } while (!converged && count < maxiter);
-											    int value;
-	    if (converged) {
-		a = re - root_re;
-		b = im - root_im;
-		if (a * a + b * b <= conv2)
-		    return count + maxiter;
-		else
-		    return count;
-	    } else
-		return 0;
+            count = 0;
+            do {
+                count = count + 1;
+                re_p = re;
+                im_p = im;
+                re2 = re * re;
+                im2 = im * im;
+                a = 2 * re * (re2 - 3 * im2) + 1;   // (a,b) = 2*z^3+1
+                b = 2 * im * (3 * re2 - im2);
+                c = 3 * (re2 - im2);                // (c,d) = 3z^2
+                d = 6 * re * im;
+                e = c * c + d * d;
+                re = (a * c + b * d) / e;           // z = (a,b)/(c,d)
+                im = (b * c - a * d) / e;
+                a = re - re_p;
+                b = im - im_p;
+                converged = (a * a + b * b) <= conv2;
+            } while (!converged && count < maxiter);
+                                                                                            int value;
+            if (converged) {
+                a = re - root_re;
+                b = im - root_im;
+                if (a * a + b * b <= conv2)
+                    return count + maxiter;
+                else
+                    return count;
+            } else
+                return 0;
 
-	    return value;
-	}
+            return value;
+        }
 };
 
 #ifndef STATICPLUGINS

@@ -52,26 +52,26 @@ static void my_error_exit(j_common_ptr p) {
 ImageIO_JPEG::can_read(const char *filename) {
     FILE *jpg = fopen(filename, "r");
     if (jpg == NULL)
-	return false;
+        return false;
     unsigned char magic[4];
     int n = fread(magic, 1, 4, jpg);
     fclose(jpg);
     if (n != 4)
-	return false;
+        return false;
     return magic[0] == 0xFF && magic[1] == 0xD8 && magic[2] == 0xFF;
 }
 
 /* public virtual */ bool
 ImageIO_JPEG::read(const char *filename, char **plugin_name,
-		   void **plugin_data, int *plugin_data_length,
-		   FWPixmap *pm, char **message) {
+                   void **plugin_data, int *plugin_data_length,
+                   FWPixmap *pm, char **message) {
     char msgbuf[MSGLEN];
 
     FILE *jpg = fopen(filename, "r");
     if (jpg == NULL) {
-	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).", filename, strerror(errno));
-	*message = strclone(msgbuf);
-	return false;
+        snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).", filename, strerror(errno));
+        *message = strclone(msgbuf);
+        return false;
     }
 
     // Buffer for receiving scanlines in 3-color images
@@ -84,25 +84,25 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
     struct jpeg_decompress_struct jcs;
     my_error_mgr jerr;
     if (setjmp(jerr.env)) {
-	snprintf(msgbuf, MSGLEN, "Something went wrong with the JPEG decompression, but I'm not telling you what.");
-	*message = strclone(msgbuf);
-	jpeg_destroy_decompress(&jcs);
-	fclose(jpg);
-	if (pm->pixels != NULL) {
-	    free(pm->pixels);
-	    pm->pixels = NULL;
-	}
-	if (pm->cmap != NULL) {
-	    delete[] pm->cmap;
-	    pm->cmap = NULL;
-	}
-	if (buf != NULL)
-	    delete[] buf;
-	if (plbuf != NULL)
-	    free(plbuf);
-	if (plname != NULL)
-	    free(plname);
-	return false;
+        snprintf(msgbuf, MSGLEN, "Something went wrong with the JPEG decompression, but I'm not telling you what.");
+        *message = strclone(msgbuf);
+        jpeg_destroy_decompress(&jcs);
+        fclose(jpg);
+        if (pm->pixels != NULL) {
+            free(pm->pixels);
+            pm->pixels = NULL;
+        }
+        if (pm->cmap != NULL) {
+            delete[] pm->cmap;
+            pm->cmap = NULL;
+        }
+        if (buf != NULL)
+            delete[] buf;
+        if (plbuf != NULL)
+            free(plbuf);
+        if (plname != NULL)
+            free(plname);
+        return false;
     }
 
     jcs.err = jpeg_std_error(&jerr.pub);
@@ -118,108 +118,108 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
     int pllength;
     unsigned int crc;
     while (marker != NULL) {
-	if (marker->marker == JPEG_APP0 + 13
-		&& (int) marker->data_length >
-				(plbuf == NULL ? FW_ID_LEN + 8 : FW_ID_LEN)
-		&& strncmp((char *) marker->data, FW_ID_STR, FW_ID_LEN) == 0) {
-	    // Looks like one of ours
-	    if (plbuf == NULL) {
-		// first 8 bytes are length & crc
-		pllength = (marker->data[FW_ID_LEN] << 24)
-			| (marker->data[FW_ID_LEN + 1] << 16)
-			| (marker->data[FW_ID_LEN + 2] << 8)
-			| (marker->data[FW_ID_LEN + 3]);
-		crc = (marker->data[FW_ID_LEN + 4] << 24)
-			| (marker->data[FW_ID_LEN + 5] << 16)
-			| (marker->data[FW_ID_LEN + 6] << 8)
-			| (marker->data[FW_ID_LEN + 7]);
-		int plbufpos = plbufsize;
-		plbufsize += marker->data_length - FW_ID_LEN - 8;
-		plbuf = (unsigned char *) malloc(plbufsize);
-		memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN + 8,
-			marker->data_length - FW_ID_LEN - 8);
-	    } else {
-		int plbufpos = plbufsize;
-		plbufsize += marker->data_length - FW_ID_LEN;
-		plbuf = (unsigned char *) realloc(plbuf, plbufsize);
-		memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN,
-			marker->data_length - FW_ID_LEN);
-	    }
-	}
-	marker = marker->next;
+        if (marker->marker == JPEG_APP0 + 13
+                && (int) marker->data_length >
+                                (plbuf == NULL ? FW_ID_LEN + 8 : FW_ID_LEN)
+                && strncmp((char *) marker->data, FW_ID_STR, FW_ID_LEN) == 0) {
+            // Looks like one of ours
+            if (plbuf == NULL) {
+                // first 8 bytes are length & crc
+                pllength = (marker->data[FW_ID_LEN] << 24)
+                        | (marker->data[FW_ID_LEN + 1] << 16)
+                        | (marker->data[FW_ID_LEN + 2] << 8)
+                        | (marker->data[FW_ID_LEN + 3]);
+                crc = (marker->data[FW_ID_LEN + 4] << 24)
+                        | (marker->data[FW_ID_LEN + 5] << 16)
+                        | (marker->data[FW_ID_LEN + 6] << 8)
+                        | (marker->data[FW_ID_LEN + 7]);
+                int plbufpos = plbufsize;
+                plbufsize += marker->data_length - FW_ID_LEN - 8;
+                plbuf = (unsigned char *) malloc(plbufsize);
+                memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN + 8,
+                        marker->data_length - FW_ID_LEN - 8);
+            } else {
+                int plbufpos = plbufsize;
+                plbufsize += marker->data_length - FW_ID_LEN;
+                plbuf = (unsigned char *) realloc(plbuf, plbufsize);
+                memcpy(plbuf + plbufpos, marker->data + FW_ID_LEN,
+                        marker->data_length - FW_ID_LEN);
+            }
+        }
+        marker = marker->next;
     }
     if (plbuf != NULL) {
-	// Let's see if we got anything good.
-	unsigned int actualcrc;
-	if (plbufsize < pllength) {
-	    snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks truncated\n(%d bytes read, %d bytes expected).", plbufsize, pllength);
-	    *message = strclone(msgbuf);
-	    free(plbuf);
-	    plbuf = NULL;
-	} else if (crc != (actualcrc = crc32(plbuf, pllength))) {
-	    snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks corrupted\n(expected CRC: 0x%x, actual: 0x%x).", crc, actualcrc);
-	    *message = strclone(msgbuf);
-	    free(plbuf);
-	    plbuf = NULL;
-	} else {
-	    // Looks good so far. Now, let's extract the plugin name. (No more
-	    // sanity checks; we trust the CRC to protect us from random
-	    // corruption. We don't expect plugins to check their data.)
-	    plname = strclone((char *) plbuf);
-	    int pnl = strlen(plname);
-	    int data_offset = pnl + 1;
-	    pllength -= pnl + 1;
-	    memmove(plbuf, plbuf + data_offset, pllength);
-	}
+        // Let's see if we got anything good.
+        unsigned int actualcrc;
+        if (plbufsize < pllength) {
+            snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks truncated\n(%d bytes read, %d bytes expected).", plbufsize, pllength);
+            *message = strclone(msgbuf);
+            free(plbuf);
+            plbuf = NULL;
+        } else if (crc != (actualcrc = crc32(plbuf, pllength))) {
+            snprintf(msgbuf, MSGLEN, "FW Plugin data block found, but it looks corrupted\n(expected CRC: 0x%x, actual: 0x%x).", crc, actualcrc);
+            *message = strclone(msgbuf);
+            free(plbuf);
+            plbuf = NULL;
+        } else {
+            // Looks good so far. Now, let's extract the plugin name. (No more
+            // sanity checks; we trust the CRC to protect us from random
+            // corruption. We don't expect plugins to check their data.)
+            plname = strclone((char *) plbuf);
+            int pnl = strlen(plname);
+            int data_offset = pnl + 1;
+            pllength -= pnl + 1;
+            memmove(plbuf, plbuf + data_offset, pllength);
+        }
     }
 
     pm->width = jcs.image_width;
     pm->height = jcs.image_height;
     if (jcs.num_components != 1 && jcs.num_components != 3) {
-	snprintf(msgbuf, MSGLEN, "JPEGViewer: weird num_components (%d).",
-		jcs.num_components);
-	*message = strclone(msgbuf);
-	jpeg_destroy_decompress(&jcs);
-	fclose(jpg);
-	return 0;
+        snprintf(msgbuf, MSGLEN, "JPEGViewer: weird num_components (%d).",
+                jcs.num_components);
+        *message = strclone(msgbuf);
+        jpeg_destroy_decompress(&jcs);
+        fclose(jpg);
+        return 0;
     }
     pm->depth = jcs.num_components * 8;
     if (pm->depth == 8)
-	pm->bytesperline = (pm->width + 3) & ~3;
+        pm->bytesperline = (pm->width + 3) & ~3;
     else
-	pm->bytesperline = pm->width * 4;
+        pm->bytesperline = pm->width * 4;
     pm->pixels = (unsigned char *) malloc(pm->bytesperline * pm->height);
     if (pm->depth == 8) {
-	pm->cmap = new FWColor[256];
-	for (int i = 0; i < 256; i++) {
-	    pm->cmap[i].r = i;
-	    pm->cmap[i].g = i;
-	    pm->cmap[i].b = i;
-	}
+        pm->cmap = new FWColor[256];
+        for (int i = 0; i < 256; i++) {
+            pm->cmap[i].r = i;
+            pm->cmap[i].g = i;
+            pm->cmap[i].b = i;
+        }
     }
 
     jpeg_start_decompress(&jcs);
     if (pm->depth == 8) {
-	while ((int) jcs.output_scanline < pm->height) {
-	    unsigned char *row = (unsigned char *)
-			pm->pixels + (jcs.output_scanline * pm->bytesperline);
-	    jpeg_read_scanlines(&jcs, &row, 1);
-	}
+        while ((int) jcs.output_scanline < pm->height) {
+            unsigned char *row = (unsigned char *)
+                        pm->pixels + (jcs.output_scanline * pm->bytesperline);
+            jpeg_read_scanlines(&jcs, &row, 1);
+        }
     } else {
-	buf = new unsigned char[pm->width * 3];
-	while ((int) jcs.output_scanline < pm->height) {
-	    char *src = (char *) buf;
-	    unsigned char *dst = pm->pixels + (jcs.output_scanline * pm->bytesperline);
-	    jpeg_read_scanlines(&jcs, &buf, 1);
-	    for (int i = 0; i < pm->width; i++) {
-		*dst++ = 0;
-		*dst++ = *src++;
-		*dst++ = *src++;
-		*dst++ = *src++;
-	    }
-	}
-	delete[] buf;
-	buf = NULL;
+        buf = new unsigned char[pm->width * 3];
+        while ((int) jcs.output_scanline < pm->height) {
+            char *src = (char *) buf;
+            unsigned char *dst = pm->pixels + (jcs.output_scanline * pm->bytesperline);
+            jpeg_read_scanlines(&jcs, &buf, 1);
+            for (int i = 0; i < pm->width; i++) {
+                *dst++ = 0;
+                *dst++ = *src++;
+                *dst++ = *src++;
+                *dst++ = *src++;
+            }
+        }
+        delete[] buf;
+        buf = NULL;
     }
 
     jpeg_finish_decompress(&jcs);
@@ -227,9 +227,9 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
     fclose(jpg);
 
     if (plbuf != NULL) {
-	*plugin_data = plbuf;
-	*plugin_data_length = pllength;
-	*plugin_name = plname;
+        *plugin_data = plbuf;
+        *plugin_data_length = pllength;
+        *plugin_name = plname;
     }
 
     return true;
@@ -237,8 +237,8 @@ ImageIO_JPEG::read(const char *filename, char **plugin_name,
 
 /* public virtual */ bool
 ImageIO_JPEG::write(const char *filename, const char *plugin_name,
-		    const void *plugin_data, int plugin_data_length,
-		    const FWPixmap *pm, char **message) {
+                    const void *plugin_data, int plugin_data_length,
+                    const FWPixmap *pm, char **message) {
     char msgbuf[MSGLEN];
 
     // Scanline buffer
@@ -246,20 +246,20 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
 
     FILE *jpg = fopen(filename, "w");
     if (jpg == NULL) {
-	snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).", filename, strerror(errno));
-	*message = strclone(msgbuf);
-	return false;
+        snprintf(msgbuf, MSGLEN, "Can't open \"%s\" (%s).", filename, strerror(errno));
+        *message = strclone(msgbuf);
+        return false;
     }
     struct jpeg_compress_struct jcs;
     my_error_mgr jerr;
     if (setjmp(jerr.env)) {
-	snprintf(msgbuf, MSGLEN, "Something went wrong with the JPEG compression, but I'm not telling you what.");
-	*message = strclone(msgbuf);
-	jpeg_destroy_compress(&jcs);
-	fclose(jpg);
-	if (buf != NULL)
-	    delete[] buf;
-	return false;
+        snprintf(msgbuf, MSGLEN, "Something went wrong with the JPEG compression, but I'm not telling you what.");
+        *message = strclone(msgbuf);
+        jpeg_destroy_compress(&jcs);
+        fclose(jpg);
+        if (buf != NULL)
+            delete[] buf;
+        return false;
     }
 
     jcs.err = jpeg_std_error(&jerr.pub);
@@ -271,7 +271,7 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
     jcs.image_width = pm->width;
     jcs.image_height = pm->height;
     bool gray = pm->depth == 1 ||
-		(pm->depth == 8 && CopyBits::is_grayscale(pm->cmap));
+                (pm->depth == 8 && CopyBits::is_grayscale(pm->cmap));
     jcs.input_components = gray ? 1 : 3;
     jcs.in_color_space = gray ? JCS_GRAYSCALE : JCS_RGB;
 
@@ -284,44 +284,44 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
     jpeg_start_compress(&jcs, TRUE);
 
     if (plugin_data != NULL && plugin_data_length > 0) {
-	char marker[65533];
-	strcpy(marker, FW_ID_STR);
-	char *datastart = marker + FW_ID_LEN;
-	int maxdata = 65533 - FW_ID_LEN;
+        char marker[65533];
+        strcpy(marker, FW_ID_STR);
+        char *datastart = marker + FW_ID_LEN;
+        int maxdata = 65533 - FW_ID_LEN;
 
-	int crc = crc32(plugin_data, plugin_data_length);
-	char *remaining = (char *) plugin_data;
-	int remaining_length = plugin_data_length;
-	bool first = true;
+        int crc = crc32(plugin_data, plugin_data_length);
+        char *remaining = (char *) plugin_data;
+        int remaining_length = plugin_data_length;
+        bool first = true;
 
-	while (remaining_length > 0) {
-	    if (first) {
-		datastart[0] = plugin_data_length >> 24;
-		datastart[1] = plugin_data_length >> 16;
-		datastart[2] = plugin_data_length >> 8;
-		datastart[3] = plugin_data_length;
-		datastart[4] = crc >> 24;
-		datastart[5] = crc >> 16;
-		datastart[6] = crc >> 8;
-		datastart[7] = crc;
-		datastart += 8;
-		maxdata -= 8;
-	    }
+        while (remaining_length > 0) {
+            if (first) {
+                datastart[0] = plugin_data_length >> 24;
+                datastart[1] = plugin_data_length >> 16;
+                datastart[2] = plugin_data_length >> 8;
+                datastart[3] = plugin_data_length;
+                datastart[4] = crc >> 24;
+                datastart[5] = crc >> 16;
+                datastart[6] = crc >> 8;
+                datastart[7] = crc;
+                datastart += 8;
+                maxdata -= 8;
+            }
 
-	    int marker_size = remaining_length < maxdata
-				    ? remaining_length : maxdata;
-	    memcpy(datastart, remaining, marker_size);
-	    jpeg_write_marker(&jcs, JPEG_APP0 + 13, (unsigned char *) marker,
-					marker_size + (datastart - marker));
-	    remaining += marker_size;
-	    remaining_length -= marker_size;
+            int marker_size = remaining_length < maxdata
+                                    ? remaining_length : maxdata;
+            memcpy(datastart, remaining, marker_size);
+            jpeg_write_marker(&jcs, JPEG_APP0 + 13, (unsigned char *) marker,
+                                        marker_size + (datastart - marker));
+            remaining += marker_size;
+            remaining_length -= marker_size;
 
-	    if (first) {
-		datastart -= 8;
-		maxdata += 8;
-		first = false;
-	    }
-	}
+            if (first) {
+                datastart -= 8;
+                maxdata += 8;
+                first = false;
+            }
+        }
     }
 
     // Allocate row buffer UNLESS we have an 8-bit image with a pure
@@ -330,48 +330,48 @@ ImageIO_JPEG::write(const char *filename, const char *plugin_name,
     // have to do any copying.
 
     if (pm->depth != 8 || !gray)
-	buf = new unsigned char[pm->width * (gray ? 1 : 3)];
+        buf = new unsigned char[pm->width * (gray ? 1 : 3)];
     unsigned char *buf2 = buf;
 
     while ((int) jcs.next_scanline < pm->height) {
-	switch (pm->depth) {
-	    case 1:
-		for (int x = 0; x < pm->width; x++)
-		    buf[x] = ((pm->pixels[jcs.next_scanline * pm->bytesperline
-				    + (x >> 3)] >> (x & 7)) & 1) * 255;
-		break;
-	    case 8:
-		if (gray) {
-		    buf2 = pm->pixels + jcs.next_scanline * pm->bytesperline;
-		} else {
-		    unsigned char *dst = buf;
-		    for (int x = 0; x < pm->width; x++) {
-			unsigned char pixel = pm->pixels[jcs.next_scanline
-						* pm->bytesperline + x];
-			*dst++ = pm->cmap[pixel].r;
-			*dst++ = pm->cmap[pixel].g;
-			*dst++ = pm->cmap[pixel].b;
-		    }
-		}
-		break;
-	    case 24: {
-		unsigned char *dst = buf;
-		unsigned char *src = pm->pixels + jcs.next_scanline
-							* pm->bytesperline;
-		for (int x = 0; x < pm->width; x++) {
-		    src++;
-		    *dst++ = *src++;
-		    *dst++ = *src++;
-		    *dst++ = *src++;
-		}
-	    }
-	    break;
-	}
-	jpeg_write_scanlines(&jcs, &buf2, 1);
+        switch (pm->depth) {
+            case 1:
+                for (int x = 0; x < pm->width; x++)
+                    buf[x] = ((pm->pixels[jcs.next_scanline * pm->bytesperline
+                                    + (x >> 3)] >> (x & 7)) & 1) * 255;
+                break;
+            case 8:
+                if (gray) {
+                    buf2 = pm->pixels + jcs.next_scanline * pm->bytesperline;
+                } else {
+                    unsigned char *dst = buf;
+                    for (int x = 0; x < pm->width; x++) {
+                        unsigned char pixel = pm->pixels[jcs.next_scanline
+                                                * pm->bytesperline + x];
+                        *dst++ = pm->cmap[pixel].r;
+                        *dst++ = pm->cmap[pixel].g;
+                        *dst++ = pm->cmap[pixel].b;
+                    }
+                }
+                break;
+            case 24: {
+                unsigned char *dst = buf;
+                unsigned char *src = pm->pixels + jcs.next_scanline
+                                                        * pm->bytesperline;
+                for (int x = 0; x < pm->width; x++) {
+                    src++;
+                    *dst++ = *src++;
+                    *dst++ = *src++;
+                    *dst++ = *src++;
+                }
+            }
+            break;
+        }
+        jpeg_write_scanlines(&jcs, &buf2, 1);
     }
 
     if (buf != NULL)
-	delete[] buf;
+        delete[] buf;
     buf = NULL;
 
     jpeg_finish_compress(&jcs);

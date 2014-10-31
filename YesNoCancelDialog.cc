@@ -53,70 +53,70 @@ static void set_geom(Widget w, int x, int y, int width, int height) {
 
 /* public */
 YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
-				     Listener *listener,
-				     bool showCancel /* = true */) 
-	: Frame(parent, true) {
+                                     Listener *listener,
+                                     bool showCancel /* = true */) 
+        : Frame(parent, true) {
     
     this->listener = listener;
     setTitle("Yes, No, Cancel?");
     
     Widget form = getContainer();
     Widget bb = XtVaCreateManagedWidget(
-	    "BulletinBoard",
-	    xmBulletinBoardWidgetClass,
-	    form,
-	    XmNmarginHeight, 0,
-	    XmNmarginWidth, 0,
-	    //XmNresizePolicy, XmRESIZE_GROW,
-	    XmNtopAttachment, XmATTACH_FORM,
-	    XmNleftAttachment, XmATTACH_FORM,
-	    XmNbottomAttachment, XmATTACH_FORM,
-	    XmNrightAttachment, XmATTACH_FORM,
-	    NULL);
+            "BulletinBoard",
+            xmBulletinBoardWidgetClass,
+            form,
+            XmNmarginHeight, 0,
+            XmNmarginWidth, 0,
+            //XmNresizePolicy, XmRESIZE_GROW,
+            XmNtopAttachment, XmATTACH_FORM,
+            XmNleftAttachment, XmATTACH_FORM,
+            XmNbottomAttachment, XmATTACH_FORM,
+            XmNrightAttachment, XmATTACH_FORM,
+            NULL);
 
     XmString s = XmStringCreateLocalized((char *) message);
     Widget label = XtVaCreateManagedWidget(
-	    "Message",
-	    xmLabelWidgetClass,
-	    bb,
-	    XmNlabelString, s,
-	    NULL);
+            "Message",
+            xmLabelWidgetClass,
+            bb,
+            XmNlabelString, s,
+            NULL);
     XmStringFree(s);
 
-    s = XmStringCreateLocalized("Yes");
+    s = XmStringCreateLocalized((char *) "Yes");
     Widget yesB = XtVaCreateManagedWidget(
-	    "Yes",
-	    xmPushButtonWidgetClass,
-	    bb,
-	    XmNlabelString, s,
-	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
-	    NULL);
+            "Yes",
+            xmPushButtonWidgetClass,
+            bb,
+            XmNlabelString, s,
+            XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+            NULL);
     XmStringFree(s);
     XtAddCallback(yesB, XmNactivateCallback, yesCB, (XtPointer) this);
 
-    s = XmStringCreateLocalized("No");
+    s = XmStringCreateLocalized((char *) "No");
     Widget noB = XtVaCreateManagedWidget(
-	    "No",
-	    xmPushButtonWidgetClass,
-	    bb,
-	    XmNlabelString, s,
-	    XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
-	    NULL);
+            "No",
+            xmPushButtonWidgetClass,
+            bb,
+            XmNlabelString, s,
+            XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+            NULL);
     XmStringFree(s);
     XtAddCallback(noB, XmNactivateCallback, noCB, (XtPointer) this);
 
     Widget cancelB;
     if (showCancel) {
-	s = XmStringCreateLocalized("Cancel");
-	cancelB = XtVaCreateManagedWidget(
-		"Cancel",
-		xmPushButtonWidgetClass,
-		bb,
-		XmNlabelString, s,
-		XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
-		NULL);
-	XmStringFree(s);
-	XtAddCallback(cancelB, XmNactivateCallback, cancelCB, (XtPointer) this);
+        s = XmStringCreateLocalized((char *) "Cancel");
+        cancelB = XtVaCreateManagedWidget(
+                "Cancel",
+                xmPushButtonWidgetClass,
+                bb,
+                XmNlabelString, s,
+                XmNnavigationType, XmEXCLUSIVE_TAB_GROUP,
+                NULL);
+        XmStringFree(s);
+        XtAddCallback(cancelB, XmNactivateCallback, cancelCB, (XtPointer) this);
     }
 
     int message_w, message_h;
@@ -130,19 +130,19 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
     int button_w, button_h;
     button_w = yes_w;
     if (button_w < no_w)
-	button_w = no_w;
+        button_w = no_w;
     button_h = yes_h;
     if (button_h < no_h)
-	button_h = no_h;
+        button_h = no_h;
 
     if (showCancel) {
-	int cancel_w, cancel_h;
-	pref_size(cancelB, &cancel_w, &cancel_h);
+        int cancel_w, cancel_h;
+        pref_size(cancelB, &cancel_w, &cancel_h);
 
-	if (button_w < cancel_w)
-	    button_w = cancel_w;
-	if (button_h < cancel_h)
-	    button_h = cancel_h;
+        if (button_w < cancel_w)
+            button_w = cancel_w;
+        if (button_h < cancel_h)
+            button_h = cancel_h;
     }
 
     int outer_margin = 10;
@@ -151,27 +151,27 @@ YesNoCancelDialog::YesNoCancelDialog(Frame *parent, const char *message,
 
     int total_w = 3 * button_w + 2 * margin2;
     if (total_w < message_w)
-	total_w = message_w;
+        total_w = message_w;
     total_w += 2 * outer_margin;
 
     int total_h = 2 * outer_margin + margin1 + message_h + button_h;
 
     set_geom(label, (total_w - message_w) / 2, outer_margin,
-			message_w, message_h);
+                        message_w, message_h);
     int x;
     if (showCancel)
-	x = (total_w - 3 * button_w - 2 * margin2) / 2;
+        x = (total_w - 3 * button_w - 2 * margin2) / 2;
     else
-	x = (total_w - 2 * button_w - margin2) / 2;
+        x = (total_w - 2 * button_w - margin2) / 2;
     set_geom(yesB, x, outer_margin + message_h + margin1,
-		button_w, button_h);
+                button_w, button_h);
     x += button_w + margin2;
     set_geom(noB, x, outer_margin + message_h + margin1,
-		button_w, button_h);
+                button_w, button_h);
     if (showCancel) {
-	x += button_w + margin2;
-	set_geom(cancelB, x, outer_margin + message_h + margin1,
-		    button_w, button_h);
+        x += button_w + margin2;
+        set_geom(cancelB, x, outer_margin + message_h + margin1,
+                    button_w, button_h);
     }
 
     XtVaSetValues(bb, XmNwidth, total_w, XmNheight, total_h, NULL);

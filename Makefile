@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307  USA
 ###############################################################################
 
-CXXFLAGS = -MMD -Wall -g -I/usr/X11R6/include -fno-rtti -fno-exceptions
+CXXFLAGS = -MMD -Wall -Wno-parentheses -Wno-sometimes-uninitialized -Wno-int-to-void-pointer-cast -g -I/usr/X11R6/include -fno-rtti -fno-exceptions
 LDFLAGS = -L/usr/X11R6/lib -Xlinker --export-dynamic
 
 # This works on Red Hat 7.3

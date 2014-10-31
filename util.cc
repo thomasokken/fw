@@ -33,7 +33,7 @@
 
 char *strclone(const char *src) {
     if (src == NULL)
-	return NULL;
+        return NULL;
     int len = strlen(src);
     char *dst = (char *) malloc(len + 1);
     strcpy(dst, src);
@@ -45,22 +45,22 @@ unsigned int crc32(const void *buf, int size) {
     static bool inited = false;
     
     if (!inited) {
-	unsigned int crc = 0;
-	for (int i = 0; i < 256; i++) {
-	    crc = i << 24;
-	    for (int j = 0; j < 8; j++) {
-		if (crc & 0x80000000)
-		    crc = (crc << 1) ^ 0x04c11db7;
-		else
-		    crc <<= 1;
-	    }
-	    crctab[i] = crc;
-	}
-	inited = true;
+        unsigned int crc = 0;
+        for (int i = 0; i < 256; i++) {
+            crc = i << 24;
+            for (int j = 0; j < 8; j++) {
+                if (crc & 0x80000000)
+                    crc = (crc << 1) ^ 0x04c11db7;
+                else
+                    crc <<= 1;
+            }
+            crctab[i] = crc;
+        }
+        inited = true;
     }
 
     if (size < 4)
-	return 0;
+        return 0;
     
     unsigned int result = 0;
     const unsigned char *data = (const unsigned char *) buf;
@@ -72,7 +72,7 @@ unsigned int crc32(const void *buf, int size) {
     size -= 4;
 
     for (int i = 0; i < size; i++)
-	result = (result << 8 | *data++) ^ crctab[result >> 24];
+        result = (result << 8 | *data++) ^ crctab[result >> 24];
 
     return result;
 }
@@ -80,31 +80,31 @@ unsigned int crc32(const void *buf, int size) {
 bool isDirectory(const char *name) {
     struct stat st;
     if (stat(name, &st) == -1)
-	return false;
+        return false;
     return S_ISDIR(st.st_mode);
 }
 
 bool isFile(const char *name) {
     struct stat st;
     if (stat(name, &st) == -1)
-	return false;
+        return false;
     return S_ISREG(st.st_mode);
 }
 
-const char *basename(const char *fullname) {
+char *basename(const char *fullname) {
     const char *lastslash = strrchr(fullname, '/');
     if (lastslash == NULL)
-	return strclone(fullname);
+        return strclone(fullname);
     else
-	return strclone(lastslash + 1);
+        return strclone(lastslash + 1);
 }
 
 char *canonical_pathname(const char *fullname) {
     char buf[PATH_MAX];
     if (realpath(fullname, buf) == NULL)
-	return strclone(fullname);
+        return strclone(fullname);
     else
-	return strclone(buf);
+        return strclone(buf);
 
 #if 0
     // This does what realpath(3) does, except for resolving symlinks.
@@ -126,30 +126,30 @@ char *canonical_pathname(const char *fullname) {
 
     // First, make sure we start with a full pathname.
     if (fullname[0] != '/')
-	if (getcwd(buf, 10000) == NULL)
-	    return strclone(fullname);
+        if (getcwd(buf, 10000) == NULL)
+            return strclone(fullname);
     strcat(buf, "/");
     strcat(buf, fullname);
     char *pos;
     while ((pos = strstr(buf, "/./")) != NULL)
-	memmove(pos, pos + 2, strlen(buf) - 1 - (pos - buf));
+        memmove(pos, pos + 2, strlen(buf) - 1 - (pos - buf));
     while ((pos = strstr(buf, "//")) != NULL)
-	memmove(pos, pos + 1, strlen(buf) - (pos - buf));
+        memmove(pos, pos + 1, strlen(buf) - (pos - buf));
     while ((pos = strstr(buf, "/../")) != NULL) {
-	// Find start of directory preceding the "/../" segment
-	char *prevslash = pos - 1;
-	while (prevslash >= buf && *prevslash != '/')
-	    prevslash--;
-	if (prevslash < buf) {
-	    // The pathname starts with "/../". Since root is its own parent,
-	    // we can simply remove the first three characters from the
-	    // pathname.
-	    memmove(buf, buf + 3, strlen(buf) - 2);
-	} else {
-	    memmove(prevslash, pos + 3, strlen(buf) - 2 - (pos - buf));
-	}
+        // Find start of directory preceding the "/../" segment
+        char *prevslash = pos - 1;
+        while (prevslash >= buf && *prevslash != '/')
+            prevslash--;
+        if (prevslash < buf) {
+            // The pathname starts with "/../". Since root is its own parent,
+            // we can simply remove the first three characters from the
+            // pathname.
+            memmove(buf, buf + 3, strlen(buf) - 2);
+        } else {
+            memmove(prevslash, pos + 3, strlen(buf) - 2 - (pos - buf));
+        }
     }
-	
+        
     return strclone(buf);
 #endif
 }
@@ -157,88 +157,88 @@ char *canonical_pathname(const char *fullname) {
 
 int bool_alignment() {
     struct {
-	char a;
-	bool b;
+        char a;
+        bool b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int char_alignment() {
     struct {
-	char a;
-	short b;
+        char a;
+        short b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int short_alignment() {
     struct {
-	char a;
-	short b;
+        char a;
+        short b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int int_alignment() {
     struct {
-	char a;
-	int b;
+        char a;
+        int b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int long_alignment() {
     struct {
-	char a;
-	long b;
+        char a;
+        long b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int long_long_alignment() {
     struct {
-	char a;
-	long long b;
+        char a;
+        long long b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int float_alignment() {
     struct {
-	char a;
-	float b;
+        char a;
+        float b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int double_alignment() {
     struct {
-	char a;
-	double b;
+        char a;
+        double b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int long_double_alignment() {
     struct {
-	char a;
-	long double b;
+        char a;
+        long double b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int char_pointer_alignment() {
     struct {
-	char a;
-	char *b;
+        char a;
+        char *b;
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
 
 int char_array_alignment() {
     struct {
-	char a;
-	char b[13];
+        char a;
+        char b[13];
     } foo;
     return ((long) &foo.b) - ((long) &foo.a);
 }
@@ -264,25 +264,25 @@ Iterator::~Iterator() {
 
 class ListIterator : public Iterator {
     private:
-	void **array;
-	int pos, length;
+        void **array;
+        int pos, length;
     public:
-	ListIterator(void **array, int length) {
-	    this->array = array;
-	    this->length = length;
-	    pos = 0;
-	}
-	virtual ~ListIterator() {
-	    //
-	}
-	virtual bool hasNext() {
-	    return pos < length;
-	}
-	virtual void *next() {
-	    if (pos >= length)
-		crash();
-	    return array[pos++];
-	}
+        ListIterator(void **array, int length) {
+            this->array = array;
+            this->length = length;
+            pos = 0;
+        }
+        virtual ~ListIterator() {
+            //
+        }
+        virtual bool hasNext() {
+            return pos < length;
+        }
+        virtual void *next() {
+            if (pos >= length)
+                crash();
+            return array[pos++];
+        }
 };
 
 /* public */
@@ -295,7 +295,7 @@ List::List() {
 /* public */
 List::~List() {
     if (array != NULL)
-	free(array);
+        free(array);
 }
 
 /* public */ void
@@ -306,8 +306,8 @@ List::clear() {
 /* public */ void
 List::append(void *item) {
     if (length == capacity) {
-	capacity++;
-	array = (void **) realloc(array, capacity * sizeof(void *));
+        capacity++;
+        array = (void **) realloc(array, capacity * sizeof(void *));
     }
     array[length++] = item;
 }
@@ -315,13 +315,13 @@ List::append(void *item) {
 /* public */ void
 List::insert(int index, void *item) {
     if (index < 0 || index > length)
-	crash();
+        crash();
     if (length == capacity) {
-	capacity++;
-	array = (void **) realloc(array, capacity * sizeof(void *));
+        capacity++;
+        array = (void **) realloc(array, capacity * sizeof(void *));
     }
     memmove(array + index + 1, array + index,
-	    (length - index) * sizeof(void *));
+            (length - index) * sizeof(void *));
     array[index] = item;
     length++;
 }
@@ -329,10 +329,10 @@ List::insert(int index, void *item) {
 /* public */ void *
 List::remove(int index) {
     if (index < 0 || index >= length)
-	crash();
+        crash();
     void *result = array[index];
     memmove(array + index, array + index + 1,
-	    (length - index - 1) * sizeof(void *));
+            (length - index - 1) * sizeof(void *));
     length--;
     return result;
 }
@@ -340,23 +340,23 @@ List::remove(int index) {
 /* public */ void
 List::remove(void *item) {
     for (int i = 0; i < length; i++)
-	if (array[i] == item) {
-	    remove(i);
-	    return;
-	}
+        if (array[i] == item) {
+            remove(i);
+            return;
+        }
 }
 
 /* public */ void
 List::set(int index, void *item) {
     if (index < 0 || index >= length)
-	crash();
+        crash();
     array[index] = item;
 }
 
 /* public */ void *
 List::get(int index) {
     if (index < 0 || index >= length)
-	crash();
+        crash();
     return array[index];
 }
 
@@ -372,8 +372,8 @@ List::iterator() {
 
 class Entry {
     public:
-	char *key;
-	const void *value;
+        char *key;
+        const void *value;
 };
 
 static int entry_compare(const void *a, const void *b) {
@@ -384,35 +384,35 @@ static int entry_compare(const void *a, const void *b) {
 
 class MapIterator : public Iterator {
     private:
-	bool doKeys;
-	Entry *entries;
-	int nentries;
-	int pos;
+        bool doKeys;
+        Entry *entries;
+        int nentries;
+        int pos;
 
     public:
-	MapIterator(Entry *entries, int nentries, bool doKeys) {
-	    this->doKeys = doKeys;
-	    this->entries = entries;
-	    this->nentries = nentries;
-	    pos = 0;
-	}
-	virtual ~MapIterator() {
-	    //
-	}
-	virtual bool hasNext() {
-	    return pos < nentries;
-	}
-	virtual void *next() {
-	    if (pos < nentries) {
-		if (doKeys)
-		    return entries[pos++].key;
-		else
-		    return (void *) entries[pos++].value;
-	    } else {
-		crash();
-		return NULL;
-	    }
-	}
+        MapIterator(Entry *entries, int nentries, bool doKeys) {
+            this->doKeys = doKeys;
+            this->entries = entries;
+            this->nentries = nentries;
+            pos = 0;
+        }
+        virtual ~MapIterator() {
+            //
+        }
+        virtual bool hasNext() {
+            return pos < nentries;
+        }
+        virtual void *next() {
+            if (pos < nentries) {
+                if (doKeys)
+                    return entries[pos++].key;
+                else
+                    return (void *) entries[pos++].value;
+            } else {
+                crash();
+                return NULL;
+            }
+        }
 };
 
 /* public */
@@ -423,111 +423,111 @@ Map::Map() {
 /* public */
 Map::~Map() {
     if (entries != NULL) {
-	for (int i = 0; i < nentries; i++)
-	    free(entries[i].key);
-	free(entries);
+        for (int i = 0; i < nentries; i++)
+            free(entries[i].key);
+        free(entries);
     }
 }
 
 /* public */ void
 Map::put(const char *key, const void *value) {
     if (key == NULL || value == NULL) {
-	crash();
-	return;
+        crash();
+        return;
     }
 
     if (entries == NULL) {
-	entries = (Entry *) malloc(sizeof(Entry));
-	entries[0].key = strclone(key);
-	entries[0].value = value;
-	nentries = 1;
-	capacity = 1;
-	if (g_verbosity >= 3)
-	    dump();
-	return;
+        entries = (Entry *) malloc(sizeof(Entry));
+        entries[0].key = strclone(key);
+        entries[0].value = value;
+        nentries = 1;
+        capacity = 1;
+        if (g_verbosity >= 3)
+            dump();
+        return;
     }
 
     int low = 0;
     int high = nentries - 1;
     while (low <= high) {
-	int mid = (low + high) / 2;
-	Entry *midVal = entries + mid;
-	int res = strcmp(midVal->key, key);
-	if (res < 0)
-	    low = mid + 1;
-	else if (res > 0)
-	    high = mid - 1;
-	else {
-	    // Key found: replace value
-	    midVal->value = value;
-	    if (g_verbosity >= 3)
-		dump();
-	    return;
-	}
+        int mid = (low + high) / 2;
+        Entry *midVal = entries + mid;
+        int res = strcmp(midVal->key, key);
+        if (res < 0)
+            low = mid + 1;
+        else if (res > 0)
+            high = mid - 1;
+        else {
+            // Key found: replace value
+            midVal->value = value;
+            if (g_verbosity >= 3)
+                dump();
+            return;
+        }
     }
     // Key not found: insert at 'low'
     if (nentries == capacity) {
-	// entries array full; grow it
-	capacity++;
-	entries = (Entry *) realloc(entries, capacity * sizeof(Entry));
+        // entries array full; grow it
+        capacity++;
+        entries = (Entry *) realloc(entries, capacity * sizeof(Entry));
     }
     memmove(entries + (low + 1), entries + low,
-	    (nentries - low) * sizeof(Entry));
+            (nentries - low) * sizeof(Entry));
     entries[low].key = strclone(key);
     entries[low].value = value;
     nentries++;
     if (g_verbosity >= 3)
-	dump();
+        dump();
 }
 
 /* public */ const void *
 Map::get(const char *key) {
     if (key == NULL) {
-	crash();
-	return NULL;
+        crash();
+        return NULL;
     }
 
     if (entries == NULL)
-	return NULL;
+        return NULL;
 
     Entry e;
     e.key = (char *) key;
     Entry *res = (Entry *) bsearch(&e, entries, nentries, sizeof(Entry),
-				    entry_compare);
+                                    entry_compare);
     return res == NULL ? NULL : res->value;
 }
 
 /* public */ void
 Map::remove(const char *key) {
     if (key == NULL) {
-	crash();
-	return;
+        crash();
+        return;
     }
 
     if (entries == NULL)
-	return;
+        return;
 
     Entry e;
     e.key = (char *) key;
     Entry *res = (Entry *) bsearch(&e, entries, nentries, sizeof(Entry),
-				    entry_compare);
+                                    entry_compare);
     if (res == NULL)
-	// Not found
-	return;
+        // Not found
+        return;
     free(res->key);
     int res_pos = res - entries;
     memmove(res, res + 1, (nentries - res_pos - 1) * sizeof(Entry));
     nentries--;
     if (g_verbosity >= 3)
-	dump();
+        dump();
 }
 
 /* public */ int
 Map::size() {
     if (entries == NULL)
-	return 0;
+        return 0;
     else
-	return nentries;
+        return nentries;
 }
 
 /* public */ Iterator *
@@ -543,7 +543,7 @@ Map::values() {
 /* public */ void
 Map::dump() {
     fprintf(stderr, "Contents of Map instance %p (entries=%d, capacity=%d)\n",
-	    this, nentries, capacity);
+            this, nentries, capacity);
     for (int i = 0; i < nentries; i++)
-	fprintf(stderr, "  \"%s\" => %p\n", entries[i].key, entries[i].value);
+        fprintf(stderr, "  \"%s\" => %p\n", entries[i].key, entries[i].value);
 }

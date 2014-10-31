@@ -1,5 +1,5 @@
 /* XPM */
-static char *fw[] = {
+static const char *fw[] = {
 /* width height num_colors chars_per_pixel */
 "    32    32       23            1",
 /* colors */

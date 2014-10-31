@@ -34,21 +34,21 @@ TextViewer::TextViewer(const char *text) : Frame(true, true, false) {
 
     // Create "OK" button
 
-    XmString label = XmStringCreateLocalized(" OK ");
+    XmString label = XmStringCreateLocalized((char *) " OK ");
     XtSetArg(args[0], XmNlabelString, label);
     XtSetArg(args[1], XmNrightAttachment, XmATTACH_FORM);
     XtSetArg(args[2], XmNrightOffset, 5);
     XtSetArg(args[3], XmNbottomAttachment, XmATTACH_FORM);
     XtSetArg(args[4], XmNbottomOffset, 5);
     Widget okB = XtCreateManagedWidget(
-	    "OKButton",
-	    xmPushButtonWidgetClass,
-	    form,
-	    args, 5);
+            "OKButton",
+            xmPushButtonWidgetClass,
+            form,
+            args, 5);
     XmStringFree(label);
     XtAddCallback(okB, XmNactivateCallback, ok, (XtPointer) this);
     XtOverrideTranslations(okB,
-		XtParseTranslationTable("<Key>Return: ArmAndActivate()"));
+                XtParseTranslationTable("<Key>Return: ArmAndActivate()"));
 
 
     // Create text area
@@ -63,19 +63,19 @@ TextViewer::TextViewer(const char *text) : Frame(true, true, false) {
     XtSetArg(args[7], XmNbottomWidget, okB);
     XtSetArg(args[8], XmNbottomOffset, 5);
     Widget scroll = XtCreateManagedWidget(
-	    "ScrolledWindow",
-	    xmScrolledWindowWidgetClass,
-	    form,
-	    args, 9);
+            "ScrolledWindow",
+            xmScrolledWindowWidgetClass,
+            form,
+            args, 9);
 
     int rows, columns;
     getTextSize(text, &rows, &columns);
     if (rows < 5)
-	rows = 5;
+        rows = 5;
     if (columns < 64)
-	columns = 64;
+        columns = 64;
     else if (columns > 100)
-	columns = 100;
+        columns = 100;
 
     XtSetArg(args[0], XmNeditable, False);
     XtSetArg(args[1], XmNcursorPositionVisible, False);
@@ -87,10 +87,10 @@ TextViewer::TextViewer(const char *text) : Frame(true, true, false) {
     XtSetArg(args[7], XmNcolumns, columns);
     XtSetArg(args[8], XmNtraversalOn, False);
     Widget textw = XtCreateManagedWidget(
-	    "Text",
-	    xmTextWidgetClass,
-	    scroll,
-	    args, 9);
+            "Text",
+            xmTextWidgetClass,
+            scroll,
+            args, 9);
 
     XmTextSetString(textw, (char *) text);
 }
@@ -103,17 +103,17 @@ TextViewer::getTextSize(const char *text, int *lines, int *columns) {
 
     char ch;
     do {
-	ch = *text++;
-	if (ch == 0 || ch == '\n') {
-	    if (*columns < pos)
-		*columns = pos;
-	    pos = 0;
-	    if (ch != 0)
-		(*lines)++;
-	} else if (ch == '\t')
-	    pos = (pos + 8) & ~7;
-	else
-	    pos++;
+        ch = *text++;
+        if (ch == 0 || ch == '\n') {
+            if (*columns < pos)
+                *columns = pos;
+            pos = 0;
+            if (ch != 0)
+                (*lines)++;
+        } else if (ch == '\t')
+            pos = (pos + 8) & ~7;
+        else
+            pos++;
     } while (ch != 0);
 }
 

@@ -46,8 +46,8 @@ static void register_plugin(const char *name, Plugin *(*factory)(void *)) {
 // In Java, the following would be a static {} block; here we use a trick...
 struct PluginMapInitializer {
     PluginMapInitializer() {
-	pluginmap = new Map;
-	register_plugins();
+        pluginmap = new Map;
+        register_plugins();
     }
 };
 static PluginMapInitializer dummy;
@@ -61,88 +61,88 @@ static int list_compar(const void *a, const void *b) {
 
 class SlaveDriver {
     private:
-	struct Slave {
-	    Plugin *worker;
-	    Slave *next;
-	};
-	static Slave *worklist;
-	static XtWorkProcId workproc_id;
+        struct Slave {
+            Plugin *worker;
+            Slave *next;
+        };
+        static Slave *worklist;
+        static XtWorkProcId workproc_id;
     
     public:
-	static void start_working(Plugin *worker) {
-	    Slave *node = worklist;
-	    bool found = false;
-	    while (node != NULL) {
-		if (node->worker == worker) {
-		    found = true;
-		    break;
-		}
-		node = node->next;
-	    }
-	    if (!found) {
-		if (worklist == NULL)
-		    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
-		node = new Slave;
-		node->worker = worker;
-		node->next = worklist;
-		worklist = node;
-	    }
-	}
+        static void start_working(Plugin *worker) {
+            Slave *node = worklist;
+            bool found = false;
+            while (node != NULL) {
+                if (node->worker == worker) {
+                    found = true;
+                    break;
+                }
+                node = node->next;
+            }
+            if (!found) {
+                if (worklist == NULL)
+                    workproc_id = XtAppAddWorkProc(g_appcontext, workproc, NULL);
+                node = new Slave;
+                node->worker = worker;
+                node->next = worklist;
+                worklist = node;
+            }
+        }
     
-	static void stop_working(Plugin *worker) {
-	    Slave *node = worklist;
-	    Slave **prev = &worklist;
-	    bool found = false;
-	    while (node != NULL) {
-		if (node->worker == worker) {
-		    found = true;
-		    break;
-		}
-		prev = &node->next;
-		node = node->next;
-	    }
-	    if (found) {
-		*prev = node->next;
-		delete node;
-		if (worklist == NULL)
-		    XtRemoveWorkProc(workproc_id);
-	    }
-	}
+        static void stop_working(Plugin *worker) {
+            Slave *node = worklist;
+            Slave **prev = &worklist;
+            bool found = false;
+            while (node != NULL) {
+                if (node->worker == worker) {
+                    found = true;
+                    break;
+                }
+                prev = &node->next;
+                node = node->next;
+            }
+            if (found) {
+                *prev = node->next;
+                delete node;
+                if (worklist == NULL)
+                    XtRemoveWorkProc(workproc_id);
+            }
+        }
 
     private:
 
-	static Boolean workproc(XtPointer ud) {
-	    static int n = 0;
+        static Boolean workproc(XtPointer ud) {
+            static int n = 0;
 
-	    // Just to be safe
-	    if (worklist == NULL)
-		return True;
+            // Just to be safe
+            if (worklist == NULL)
+                return True;
 
-	    Slave *node = worklist;
-	    Slave **prev = &worklist;
-	    for (int i = 0; i < n; i++) {
-		prev = &node->next;
-		node = node->next;
-		if (node == NULL) {
-		    n = 0;
-		    prev = &worklist;
-		    node = worklist;
-		    break;
-		}
-	    }
+            Slave *node = worklist;
+            Slave **prev = &worklist;
+            for (int i = 0; i < n; i++) {
+                prev = &node->next;
+                node = node->next;
+                if (node == NULL) {
+                    n = 0;
+                    prev = &worklist;
+                    node = worklist;
+                    break;
+                }
+            }
 
-	    node->worker->viewer->setDirty();
-	    if (node->worker->work()) {
-		node->worker->finished = true;
-		node->worker->viewer->pluginFinished(true);
-		*prev = node->next;
-		delete node;
-		if (worklist == NULL)
-		    return True;
-	    }
-	    n++;
-	    return False;
-	}
+            node->worker->viewer->setDirty();
+            if (node->worker->work()) {
+                node->worker->finished = true;
+                node->worker->viewer->pluginFinished(true);
+                *prev = node->next;
+                delete node;
+                if (worklist == NULL)
+                    return True;
+            }
+            n++;
+            return False;
+        }
 };
 
 /* public static */ SlaveDriver::Slave *
@@ -160,45 +160,45 @@ class Null : public Plugin {
     // statically linked.
 
     public:
-	Null() : Plugin(NULL) {}
-	virtual ~Null() {}
-	virtual const char *name() {
-	    return "Null";
-	}
-	virtual bool start() {
-	    paint();
-	    return true;
-	}
+        Null() : Plugin(NULL) {}
+        virtual ~Null() {}
+        virtual const char *name() {
+            return "Null";
+        }
+        virtual bool start() {
+            paint();
+            return true;
+        }
 };
 
 
 class About : public Plugin {
     public:
-	About() : Plugin(NULL) {}
-	virtual ~About() {}
-	virtual const char *name() {
-	    return "About";
-	}
-	virtual void init_new() {
-	    pm->width = About_width;
-	    pm->height = About_height;
-	    pm->bytesperline = (About_width + 31 >> 3) & ~3;
-	    int srcbpl = About_width + 7 >> 3;
-	    int size = pm->bytesperline * pm->height;
-	    pm->pixels = (unsigned char *) malloc(size);
-	    for (int v = 0; v < pm->height; v++) {
-		unsigned char *src = About_bits + v * srcbpl;
-		unsigned char *dst = pm->pixels + v * pm->bytesperline;
-		for (int h = 0; h < srcbpl; h++)
-		    *dst++ = ~*src++;
-	    }
-	    pm->depth = 1;
-	    init_proceed();
-	}
-	virtual bool start() {
-	    paint();
-	    return true;
-	}
+        About() : Plugin(NULL) {}
+        virtual ~About() {}
+        virtual const char *name() {
+            return "About";
+        }
+        virtual void init_new() {
+            pm->width = About_width;
+            pm->height = About_height;
+            pm->bytesperline = (About_width + 31 >> 3) & ~3;
+            int srcbpl = About_width + 7 >> 3;
+            int size = pm->bytesperline * pm->height;
+            pm->pixels = (unsigned char *) malloc(size);
+            for (int v = 0; v < pm->height; v++) {
+                unsigned char *src = About_bits + v * srcbpl;
+                unsigned char *dst = pm->pixels + v * pm->bytesperline;
+                for (int h = 0; h < srcbpl; h++)
+                    *dst++ = ~*src++;
+            }
+            pm->depth = 1;
+            init_proceed();
+        }
+        virtual bool start() {
+            paint();
+            return true;
+        }
 };
 
 
@@ -210,8 +210,8 @@ class About : public Plugin {
 // string pointed to by 'extra'. There is no length limit to 'extra'.
 
 static const char *layout[] = {
-    "bool",	// finished
-    "char*",	// extra (for future use)
+    "bool",     // finished
+    "char*",    // extra (for future use)
     NULL
 };
 
@@ -234,39 +234,39 @@ Plugin::Plugin(void *dl) {
 Plugin::~Plugin() {
     stop_working();
     if (settings_helper != NULL)
-	delete settings_helper;
+        delete settings_helper;
     if (settings_layout != NULL)
-	free(settings_layout);
+        free(settings_layout);
     if (settings_base!= NULL)
-	free(settings_base);
+        free(settings_base);
     if (extra != NULL)
-	free(extra);
+        free(extra);
 }
 
 /* public static */ Plugin *
 Plugin::get(const char *name) {
     if (name == NULL || strcmp(name, "Null") == 0)
-	return new Null();
+        return new Null();
     else if (strcmp(name, "About") == 0)
-	return new About();
+        return new About();
 
 #ifndef STATICPLUGINS
     char dlname[PATH_MAX];
     snprintf(dlname, PATH_MAX, "%s/.fw/%s.so", getenv("HOME"), name);
     void *dl = dlopen(dlname, RTLD_NOW);
     if (dl == NULL) {
-	if (g_verbosity >= 1)
-	    fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
-	return NULL;
+        if (g_verbosity >= 1)
+            fprintf(stderr, "Loading \"%s\" failed: %s\n", name, dlerror());
+        return NULL;
     }
     Plugin *(*factory)(void *) = (Plugin *(*)(void *)) dlsym(dl, "factory");
     return (*factory)(dl);
 #else
     Plugin *(*factory)(void *) = (Plugin *(*)(void *)) pluginmap->get(name);
     if (factory == NULL) {
-	if (g_verbosity >= 1)
-	    fprintf(stderr, "Plugin \"%s\" does not exist.\n", name);
-	return NULL;
+        if (g_verbosity >= 1)
+            fprintf(stderr, "Plugin \"%s\" does not exist.\n", name);
+        return NULL;
     }
     return (*factory)(NULL);
 #endif
@@ -278,7 +278,7 @@ Plugin::release(Plugin *plugin) {
     void *dl = plugin->dl;
     delete plugin;
     if (dl != NULL)
-	dlclose(dl);
+        dlclose(dl);
 #else
     delete plugin;
 #endif
@@ -291,22 +291,22 @@ Plugin::list() {
     snprintf(dirname, PATH_MAX, "%s/.fw", getenv("HOME"));
     DIR *dir = opendir(dirname);
     if (dir == NULL)
-	return NULL;
+        return NULL;
     int n = 0;
     char **names = (char **) malloc(sizeof(char *));
     names[0] = NULL;
     struct dirent *dent;
     while ((dent = readdir(dir)) != NULL) {
-	int len = strlen(dent->d_name);
-	if (len >= 3 && strcmp(dent->d_name + (len - 3), ".so") == 0) {
-	    char *name = (char *) malloc(len - 2);
-	    strncpy(name, dent->d_name, len - 3);
-	    name[len - 3] = 0;
-	    n++;
-	    names = (char **) realloc(names, (n + 1) * sizeof(char *));
-	    names[n - 1] = name;
-	    names[n] = NULL;
-	}
+        int len = strlen(dent->d_name);
+        if (len >= 3 && strcmp(dent->d_name + (len - 3), ".so") == 0) {
+            char *name = (char *) malloc(len - 2);
+            strncpy(name, dent->d_name, len - 3);
+            name[len - 3] = 0;
+            n++;
+            names = (char **) realloc(names, (n + 1) * sizeof(char *));
+            names[n - 1] = name;
+            names[n] = NULL;
+        }
     }
     closedir(dir);
 #else
@@ -314,12 +314,12 @@ Plugin::list() {
     Iterator *iter = pluginmap->keys();
     int n = 0;
     while (iter->hasNext())
-	names[n++] = strclone((const char *) iter->next());
+        names[n++] = strclone((const char *) iter->next());
     names[n] = NULL;
 #endif
     if (n == 0) {
-	free(names);
-	return NULL;
+        free(names);
+        return NULL;
     }
     qsort(names, n, sizeof(char *), list_compar);
     return names;
@@ -329,9 +329,9 @@ Plugin::list() {
 Plugin::register_for_serialization(const char **layout, void *base) {
     settings_count++;
     settings_layout = (const char ***) realloc(settings_layout,
-					 settings_count * sizeof(char **));
+                                         settings_count * sizeof(char **));
     settings_base = (void **) realloc(settings_base,
-				      settings_count * sizeof(void *));
+                                      settings_count * sizeof(void *));
     settings_layout[settings_count - 1] = layout;
     settings_base[settings_count - 1] = base;
 }
@@ -339,23 +339,23 @@ Plugin::register_for_serialization(const char **layout, void *base) {
 /* public */ void
 Plugin::serialize(void **buf, int *nbytes) {
     if (settings_helper == NULL)
-	settings_helper = new SettingsHelper(this);
+        settings_helper = new SettingsHelper(this);
     settings_helper->serialize(buf, nbytes);
 }
 
 /* public */ void
 Plugin::deserialize(void *buf, int nbytes) {
     if (settings_helper == NULL)
-	settings_helper = new SettingsHelper(this);
+        settings_helper = new SettingsHelper(this);
     settings_helper->deserialize(buf, nbytes);
     if (finished)
-	viewer->pluginFinished(false);
+        viewer->pluginFinished(false);
 }
 
 /* public */ char *
 Plugin::dumpSettings() {
     if (settings_helper == NULL)
-	settings_helper = new SettingsHelper(this);
+        settings_helper = new SettingsHelper(this);
     return settings_helper->dumpSettings();
 }
 
@@ -426,7 +426,7 @@ Plugin::debug_level() {
 /* protected */ void
 Plugin::get_settings_dialog() {
     if (settings_helper == NULL)
-	settings_helper = new SettingsHelper(this);
+        settings_helper = new SettingsHelper(this);
     new SettingsDialog(this, settings_helper);
 }
 
