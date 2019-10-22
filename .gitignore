@@ -1,0 +1,8 @@
+
+# /
+/*.d
+/fw
+
+# /plugins/
+/plugins/*.d
+/plugins/plugins.h
