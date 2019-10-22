@@ -1,8 +1,12 @@
 
 # /
 /*.d
+/*.o
+/*.so
 /fw
 
 # /plugins/
 /plugins/*.d
+/plugins/*.o
+/plugins/*.so
 /plugins/plugins.h
