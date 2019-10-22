@@ -27,7 +27,7 @@ unsigned int crc32(const void *buf, int size);
 
 bool isDirectory(const char *name);
 bool isFile(const char *name);
-char *basename(const char *fullname);
+char *basename2(const char *fullname);
 char *canonical_pathname(const char *fullname);
 
 int bool_alignment();

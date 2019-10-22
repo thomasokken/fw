@@ -91,7 +91,7 @@ bool isFile(const char *name) {
     return S_ISREG(st.st_mode);
 }
 
-char *basename(const char *fullname) {
+char *basename2(const char *fullname) {
     const char *lastslash = strrchr(fullname, '/');
     if (lastslash == NULL)
         return strclone(fullname);

@@ -221,7 +221,7 @@ Viewer::finish_init() {
     } else if (strcmp(plugin->name(), "Null") == 0) {
         // No check if filename == NULL. The Null plugin is *only*
         // used when opening files; you can't do File->New->Null.
-        char *name = basename(filename);
+        char *name = basename2(filename);
         setTitle(name);
         setIconTitle(name);
         free(name);
@@ -231,7 +231,7 @@ Viewer::finish_init() {
             untitled = ++untitledcount;
             snprintf(buf, 1024, "Untitled #%d (%s)", untitled, plugin->name());
         } else {
-            char *name = basename(filename);
+            char *name = basename2(filename);
             snprintf(buf, 1024, "%s (%s)", name, plugin->name());
             free(name);
         }
@@ -731,7 +731,7 @@ Viewer::pluginFinished(bool notify) {
         if (filename == NULL)
             snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"Untitled #%d\" has been completed.", plugin->name(), untitled);
         else {
-            char *name = basename(filename);
+            char *name = basename2(filename);
             snprintf(buf, 1024, "The plugin \"%s\" would like to inform you that work on the image \"%s\" has been completed.", plugin->name(), name);
             free(name);
         }
@@ -1395,7 +1395,7 @@ Viewer::save(const char *name, const char *type) {
             char idbuf[1024];
             snprintf(idbuf, 1024, "Windows.X.%d", id);
             const char *pluginname = plugin->name();
-            const char *label = basename(name);
+            const char *label = basename2(name);
             char labelbuf[1024];
 
             if (strcmp(pluginname, "Null") == 0)
@@ -1722,7 +1722,7 @@ Viewer::doQuit2() {
         if (viewer->filename == NULL) {
             snprintf(buf, 1024, "Save changes to \"Untitled #%d\" before quitting?", viewer->untitled);
         } else {
-            char *bn = basename(viewer->filename);
+            char *bn = basename2(viewer->filename);
             snprintf(buf, 1024, "Save changes to \"%s\" before quitting?", bn);
             free(bn);
         }
