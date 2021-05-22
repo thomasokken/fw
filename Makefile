@@ -20,7 +20,7 @@ CXXFLAGS = -MMD -Wall -Wno-parentheses -Wno-sometimes-uninitialized -Wno-int-to-
 LDFLAGS = -L/usr/X11R6/lib -Xlinker --export-dynamic
 
 # This works on Red Hat 7.3
-LOADLIBES = -lXm -lXpm -ljpeg -lpng -lXmu
+LOADLIBES = -lXm -lXpm -lXt -lX11 -ldl -ljpeg -lpng -lXmu
 # If that doesn't do it for you, try this:
 # LOADLIBES = -lXm -lXp -lXt -lX11 -lXmu -lXpm -ldl -ljpeg -lpng -lz
 

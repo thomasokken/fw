@@ -49,3 +49,6 @@ can't even begin to offer advice about those. If you are having problems, with
 the plugins in particular, please try using Makefile.staticplugins and
 plugins/Makefile.staticplugins instead of the regular Makefiles; these will
 link the plug-ins statically into the executable.
+
+To build in Ubuntu 20.04, install libmotif-dev, libjpeg-dev, libxpm-dev,
+and libxmu-dev.
