@@ -244,12 +244,6 @@ static const char *helptext =
 "\nthe license terms will be. Probably something BSD-ish or Netscape-ish, but"
 "\nwe'll see."
 "\n"
-"\nTo contact the author: e-mail to thomas_okken@yahoo.com."
-"\nOr send snail mail to:"
-"\n"
-"\nThomas Okken"
-"\nHenri Dunantplein 62"
-"\n3731 CM  De Bilt"
-"\nNetherlands"
+"\nTo contact the author: e-mail to thomasokken@gmail.com."
 "\n"
 "\n----------------------------------------------------------------------------";
